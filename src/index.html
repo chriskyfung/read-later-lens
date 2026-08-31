@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW" class="h-full bg-slate-900 text-slate-100">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Instapaper Bookmark Manager</title>
-  
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -26,33 +27,53 @@
       }
     }
   </script>
-  
+
   <!-- PapaParse for CSV parsing -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  
+
   <!-- SQL.js for WebAssembly SQLite support -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
-  
+
   <!-- D3.js for visual analytics & concept graphs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
   <style>
     /* Custom scrollbars */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    .word-cloud-item:hover { transform: scale(1.15); transition: transform 0.15s ease-in-out; }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    .word-cloud-item:hover {
+      transform: scale(1.15);
+      transition: transform 0.15s ease-in-out;
+    }
   </style>
 </head>
+
 <body class="h-full flex flex-col font-sans antialiased bg-slate-900 text-slate-100 overflow-hidden">
 
   <!-- Top Navigation Header -->
-  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 px-6 py-3 flex items-center justify-between z-20 shrink-0">
+  <header
+    class="bg-slate-800/90 backdrop-blur border-b border-slate-700 px-6 py-3 flex items-center justify-between z-20 shrink-0">
     <div class="flex items-center space-x-3">
       <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-500/30">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
         </svg>
       </div>
       <div>
@@ -62,40 +83,50 @@
     </div>
 
     <!-- Search & Quick Actions -->
-    <div class="flex items-center space-x-4 flex-1 max-w-xl mx-8">
+    <div class="flex flex-col space-y-2 flex-1 max-w-xl mx-8">
       <div class="relative w-full">
         <input type="text" id="searchInput" placeholder="搜尋標題、網址、預覽內容或標籤..."
-          class="w-full bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-sm text-slate-100 rounded-xl pl-10 pr-28 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all">
-        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          class="w-full bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-sm text-slate-100 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
-        <label class="absolute right-3 top-2 flex items-center space-x-1.5 cursor-pointer text-xs text-slate-400 hover:text-slate-200 select-none">
-          <input type="checkbox" id="scopeFolderCheckbox" class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-800">
-          <span>僅搜尋當前資料夾</span>
-        </label>
       </div>
+      <label
+        class="flex items-center space-x-1.5 cursor-pointer text-xs text-slate-400 hover:text-slate-200 select-none self-end">
+        <input type="checkbox" id="scopeFolderCheckbox"
+          class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-800">
+        <span>僅搜尋當前資料夾</span>
+      </label>
     </div>
 
     <!-- Action Buttons -->
     <div class="flex items-center space-x-2">
-      <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-2 shadow-md transition">
+      <label title="匯入 CSV, JSON, 或 SQLite (.db) 檔案"
+        class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-md transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
-        <span>匯入檔案 (CSV/JSON/DB)</span>
+        <span>匯入</span>
         <input type="file" id="fileInput" multiple accept=".csv,.json,.db" class="hidden">
       </label>
 
-      <button id="saveBackBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-md transition">
+      <button id="saveBackBtn" title="儲存變更或匯出檔案"
+        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-md transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
         </svg>
-        <span>儲存修改 / 匯出</span>
+        <span>儲存/匯出</span>
       </button>
 
-      <button id="clearCacheBtn" title="清除本地快取" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-2 rounded-lg transition">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+      <button id="clearCacheBtn" title="清除本地快取"
+        class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-2 rounded-lg transition">
+        <svg id="clearCacheIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+          </path>
         </svg>
       </button>
     </div>
@@ -103,10 +134,11 @@
 
   <!-- Main Application Body -->
   <div class="flex-1 flex overflow-hidden">
-    
+
     <!-- Left Sidebar -->
-    <aside class="w-72 bg-slate-800/50 border-r border-slate-700/80 flex flex-col shrink-0 overflow-y-auto p-4 space-y-6">
-      
+    <aside
+      class="w-72 bg-slate-800/50 border-r border-slate-700/80 flex flex-col shrink-0 overflow-y-auto p-4 space-y-6">
+
       <!-- Source Files / Folders -->
       <div>
         <div class="flex items-center justify-between mb-2">
@@ -114,10 +146,13 @@
           <span id="totalSourceCount" class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">0</span>
         </div>
         <div id="folderList" class="space-y-1">
-          <button data-folder="ALL" class="folder-btn active w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+          <button data-folder="ALL"
+            class="folder-btn active w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
             <span class="flex items-center space-x-2 truncate">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                </path>
               </svg>
               <span class="truncate">全部書籤 (All Items)</span>
             </span>
@@ -131,11 +166,19 @@
       <div>
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">語系過濾</h2>
         <div id="languageFilters" class="flex flex-wrap gap-1.5">
-          <button data-lang="ALL" class="lang-btn active text-xs px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium">全部</button>
-          <button data-lang="en" class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">英文 (EN)</button>
-          <button data-lang="zh" class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">中文 (ZH)</button>
-          <button data-lang="ja" class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">日文 (JA)</button>
-          <button data-lang="other" class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">其他</button>
+          <button data-lang="ALL"
+            class="lang-btn active text-xs px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium">全部</button>
+          <button data-lang="en"
+            class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">英文
+            (EN)</button>
+          <button data-lang="zh"
+            class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">中文
+            (ZH)</button>
+          <button data-lang="ja"
+            class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">日文
+            (JA)</button>
+          <button data-lang="other"
+            class="lang-btn text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300">其他</button>
         </div>
       </div>
 
@@ -161,21 +204,25 @@
 
     <!-- Center Content Workspace -->
     <main class="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">
-      
+
       <!-- Control Bar: Sort, View Tabs & Batch Actions -->
       <div class="bg-slate-800/40 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0">
         <!-- View Mode Tabs -->
         <div class="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
-          <button data-tab="bookmarks" class="main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow">
+          <button data-tab="bookmarks"
+            class="main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow">
             書籤列表 (<span id="filteredCount">0</span>)
           </button>
-          <button data-tab="wordcloud" class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
+          <button data-tab="wordcloud"
+            class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
             ☁️ 文字雲 (Word Cloud)
           </button>
-          <button data-tab="domains" class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
+          <button data-tab="domains"
+            class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
             📊 域名統計
           </button>
-          <button data-tab="linkage" class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
+          <button data-tab="linkage"
+            class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
             🕸️ 概念關聯網
           </button>
         </div>
@@ -185,7 +232,8 @@
           <!-- Sort Dropdown -->
           <div class="flex items-center space-x-2 text-xs text-slate-400">
             <span>排序方式:</span>
-            <select id="sortSelect" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+            <select id="sortSelect"
+              class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
               <option value="relevance">搜尋相關度 (Relevance)</option>
               <option value="newer">最新優先 (Newer First)</option>
               <option value="older">最舊優先 (Older First)</option>
@@ -195,10 +243,13 @@
           </div>
 
           <!-- Batch Action Toggle Bar -->
-          <div id="batchActionBar" class="hidden items-center space-x-2 bg-indigo-900/40 border border-indigo-500/40 px-3 py-1 rounded-lg text-xs text-indigo-200">
+          <div id="batchActionBar"
+            class="hidden items-center space-x-2 bg-indigo-900/40 border border-indigo-500/40 px-3 py-1 rounded-lg text-xs text-indigo-200">
             <span>已選擇 <strong id="selectedCount">0</strong> 項</span>
-            <button id="batchTagBtn" class="bg-indigo-600 hover:bg-indigo-500 px-2 py-0.5 rounded text-white font-medium">批量新增標籤</button>
-            <button id="batchDeleteBtn" class="bg-rose-600 hover:bg-rose-500 px-2 py-0.5 rounded text-white font-medium">批量刪除</button>
+            <button id="batchTagBtn"
+              class="bg-indigo-600 hover:bg-indigo-500 px-2 py-0.5 rounded text-white font-medium">批量新增標籤</button>
+            <button id="batchDeleteBtn"
+              class="bg-rose-600 hover:bg-rose-500 px-2 py-0.5 rounded text-white font-medium">批量刪除</button>
             <button id="batchCancelBtn" class="text-slate-400 hover:text-slate-200 underline">取消</button>
           </div>
         </div>
@@ -206,14 +257,15 @@
 
       <!-- Main Display Panels Container -->
       <div class="flex-1 overflow-y-auto p-6 relative" id="contentViewport">
-        
+
         <!-- Panel 1: Bookmarks Grid View -->
         <div id="panelBookmarks" class="tab-panel">
-          
+
           <!-- Select All Header Row -->
           <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800 text-xs text-slate-400">
             <label class="flex items-center space-x-2 cursor-pointer select-none">
-              <input type="checkbox" id="selectAllCheckbox" class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-800">
+              <input type="checkbox" id="selectAllCheckbox"
+                class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-800">
               <span>全選本頁書籤</span>
             </label>
             <span id="activeFilterSummary" class="text-slate-500">顯示全部資料</span>
@@ -228,7 +280,9 @@
           <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-center">
             <div class="bg-slate-800/80 p-4 rounded-full text-slate-500 mb-4">
               <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                </path>
               </svg>
             </div>
             <h3 class="text-slate-300 font-semibold mb-1">尚未載入書籤或未找到符合的資料</h3>
@@ -242,7 +296,8 @@
             <h3 class="text-sm font-semibold text-indigo-300 mb-1">☁️ 關鍵字文字雲 (Word Cloud Analytics)</h3>
             <p class="text-xs text-slate-400">系統自動整合英文 Stopwords 停用詞過濾，並對中日文內文進行 N-Gram 輕量化斷詞分析。點擊任意關鍵字可立即進行全局搜尋。</p>
           </div>
-          <div id="wordCloudContainer" class="flex-1 bg-slate-800/30 border border-slate-800 rounded-xl p-6 flex flex-wrap items-center justify-center gap-3 overflow-y-auto">
+          <div id="wordCloudContainer"
+            class="flex-1 bg-slate-800/30 border border-slate-800 rounded-xl p-6 flex flex-wrap items-center justify-center gap-3 overflow-y-auto">
             <!-- Word Cloud dynamic elements -->
           </div>
         </div>
@@ -259,16 +314,39 @@
         </div>
 
         <!-- Panel 4: Concept Linkage Graph View -->
-        <div id="panelLinkage" class="tab-panel hidden h-full flex flex-col">
-          <div class="bg-slate-800/60 border border-slate-700/70 rounded-xl p-4 mb-4 flex justify-between items-center">
+        <div id="panelLinkage" class="tab-panel hidden h-full flex flex-col relative">
+          <div
+            class="bg-slate-800/60 border border-slate-700/70 rounded-xl p-4 mb-4 flex justify-between items-center z-10">
             <div>
               <h3 class="text-sm font-semibold text-indigo-300">🕸️ 書籤概念關聯圖 (D3 Force Graph)</h3>
-              <p class="text-xs text-slate-400">根據文章間共有的關鍵字與網域名稱建立互動式力導向拓撲圖。</p>
+              <p class="text-xs text-slate-400">依據共用關鍵字建立拓撲。節點大小代表關聯度，顏色代表域名。支援縮放與平移。</p>
             </div>
-            <button id="resetGraphBtn" class="bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 px-3 py-1.5 rounded-lg">重置圖表 View</button>
+            <div class="flex items-center space-x-2">
+              <button id="zoomInBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-1.5 rounded-lg"
+                title="放大"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                </svg></button>
+              <button id="zoomOutBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-1.5 rounded-lg"
+                title="縮小"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                </svg></button>
+              <button id="resetGraphBtn"
+                class="bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 px-3 py-1.5 rounded-lg">重置視圖</button>
+            </div>
           </div>
-          <div id="d3GraphCanvas" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden min-h-[450px]">
+          <div id="d3GraphCanvas"
+            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden min-h-[450px]">
             <!-- D3 SVG injected here -->
+          </div>
+
+          <!-- D3 Tooltip -->
+          <div id="graphTooltip"
+            class="fixed opacity-0 pointer-events-none z-50 bg-slate-800 border border-indigo-500/50 p-3 rounded-lg shadow-2xl transition-opacity duration-200 max-w-xs transform -translate-x-1/2 -translate-y-full mt-[-10px]">
+            <div id="ttTitle" class="text-sm font-bold text-white mb-1 leading-snug line-clamp-2"></div>
+            <div class="text-[10px] text-indigo-300 font-mono mb-1 truncate" id="ttDomain"></div>
+            <div class="flex flex-wrap gap-1" id="ttTags"></div>
           </div>
         </div>
 
@@ -277,12 +355,15 @@
   </div>
 
   <!-- MODAL 1: Reader View Modal -->
-  <div id="readerModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+  <div id="readerModal"
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div
+      class="bg-slate-800 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
       <!-- Modal Header -->
       <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/80">
         <div class="flex items-center space-x-2">
-          <span class="bg-indigo-600/30 text-indigo-300 text-xs px-2.5 py-1 rounded-full font-semibold" id="readerLangBadge">EN</span>
+          <span class="bg-indigo-600/30 text-indigo-300 text-xs px-2.5 py-1 rounded-full font-semibold"
+            id="readerLangBadge">EN</span>
           <h3 id="readerTitle" class="font-bold text-base text-white truncate max-w-lg">文章內文預覽</h3>
         </div>
         <button id="closeReaderBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
@@ -295,31 +376,41 @@
       <div class="p-6 overflow-y-auto space-y-4 text-slate-300 leading-relaxed text-sm" id="readerBody">
         <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-700/50">
           <div class="text-xs text-slate-400 mb-1">原始連結 URL:</div>
-          <a id="readerOriginalUrl" href="#" target="_blank" class="text-indigo-400 hover:underline break-all text-xs"></a>
+          <a id="readerOriginalUrl" href="#" target="_blank"
+            class="text-indigo-400 hover:underline break-all text-xs"></a>
         </div>
         <div id="readerPreviewContent" class="whitespace-pre-wrap font-serif text-base text-slate-200"></div>
       </div>
       <!-- Modal Footer -->
       <div class="px-6 py-3 border-t border-slate-700 bg-slate-900/50 flex justify-between items-center">
-        <a id="readerInstapaperBtn" href="#" target="_blank" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-4 py-2 rounded-lg font-medium flex items-center space-x-1">
+        <a id="readerInstapaperBtn" href="#" target="_blank"
+          class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-4 py-2 rounded-lg font-medium flex items-center space-x-1">
           <span>開啟 Instapaper 閱讀器</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+          </svg>
         </a>
-        <button id="closeReaderFooterBtn" class="bg-slate-700 hover:bg-slate-600 text-xs text-white px-4 py-2 rounded-lg">關閉</button>
+        <button id="closeReaderFooterBtn"
+          class="bg-slate-700 hover:bg-slate-600 text-xs text-white px-4 py-2 rounded-lg">關閉</button>
       </div>
     </div>
   </div>
 
   <!-- MODAL 2: Article Similarity Matrix Drawer/Modal -->
-  <div id="similarityModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+  <div id="similarityModal"
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div
+      class="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
       <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/90">
         <div>
           <h3 class="font-bold text-base text-white">⚡ 相似文章推薦分析 (Cosine Similarity)</h3>
           <p class="text-xs text-slate-400">基於 $TF\text{-}IDF$ 向量演算法計算當前文章與庫存其他文章的相似度。</p>
         </div>
         <button id="closeSimilarityBtn" class="text-slate-400 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
         </button>
       </div>
       <div class="p-6 overflow-y-auto space-y-4">
@@ -338,15 +429,18 @@
   </div>
 
   <!-- MODAL 3: Save Back / Export Options Modal -->
-  <div id="saveModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="saveModal"
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-5">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
         <h3 class="font-bold text-base text-white">💾 儲存與匯出變更</h3>
         <button id="closeSaveBtn" class="text-slate-400 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
         </button>
       </div>
-      
+
       <p class="text-xs text-slate-300 leading-relaxed">
         選擇回寫至原來源檔案（優先使用 File System Access API 直接寫入，不支援時將以下載方式處理）：
       </p>
@@ -356,14 +450,44 @@
       </div>
 
       <div class="pt-3 border-t border-slate-700 flex justify-end space-x-2">
-        <button id="exportAllUnifiedJsonBtn" class="bg-slate-700 hover:bg-slate-600 text-xs text-white px-3 py-2 rounded-lg">匯出成統一 JSON</button>
-        <button id="exportAllUnifiedCsvBtn" class="bg-indigo-600 hover:bg-indigo-500 text-xs text-white px-3 py-2 rounded-lg font-semibold">匯出成統一 CSV</button>
+        <button id="exportAllUnifiedJsonBtn"
+          class="bg-slate-700 hover:bg-slate-600 text-xs text-white px-3 py-2 rounded-lg">匯出成統一 JSON</button>
+        <button id="exportAllUnifiedCsvBtn"
+          class="bg-indigo-600 hover:bg-indigo-500 text-xs text-white px-3 py-2 rounded-lg font-semibold">匯出成統一
+          CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Duplicate File Warning Modal -->
+  <div id="duplicateModal"
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-5">
+      <h3 class="font-bold text-base text-white flex items-center gap-2">
+        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+          </path>
+        </svg>
+        發現同名檔案
+      </h3>
+      <p class="text-sm text-slate-300" id="duplicateFileText"></p>
+      <div class="flex flex-col space-y-2 pt-2">
+        <button id="dupBtnOverwrite"
+          class="bg-rose-600 hover:bg-rose-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition">覆寫舊檔案
+          (覆蓋)</button>
+        <button id="dupBtnKeepBoth"
+          class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition">兩者皆保留
+          (另存新檔)</button>
+        <button id="dupBtnCancel"
+          class="bg-slate-700 hover:bg-slate-600 text-white text-sm px-4 py-2 rounded-lg font-medium transition">取消匯入</button>
       </div>
     </div>
   </div>
 
   <!-- Notification Toast Modal -->
-  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-indigo-600 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2">
+  <div id="toastNotification"
+    class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-indigo-600 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2">
     <span id="toastMsg">通知訊息</span>
   </div>
 
@@ -386,23 +510,24 @@
 
     // English Stopwords List
     const ENGLISH_STOPWORDS = new Set([
-      'a','about','above','after','again','against','all','am','an','and','any','are','aren\'t','as','at','be','because',
-      'been','before','being','below','between','both','but','by','can','can\'t','cannot','could','couldn\'t','did',
-      'didn\'t','do','does','doesn\'t','doing','don\'t','down','during','each','few','for','from','further','had',
-      'hadn\'t','has','hasn\'t','have','haven\'t','having','he','he\'d','he\'ll','he\'s','her','here','here\'s','hers',
-      'herself','him','himself','his','how','how\'s','i','i\'d','i\'ll','i\'m','i\'ve','if','in','into','is','isn\'t',
-      'it','it\'s','its','itself','let\'s','me','more','most','mustn\'t','my','myself','no','nor','not','of','off',
-      'on','once','only','or','other','ought','our','ours','ourselves','out','over','own','same','shan\'t','she',
-      'she\'d','she\'ll','she\'s','should','shouldn\'t','so','some','such','than','that','that\'s','the','their',
-      'theirs','them','themselves','then','there','there\'s','these','they','they\'d','they\'ll','they\'re','they\'ve',
-      'this','those','through','to','too','under','until','up','very','was','wasn\'t','we','we\'d','we\'ll','we\'re',
-      'we\'ve','were','weren\'t','what','what\'s','when','when\'s','where','where\'s','which','while','who','who\'s',
-      'whom','why','why\'s','with','won\'t','would','wouldn\'t','you','you\'d','you\'ll','you\'re','you\'ve','your',
-      'yours','yourself','yourselves','http','https','com','org','net','www','html','amp'
+      'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at', 'be', 'because',
+      'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'can\'t', 'cannot', 'could', 'couldn\'t', 'did',
+      'didn\'t', 'do', 'does', 'doesn\'t', 'doing', 'don\'t', 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had',
+      'hadn\'t', 'has', 'hasn\'t', 'have', 'haven\'t', 'having', 'he', 'he\'d', 'he\'ll', 'he\'s', 'her', 'here', 'here\'s', 'hers',
+      'herself', 'him', 'himself', 'his', 'how', 'how\'s', 'i', 'i\'d', 'i\'ll', 'i\'m', 'i\'ve', 'if', 'in', 'into', 'is', 'isn\'t',
+      'it', 'it\'s', 'its', 'itself', 'let\'s', 'me', 'more', 'most', 'mustn\'t', 'my', 'myself', 'no', 'nor', 'not', 'of', 'off',
+      'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'shan\'t', 'she',
+      'she\'d', 'she\'ll', 'she\'s', 'should', 'shouldn\'t', 'so', 'some', 'such', 'than', 'that', 'that\'s', 'the', 'their',
+      'theirs', 'them', 'themselves', 'then', 'there', 'there\'s', 'these', 'they', 'they\'d', 'they\'ll', 'they\'re', 'they\'ve',
+      'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', 'wasn\'t', 'we', 'we\'d', 'we\'ll', 'we\'re',
+      'we\'ve', 'were', 'weren\'t', 'what', 'what\'s', 'when', 'when\'s', 'where', 'where\'s', 'which', 'while', 'who', 'who\'s',
+      'whom', 'why', 'why\'s', 'with', 'won\'t', 'would', 'wouldn\'t', 'you', 'you\'d', 'you\'ll', 'you\'re', 'you\'ve', 'your',
+      'yours', 'yourself', 'yourselves', 'http', 'https', 'com', 'org', 'net', 'www', 'html', 'amp',
+      'ever', 'get', 'also', 'like', 'just', 'would', 'make', 'time', 'new', 'way', 'know', 'one', 'two', 'see', 'well', 'much', 'even', 'us'
     ]);
 
     // CJK Common Stop Words
-    const CJK_STOPWORDS = new Set(['的','了','在','是','我','有','和','就','不','人','都','一','一個','上','也','很','到','說','要','去','你','會','著','沒有','看','好','自己','這','那','就','以','或','對']);
+    const CJK_STOPWORDS = new Set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一個', '上', '也', '很', '到', '說', '要', '去', '你', '會', '著', '沒有', '看', '好', '自己', '這', '那', '就', '以', '或', '對']);
 
     // Initialize IndexedDB
     function initIndexedDB() {
@@ -428,7 +553,7 @@
       try {
         const tx = state.dbCache.transaction('app_state', 'readwrite');
         const store = tx.objectStore('app_state');
-        
+
         // Convert sourceFiles map to array for JSON serialization
         const sourcesArray = Array.from(state.sourceFiles.entries()).map(([k, v]) => ({
           id: v.id,
@@ -491,6 +616,17 @@
       return 'en';
     }
 
+    // Simple Stemmer Helper
+    function simpleStem(word) {
+      if (word.length < 4) return word;
+      if (word.endsWith('ing') && word.length > 5) return word.slice(0, -3);
+      if (word.endsWith('ies') && word.length > 4) return word.slice(0, -3) + 'y';
+      if (word.endsWith('es') && word.length > 4) return word.slice(0, -2);
+      if (word.endsWith('s') && word.length > 3 && !word.endsWith('ss')) return word.slice(0, -1);
+      if (word.endsWith('ed') && word.length > 4) return word.slice(0, -2);
+      return word;
+    }
+
     // Lightweight Character & N-Gram Tokenizer for English & CJK
     function tokenizeText(text) {
       if (!text) return [];
@@ -500,13 +636,13 @@
 
       for (let word of rawTokens) {
         if (!word || word.length < 2) continue;
-        
+
         // English word check
         if (/^[a-z0-9]+$/.test(word)) {
-          if (!ENGLISH_STOPWORDS.has(word)) {
-            tokens.push(word);
+          if (!ENGLISH_STOPWORDS.has(word) && !/^\d+$/.test(word)) {
+            tokens.push(simpleStem(word));
           }
-        } 
+        }
         // CJK character processing with bi-grams
         else if (/[\u4e00-\u9fa5\u3040-\u30ff]/.test(word)) {
           for (let i = 0; i < word.length - 1; i++) {
@@ -528,69 +664,114 @@
       }
     }
 
+    function waitForDuplicateResolution() {
+      return new Promise(resolve => {
+        const cleanup = () => {
+          document.getElementById('dupBtnOverwrite').removeEventListener('click', onOverwrite);
+          document.getElementById('dupBtnKeepBoth').removeEventListener('click', onKeep);
+          document.getElementById('dupBtnCancel').removeEventListener('click', onCancel);
+          document.getElementById('duplicateModal').classList.add('hidden');
+        };
+        const onOverwrite = () => { cleanup(); resolve('overwrite'); };
+        const onKeep = () => { cleanup(); resolve('keep'); };
+        const onCancel = () => { cleanup(); resolve('cancel'); };
+
+        document.getElementById('dupBtnOverwrite').addEventListener('click', onOverwrite);
+        document.getElementById('dupBtnKeepBoth').addEventListener('click', onKeep);
+        document.getElementById('dupBtnCancel').addEventListener('click', onCancel);
+      });
+    }
+
     async function handleFileUploads(files) {
       await initSql();
 
       for (let file of files) {
-        const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         const fileName = file.name;
-        const ext = fileName.split('.').pop().toLowerCase();
 
-        const fileRecord = {
-          id: fileId,
-          name: fileName,
-          type: ext,
-          originalData: null,
-          fileHandle: null
-        };
-
-        try {
-          if (ext === 'csv') {
-            const text = await file.text();
-            fileRecord.originalData = text;
-            Papa.parse(text, {
-              header: true,
-              skipEmptyLines: true,
-              complete: (results) => {
-                processRawRecords(results.data, fileRecord);
-              }
-            });
-          } else if (ext === 'json') {
-            const text = await file.text();
-            fileRecord.originalData = text;
-            const parsed = JSON.parse(text);
-            const arrayData = Array.isArray(parsed) ? parsed : (parsed.bookmarks || [parsed]);
-            processRawRecords(arrayData, fileRecord);
-          } else if (ext === 'db' || ext === 'sqlite') {
-            const arrayBuffer = await file.arrayBuffer();
-            const uInt8Array = new Uint8Array(arrayBuffer);
-            fileRecord.originalData = uInt8Array;
-            const db = new state.SQL.Database(uInt8Array);
-            
-            // Search for tables containing bookmarks
-            const tablesRes = db.exec("SELECT name FROM sqlite_master WHERE type='table';");
-            let rows = [];
-            if (tablesRes.length > 0) {
-              const tableName = tablesRes[0].values[0][0];
-              const queryRes = db.exec(`SELECT * FROM ${tableName}`);
-              if (queryRes.length > 0) {
-                const cols = queryRes[0].columns;
-                rows = queryRes[0].values.map(valArr => {
-                  let obj = {};
-                  cols.forEach((col, idx) => obj[col] = valArr[idx]);
-                  return obj;
-                });
-              }
-            }
-            processRawRecords(rows, fileRecord);
+        // Check for duplicate names
+        let duplicateId = null;
+        for (let [id, val] of state.sourceFiles.entries()) {
+          if (val.name === fileName) {
+            duplicateId = id;
+            break;
           }
-
-          state.sourceFiles.set(fileId, fileRecord);
-          showToast(`已成功載入檔案: ${fileName}`);
-        } catch (err) {
-          console.error(`解析檔案 ${fileName} 失敗:`, err);
-          showToast(`解析檔案 ${fileName} 失敗，請確認格式`);
         }
+
+        if (duplicateId) {
+          document.getElementById('duplicateFileText').innerText = `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+          document.getElementById('duplicateModal').classList.remove('hidden');
+
+          const action = await waitForDuplicateResolution();
+          if (action === 'overwrite') {
+            deleteFolder(duplicateId, false);
+            await processSingleFile(file, fileName);
+          } else if (action === 'keep') {
+            const newName = fileName.replace(/(\.[\w\d_-]+)$/i, `_${Date.now()}$1`);
+            await processSingleFile(file, newName);
+          }
+        } else {
+          await processSingleFile(file, fileName);
+        }
+      }
+    }
+
+    async function processSingleFile(file, finalName) {
+      const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      const ext = finalName.split('.').pop().toLowerCase();
+
+      const fileRecord = {
+        id: fileId,
+        name: finalName,
+        type: ext,
+        originalData: null,
+        fileHandle: null
+      };
+
+      try {
+        if (ext === 'csv') {
+          const text = await file.text();
+          fileRecord.originalData = text;
+          Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+              processRawRecords(results.data, fileRecord);
+            }
+          });
+        } else if (ext === 'json') {
+          const text = await file.text();
+          fileRecord.originalData = text;
+          const parsed = JSON.parse(text);
+          const arrayData = Array.isArray(parsed) ? parsed : (parsed.bookmarks || [parsed]);
+          processRawRecords(arrayData, fileRecord);
+        } else if (ext === 'db' || ext === 'sqlite') {
+          const arrayBuffer = await file.arrayBuffer();
+          const uInt8Array = new Uint8Array(arrayBuffer);
+          fileRecord.originalData = uInt8Array;
+          const db = new state.SQL.Database(uInt8Array);
+
+          const tablesRes = db.exec("SELECT name FROM sqlite_master WHERE type='table';");
+          let rows = [];
+          if (tablesRes.length > 0) {
+            const tableName = tablesRes[0].values[0][0];
+            const queryRes = db.exec(`SELECT * FROM ${tableName}`);
+            if (queryRes.length > 0) {
+              const cols = queryRes[0].columns;
+              rows = queryRes[0].values.map(valArr => {
+                let obj = {};
+                cols.forEach((col, idx) => obj[col] = valArr[idx]);
+                return obj;
+              });
+            }
+          }
+          processRawRecords(rows, fileRecord);
+        }
+
+        state.sourceFiles.set(fileId, fileRecord);
+        showToast(`已成功載入檔案: ${finalName}`);
+      } catch (err) {
+        console.error(`解析檔案 ${finalName} 失敗:`, err);
+        showToast(`解析檔案 ${finalName} 失敗，請確認格式`);
       }
     }
 
@@ -697,40 +878,82 @@
 
     function renderSidebarFolders() {
       const folderList = document.getElementById('folderList');
-      // Keep static 'All' button
-      const allBtn = folderList.querySelector('[data-folder="ALL"]');
       folderList.innerHTML = '';
+
+      const allBtn = document.createElement('button');
+      allBtn.dataset.folder = 'ALL';
+      const isAllActive = state.activeFolder === 'ALL';
+      allBtn.className = `folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition border ${isAllActive
+          ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30'
+          : 'text-slate-300 border-transparent hover:bg-slate-700/50'
+        }`;
+
+      allBtn.innerHTML = `
+        <span class="flex items-center space-x-2 truncate">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          <span class="truncate">全部書籤 (All Items)</span>
+        </span>
+        <span id="allCountBadge" class="bg-indigo-900/50 text-indigo-200 text-xs px-1.5 py-0.5 rounded">${state.bookmarks.length}</span>
+      `;
+      allBtn.onclick = () => {
+        state.activeFolder = 'ALL';
+        renderAll();
+      };
       folderList.appendChild(allBtn);
 
-      document.getElementById('allCountBadge').innerText = state.bookmarks.length;
       document.getElementById('totalSourceCount').innerText = state.sourceFiles.size;
 
       state.sourceFiles.forEach((file) => {
         const count = state.bookmarks.filter(b => b.source_file_id === file.id).length;
-        const btn = document.createElement('button');
-        btn.dataset.folder = file.id;
+        const btn = document.createElement('div');
         const isActive = state.activeFolder === file.id;
-        btn.className = `folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition ${
-          isActive 
-            ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' 
-            : 'text-slate-300 hover:bg-slate-700/50'
-        }`;
+        btn.className = `folder-btn w-full group flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium border transition cursor-pointer ${isActive
+            ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30'
+            : 'text-slate-300 border-transparent hover:bg-slate-700/50'
+          }`;
 
         const typeBadgeColor = file.type === 'csv' ? 'bg-amber-900/60 text-amber-200' : (file.type === 'json' ? 'bg-emerald-900/60 text-emerald-200' : 'bg-sky-900/60 text-sky-200');
 
         btn.innerHTML = `
-          <span class="flex items-center space-x-2 truncate">
-            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor}">${file.type}</span>
+          <div class="flex items-center space-x-2 truncate flex-1" onclick="selectFolder('${file.id}')">
+            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor} shrink-0">${file.type}</span>
             <span class="truncate">${file.name}</span>
-          </span>
-          <span class="bg-slate-800 text-slate-400 text-xs px-1.5 py-0.5 rounded">${count}</span>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+              <span class="${isActive ? 'hidden' : 'block'} group-hover:hidden bg-slate-800 text-slate-400 text-xs px-1.5 py-0.5 rounded">${count}</span>
+              <button onclick="confirmDeleteFolder(event, '${file.id}')" class="hidden group-hover:block text-slate-400 hover:text-rose-400 p-1" title="刪除檔案與其書籤">
+                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+          </div>
         `;
-        btn.onclick = () => {
-          state.activeFolder = file.id;
-          renderAll();
-        };
         folderList.appendChild(btn);
       });
+    }
+
+    window.selectFolder = (id) => {
+      state.activeFolder = id;
+      renderAll();
+    };
+
+    window.confirmDeleteFolder = (e, id) => {
+      e.stopPropagation();
+      const file = state.sourceFiles.get(id);
+      if (confirm(`確定要刪除「${file.name}」與相關的所有書籤資料嗎？`)) {
+        deleteFolder(id, true);
+      }
+    };
+
+    function deleteFolder(id, reRender) {
+      state.sourceFiles.delete(id);
+      state.bookmarks = state.bookmarks.filter(b => b.source_file_id !== id);
+      if (state.activeFolder === id) state.activeFolder = 'ALL';
+      saveStateToIndexedDB();
+      if (reRender) {
+        renderAll();
+        showToast('已刪除檔案及書籤');
+      }
     }
 
     function renderTagCloud() {
@@ -752,9 +975,8 @@
       tagCounts.forEach((count, tag) => {
         const pill = document.createElement('button');
         const isActive = state.activeTag === tag;
-        pill.className = `text-[11px] px-2 py-0.5 rounded-full transition ${
-          isActive ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-        }`;
+        pill.className = `text-[11px] px-2 py-0.5 rounded-full transition ${isActive ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+          }`;
         pill.innerText = `#${tag} (${count})`;
         pill.onclick = () => {
           state.activeTag = isActive ? null : tag;
@@ -782,9 +1004,8 @@
       filtered.forEach(b => {
         const card = document.createElement('div');
         const isSelected = state.selectedIds.has(b.id);
-        card.className = `bg-slate-800/80 hover:bg-slate-800 border ${
-          isSelected ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-700/70'
-        } rounded-xl p-4 flex flex-col justify-between transition-all duration-200 shadow-lg group`;
+        card.className = `bg-slate-800/80 hover:bg-slate-800 border ${isSelected ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-700/70'
+          } rounded-xl p-4 flex flex-col justify-between transition-all duration-200 shadow-lg group`;
 
         const langTag = b.detected_language ? b.detected_language.toUpperCase() : 'EN';
 
@@ -902,7 +1123,7 @@
           const urlObj = new URL(b.url);
           const domain = urlObj.hostname.replace('www.', '');
           if (domain) domainCounts.set(domain, (domainCounts.get(domain) || 0) + 1);
-        } catch (e) {}
+        } catch (e) { }
       });
 
       const sorted = Array.from(domainCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 15);
@@ -917,7 +1138,13 @@
       sorted.forEach(([domain, count]) => {
         const pct = Math.round((count / maxCount) * 100);
         const row = document.createElement('div');
-        row.className = 'bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 flex items-center space-x-4';
+        row.className = 'bg-slate-800/80 hover:bg-slate-700 cursor-pointer p-3 rounded-xl border border-slate-700/60 flex items-center space-x-4 transition';
+        row.onclick = () => {
+          state.searchQuery = domain;
+          document.getElementById('searchInput').value = domain;
+          switchTab('bookmarks');
+          renderAll();
+        };
 
         row.innerHTML = `
           <div class="w-36 text-xs font-semibold text-slate-200 truncate" title="${domain}">${domain}</div>
@@ -930,31 +1157,53 @@
       });
     }
 
+    let currentD3Zoom = null;
+    let currentD3Svg = null;
+
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
       container.innerHTML = '';
 
-      const filtered = getFilteredBookmarks().slice(0, 40); // Limit to top 40 for graph clarity
+      const tooltip = document.getElementById('graphTooltip');
+      const ttTitle = document.getElementById('ttTitle');
+      const ttDomain = document.getElementById('ttDomain');
+      const ttTags = document.getElementById('ttTags');
+
+      const filtered = getFilteredBookmarks().slice(0, 50); // Limit to top 50 for graph clarity
       if (filtered.length < 2) {
         container.innerHTML = '<div class="text-slate-500 text-xs flex items-center justify-center h-full">需要至少 2 筆書籤以構建關聯網絡拓撲圖</div>';
         return;
       }
 
-      // Build nodes & links
-      const nodes = filtered.map(b => ({ id: b.id, title: b.title, url: b.url }));
-      const links = [];
+      // Pre-calculate degrees and domains
+      const domains = new Set();
+      const nodesMap = new Map(filtered.map(b => {
+        let domain = 'unknown';
+        try { domain = new URL(b.url).hostname.replace('www.', ''); } catch (e) { }
+        domains.add(domain);
+        return [b.id, { id: b.id, title: b.title, url: b.url, domain: domain, degree: 0, tags: b.tags || [] }];
+      }));
 
-      for (let i = 0; i < filtered.length; i++) {
-        for (let j = i + 1; j < filtered.length; j++) {
-          const sim = calculateCosineSimilarity(filtered[i], filtered[j]);
+      const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(domains));
+
+      const links = [];
+      const nodesList = Array.from(nodesMap.values());
+
+      for (let i = 0; i < nodesList.length; i++) {
+        for (let j = i + 1; j < nodesList.length; j++) {
+          const b1 = filtered.find(b => b.id === nodesList[i].id);
+          const b2 = filtered.find(b => b.id === nodesList[j].id);
+          const sim = calculateCosineSimilarity(b1, b2);
           if (sim > 0.15) {
-            links.push({ source: filtered[i].id, target: filtered[j].id, value: sim });
+            links.push({ source: b1.id, target: b2.id, value: sim });
+            nodesMap.get(b1.id).degree++;
+            nodesMap.get(b2.id).degree++;
           }
         }
       }
 
       const width = container.clientWidth || 600;
-      const height = 450;
+      const height = container.clientHeight || 450;
 
       const svg = d3.select('#d3GraphCanvas')
         .append('svg')
@@ -962,34 +1211,99 @@
         .attr('height', '100%')
         .attr('viewBox', [0, 0, width, height]);
 
-      const simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-        .force('charge', d3.forceManyBody().strength(-180))
-        .force('center', d3.forceCenter(width / 2, height / 2));
+      currentD3Svg = svg;
 
-      const link = svg.append('g')
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', (event) => {
+          g.attr('transform', event.transform);
+        });
+
+      currentD3Zoom = zoom;
+      svg.call(zoom);
+
+      const g = svg.append('g').attr('id', 'graph-container');
+
+      const simulation = d3.forceSimulation(nodesList)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collide', d3.forceCollide().radius(d => Math.max(12, 6 + d.degree * 2)));
+
+      const link = g.append('g')
         .selectAll('line')
         .data(links)
         .join('line')
-        .attr('stroke', '#4338ca')
-        .attr('stroke-opacity', 0.6)
-        .attr('stroke-width', d => Math.max(1, d.value * 4));
+        .attr('stroke', '#475569')
+        .attr('stroke-opacity', 0.4)
+        .attr('stroke-width', d => Math.max(1, d.value * 5));
 
-      const node = svg.append('g')
-        .selectAll('circle')
-        .data(nodes)
-        .join('circle')
-        .attr('r', 7)
-        .attr('fill', '#6366f1')
-        .attr('stroke', '#e0e7ff')
-        .attr('stroke-width', 1.5)
+      const nodeGroup = g.append('g')
+        .selectAll('.node-group')
+        .data(nodesList)
+        .join('g')
+        .attr('class', 'node-group')
         .style('cursor', 'pointer')
         .call(d3.drag()
           .on('start', dragstarted)
           .on('drag', dragged)
           .on('end', dragended));
 
-      node.append('title').text(d => d.title);
+      // Append Circles
+      nodeGroup.append('circle')
+        .attr('r', d => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
+        .attr('fill', d => colorScale(d.domain))
+        .attr('stroke', '#1e293b')
+        .attr('stroke-width', 2);
+
+      // Append Labels
+      nodeGroup.append('text')
+        .text(d => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
+        .attr('x', d => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
+        .attr('y', 4)
+        .attr('font-size', '10px')
+        .attr('fill', '#cbd5e1')
+        .style('pointer-events', 'none')
+        .style('text-shadow', '1px 1px 2px #0f172a, -1px -1px 2px #0f172a');
+
+      // Interactions (Hover & Tooltip)
+      nodeGroup.on('mouseover', function (event, d) {
+        // Highlight
+        d3.selectAll('.node-group').style('opacity', 0.2);
+        link.style('opacity', 0.1);
+
+        const connectedIds = new Set([d.id]);
+        link.filter(l => {
+          if (l.source.id === d.id) { connectedIds.add(l.target.id); return true; }
+          if (l.target.id === d.id) { connectedIds.add(l.source.id); return true; }
+          return false;
+        }).style('opacity', 1).attr('stroke', '#6366f1');
+
+        d3.selectAll('.node-group').filter(n => connectedIds.has(n.id)).style('opacity', 1);
+
+        // Tooltip
+        ttTitle.innerText = d.title;
+        ttDomain.innerText = d.domain;
+        ttTags.innerHTML = d.tags.slice(0, 4).map(t => `<span class="bg-indigo-900/50 text-indigo-200 px-1.5 rounded text-[9px]">#${escapeHtml(t)}</span>`).join('');
+
+        tooltip.style.opacity = 1;
+        const containerRect = container.getBoundingClientRect();
+        tooltip.style.left = (event.clientX) + 'px';
+        tooltip.style.top = (event.clientY - 20) + 'px';
+      })
+        .on('mousemove', function (event) {
+          tooltip.style.left = (event.clientX) + 'px';
+          tooltip.style.top = (event.clientY - 20) + 'px';
+        })
+        .on('mouseout', function () {
+          d3.selectAll('.node-group').style('opacity', 1);
+          link.style('opacity', 0.4).attr('stroke', '#475569');
+          tooltip.style.opacity = 0;
+        })
+        .on('click', (event, d) => {
+          if (event.defaultPrevented) return;
+          window.open(d.url, '_blank');
+        });
 
       simulation.on('tick', () => {
         link
@@ -998,9 +1312,7 @@
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
 
-        node
-          .attr('cx', d => d.x)
-          .attr('cy', d => d.y);
+        nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
       });
 
       function dragstarted(event) {
@@ -1308,61 +1620,62 @@
         renderAll();
         updateBatchActionBar();
         showToast('已批量刪除選擇的書籤');
+        // Batch Cancel
+        document.getElementById('batchCancelBtn').addEventListener('click', () => {
+          state.selectedIds.clear();
+          renderBookmarkCards();
+          updateBatchActionBar();
+        });
+
+        // D3 Zoom Controls
+        document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1.3);
+        });
+        document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1 / 1.3);
+        });
+        document.getElementById('resetGraphBtn').onclick = () => {
+          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.transform, d3.zoomIdentity);
+          renderConceptLinkageGraph();
+        };
+
+        // Modals Close
+        document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
+        document.getElementById('closeReaderFooterBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
+        document.getElementById('closeSimilarityBtn').onclick = () => document.getElementById('similarityModal').classList.add('hidden');
+        document.getElementById('closeSaveBtn').onclick = () => document.getElementById('saveModal').classList.add('hidden');
+        document.getElementById('saveBackBtn').onclick = () => openSaveModal();
+
+        document.getElementById('clearCacheBtn').onclick = () => {
+          if (confirm('確定要清除 IndexedDB 中的本地快取書籤資料嗎？')) {
+            const icon = document.getElementById('clearCacheIcon');
+            icon.classList.add('animate-spin');
+
+            setTimeout(() => {
+              state.bookmarks = [];
+              state.sourceFiles.clear();
+              saveStateToIndexedDB();
+              renderAll();
+              icon.classList.remove('animate-spin');
+              showToast('已清除本地快取');
+            }, 400);
+          }
+        };
+
+        document.getElementById('exportAllUnifiedJsonBtn').onclick = () => {
+          const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: 'application/json' });
+          downloadBlob(blob, 'all_bookmarks_export.json');
+        };
+
+        document.getElementById('exportAllUnifiedCsvBtn').onclick = () => {
+          const csv = Papa.unparse(state.bookmarks);
+          const blob = new Blob([csv], { type: 'text/csv' });
+          downloadBlob(blob, 'all_bookmarks_export.csv');
+        };
+
+        document.getElementById('resetGraphBtn').onclick = () => renderConceptLinkageGraph();
       });
-
-      // Batch Tag
-      document.getElementById('batchTagBtn').addEventListener('click', () => {
-        const tag = prompt('請輸入要增加至選取項目中的標籤名稱：');
-        if (tag && tag.trim()) {
-          const tagStr = tag.trim();
-          state.bookmarks.forEach(b => {
-            if (state.selectedIds.has(b.id)) {
-              if (!b.tags) b.tags = [];
-              if (!b.tags.includes(tagStr)) b.tags.push(tagStr);
-            }
-          });
-          saveStateToIndexedDB();
-          renderAll();
-          showToast(`已批量新增標籤 #${tagStr}`);
-        }
-      });
-
-      document.getElementById('batchCancelBtn').addEventListener('click', () => {
-        state.selectedIds.clear();
-        renderBookmarkCards();
-        updateBatchActionBar();
-      });
-
-      // Modals Close
-      document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-      document.getElementById('closeReaderFooterBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-      document.getElementById('closeSimilarityBtn').onclick = () => document.getElementById('similarityModal').classList.add('hidden');
-      document.getElementById('closeSaveBtn').onclick = () => document.getElementById('saveModal').classList.add('hidden');
-      document.getElementById('saveBackBtn').onclick = () => openSaveModal();
-
-      document.getElementById('clearCacheBtn').onclick = () => {
-        if (confirm('確定要清除 IndexedDB 中的本地快取書籤資料嗎？')) {
-          state.bookmarks = [];
-          state.sourceFiles.clear();
-          saveStateToIndexedDB();
-          renderAll();
-          showToast('已清除本地快取');
-        }
-      };
-
-      document.getElementById('exportAllUnifiedJsonBtn').onclick = () => {
-        const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: 'application/json' });
-        downloadBlob(blob, 'all_bookmarks_export.json');
-      };
-
-      document.getElementById('exportAllUnifiedCsvBtn').onclick = () => {
-        const csv = Papa.unparse(state.bookmarks);
-        const blob = new Blob([csv], { type: 'text/csv' });
-        downloadBlob(blob, 'all_bookmarks_export.csv');
-      };
-
-      document.getElementById('resetGraphBtn').onclick = () => renderConceptLinkageGraph();
-    });
   </script>
 </body>
+
 </html>
