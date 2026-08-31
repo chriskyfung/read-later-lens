@@ -754,7 +754,8 @@
           let rows = [];
           if (tablesRes.length > 0) {
             const tableName = tablesRes[0].values[0][0];
-            const queryRes = db.exec(`SELECT * FROM ${tableName}`);
+            // Wrap tableName in double quotes to handle hyphens and special characters
+            const queryRes = db.exec(`SELECT * FROM "${tableName}"`);
             if (queryRes.length > 0) {
               const cols = queryRes[0].columns;
               rows = queryRes[0].values.map(valArr => {
