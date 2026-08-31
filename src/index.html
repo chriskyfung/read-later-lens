@@ -1620,61 +1620,63 @@
         renderAll();
         updateBatchActionBar();
         showToast('已批量刪除選擇的書籤');
-        // Batch Cancel
-        document.getElementById('batchCancelBtn').addEventListener('click', () => {
-          state.selectedIds.clear();
-          renderBookmarkCards();
-          updateBatchActionBar();
-        });
-
-        // D3 Zoom Controls
-        document.getElementById('zoomInBtn')?.addEventListener('click', () => {
-          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1.3);
-        });
-        document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
-          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1 / 1.3);
-        });
-        document.getElementById('resetGraphBtn').onclick = () => {
-          if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.transform, d3.zoomIdentity);
-          renderConceptLinkageGraph();
-        };
-
-        // Modals Close
-        document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-        document.getElementById('closeReaderFooterBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-        document.getElementById('closeSimilarityBtn').onclick = () => document.getElementById('similarityModal').classList.add('hidden');
-        document.getElementById('closeSaveBtn').onclick = () => document.getElementById('saveModal').classList.add('hidden');
-        document.getElementById('saveBackBtn').onclick = () => openSaveModal();
-
-        document.getElementById('clearCacheBtn').onclick = () => {
-          if (confirm('確定要清除 IndexedDB 中的本地快取書籤資料嗎？')) {
-            const icon = document.getElementById('clearCacheIcon');
-            icon.classList.add('animate-spin');
-
-            setTimeout(() => {
-              state.bookmarks = [];
-              state.sourceFiles.clear();
-              saveStateToIndexedDB();
-              renderAll();
-              icon.classList.remove('animate-spin');
-              showToast('已清除本地快取');
-            }, 400);
-          }
-        };
-
-        document.getElementById('exportAllUnifiedJsonBtn').onclick = () => {
-          const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: 'application/json' });
-          downloadBlob(blob, 'all_bookmarks_export.json');
-        };
-
-        document.getElementById('exportAllUnifiedCsvBtn').onclick = () => {
-          const csv = Papa.unparse(state.bookmarks);
-          const blob = new Blob([csv], { type: 'text/csv' });
-          downloadBlob(blob, 'all_bookmarks_export.csv');
-        };
-
-        document.getElementById('resetGraphBtn').onclick = () => renderConceptLinkageGraph();
       });
+
+      // Batch Cancel
+      document.getElementById('batchCancelBtn').addEventListener('click', () => {
+        state.selectedIds.clear();
+        renderBookmarkCards();
+        updateBatchActionBar();
+      });
+
+      // D3 Zoom Controls
+      document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1.3);
+      });
+      document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1 / 1.3);
+      });
+      document.getElementById('resetGraphBtn').onclick = () => {
+        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.transform, d3.zoomIdentity);
+        renderConceptLinkageGraph();
+      };
+
+      // Modals Close
+      document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
+      document.getElementById('closeReaderFooterBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
+      document.getElementById('closeSimilarityBtn').onclick = () => document.getElementById('similarityModal').classList.add('hidden');
+      document.getElementById('closeSaveBtn').onclick = () => document.getElementById('saveModal').classList.add('hidden');
+      document.getElementById('saveBackBtn').onclick = () => openSaveModal();
+
+      document.getElementById('clearCacheBtn').onclick = () => {
+        if (confirm('確定要清除 IndexedDB 中的本地快取書籤資料嗎？')) {
+          const icon = document.getElementById('clearCacheIcon');
+          icon.classList.add('animate-spin');
+
+          setTimeout(() => {
+            state.bookmarks = [];
+            state.sourceFiles.clear();
+            saveStateToIndexedDB();
+            renderAll();
+            icon.classList.remove('animate-spin');
+            showToast('已清除本地快取');
+          }, 400);
+        }
+      };
+
+      document.getElementById('exportAllUnifiedJsonBtn').onclick = () => {
+        const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, 'all_bookmarks_export.json');
+      };
+
+      document.getElementById('exportAllUnifiedCsvBtn').onclick = () => {
+        const csv = Papa.unparse(state.bookmarks);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        downloadBlob(blob, 'all_bookmarks_export.csv');
+      };
+
+      document.getElementById('resetGraphBtn').onclick = () => renderConceptLinkageGraph();
+    });
   </script>
 </body>
 
