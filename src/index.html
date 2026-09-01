@@ -1257,7 +1257,7 @@
         .attr('height', '100%')
         .attr('viewBox', `0 0 ${width} ${height}`);
 
-      currentD3Svg = svg;
+      const g = svg.append('g');
 
       const zoom = d3.zoom()
         .scaleExtent([0.2, 5])
@@ -1265,7 +1265,7 @@
 
       svg.call(zoom);
 
-      const g = svg.append('g').attr('id', 'graph-container');
+      currentD3Svg = svg;
       currentD3Zoom = zoom;
 
       const simulation = d3.forceSimulation(nodesList)
