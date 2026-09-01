@@ -1284,26 +1284,25 @@
         .attr('stroke-opacity', 0.4)
         .attr('stroke-width', d => Math.max(1, d.value * 5));
 
-      const nodeGroup = g.append('g')
-        .selectAll('.node-group')
+      const node = g.append('g')
+        .selectAll('g')
         .data(nodesList)
-        .join('g')
-        .attr('class', 'node-group')
-        .style('cursor', 'pointer')
+        .enter()
+        .append('g')
         .call(d3.drag()
           .on('start', dragstarted)
           .on('drag', dragged)
           .on('end', dragended));
 
       // Append Circles
-      nodeGroup.append('circle')
+      node.append('circle')
         .attr('r', d => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
         .attr('fill', d => colorScale(d.domain))
         .attr('stroke', '#1e293b')
         .attr('stroke-width', 2);
 
       // Append Labels
-      nodeGroup.append('text')
+      node.append('text')
         .text(d => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
         .attr('x', d => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
         .attr('y', 4)
@@ -1313,7 +1312,7 @@
         .style('text-shadow', '1px 1px 2px #0f172a, -1px -1px 2px #0f172a');
 
       // Interactions (Hover & Tooltip)
-      nodeGroup.on('mouseover', function (event, d) {
+      node.on('mouseover', function (event, d) {
         // Highlight
         d3.selectAll('.node-group').style('opacity', 0.2);
         link.style('opacity', 0.1);
@@ -1357,7 +1356,7 @@
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
 
-        nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
       });
 
       function dragstarted(event, d) {
