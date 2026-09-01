@@ -1405,6 +1405,24 @@
       return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      document.querySelectorAll('.main-tab').forEach(b => {
+        if (b.dataset.tab === tabId) {
+          b.className = 'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow';
+        } else {
+          b.className = 'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200';
+        }
+      });
+
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+
+      if (tabId === 'bookmarks') document.getElementById('panelBookmarks').classList.remove('hidden');
+      if (tabId === 'wordcloud') { document.getElementById('panelWordcloud').classList.remove('hidden'); renderWordCloud(); }
+      if (tabId === 'domains') { document.getElementById('panelDomains').classList.remove('hidden'); renderDomainChart(); }
+      if (tabId === 'linkage') { document.getElementById('panelLinkage').classList.remove('hidden'); renderConceptLinkageGraph(); }
+    }
+
     function openReaderModal(bookmarkId) {
       const b = state.bookmarks.find(item => item.id === bookmarkId);
       if (!b) return;
@@ -1531,24 +1549,6 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showToast(`已開始下載檔案: ${filename}`);
-    }
-
-    function switchTab(tabId) {
-      state.activeTab = tabId;
-      document.querySelectorAll('.main-tab').forEach(b => {
-        if (b.dataset.tab === tabId) {
-          b.className = 'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow';
-        } else {
-          b.className = 'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200';
-        }
-      });
-
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-
-      if (tabId === 'bookmarks') document.getElementById('panelBookmarks').classList.remove('hidden');
-      if (tabId === 'wordcloud') { document.getElementById('panelWordcloud').classList.remove('hidden'); renderWordCloud(); }
-      if (tabId === 'domains') { document.getElementById('panelDomains').classList.remove('hidden'); renderDomainChart(); }
-      if (tabId === 'linkage') { document.getElementById('panelLinkage').classList.remove('hidden'); renderConceptLinkageGraph(); }
     }
 
     // Window Load / Initialization
