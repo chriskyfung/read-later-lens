@@ -1506,8 +1506,11 @@
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      showToast(`已開始下載檔案: ${filename}`);
     }
 
     function switchTab(tabId) {
