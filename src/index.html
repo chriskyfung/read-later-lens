@@ -485,6 +485,7 @@
     <span id="toastMsg">通知訊息</span>
   </div>
 
+  <!-- Script Logic -->
   <script>
     // Global state
     const state = {
@@ -862,9 +863,10 @@
       renderSidebarFolders();
       renderTagCloud();
       renderBookmarkCards();
-      renderWordCloud();
-      renderDomainAnalytics();
-      renderConceptLinkageGraph();
+
+      if (state.activeTab === 'wordcloud') renderWordCloud();
+      if (state.activeTab === 'domains') renderDomainAnalytics();
+      if (state.activeTab === 'linkage') renderConceptLinkageGraph();
     }
 
     function renderSidebarFolders() {
