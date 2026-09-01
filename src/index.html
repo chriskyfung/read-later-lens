@@ -1310,29 +1310,15 @@
         .attr('pointer-events', 'none');
 
       // Interactions (Hover & Tooltip)
-      node.on('mouseover', function (event, d) {
-        // Highlight
-        d3.selectAll('.node-group').style('opacity', 0.2);
-        link.style('opacity', 0.1);
-
-        const connectedIds = new Set([d.id]);
-        link.filter(l => {
-          if (l.source.id === d.id) { connectedIds.add(l.target.id); return true; }
-          if (l.target.id === d.id) { connectedIds.add(l.source.id); return true; }
-          return false;
-        }).style('opacity', 1).attr('stroke', '#6366f1');
-
-        d3.selectAll('.node-group').filter(n => connectedIds.has(n.id)).style('opacity', 1);
-
-        // Tooltip
+      node.on('mouseover', (event, d) => {
+        tooltip.style.opacity = '1';
         ttTitle.innerText = d.title;
         ttDomain.innerText = d.domain;
-        ttTags.innerHTML = d.tags.slice(0, 4).map(t => `<span class="bg-indigo-900/50 text-indigo-200 px-1.5 rounded text-[9px]">#${escapeHtml(t)}</span>`).join('');
+        ttTags.innerHTML = (d.tags || []).map(t => `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${t}</span>`).join('');
 
-        tooltip.style.opacity = 1;
-        const containerRect = container.getBoundingClientRect();
-        tooltip.style.left = (event.clientX) + 'px';
-        tooltip.style.top = (event.clientY - 20) + 'px';
+        link.style('stroke', l => (l.source.id === d.id || l.target.id === d.id) ? '#6366f1' : '#334155')
+          .style('stroke-opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2)
+          .style('stroke-width', l => (l.source.id === d.id || l.target.id === d.id) ? 3 : 1);
       })
         .on('mousemove', (event) => {
           tooltip.style.left = `${event.clientX}px`;
