@@ -1558,7 +1558,9 @@
 
       // File upload listener
       document.getElementById('fileInput').addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleFileUploads(e.target.files);
+        if (e.target.files && e.target.files.length > 0) {
+          handleFileUploads(Array.from(e.target.files));
+        }
       });
 
       // Search listeners
