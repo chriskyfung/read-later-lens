@@ -1163,6 +1163,28 @@
       updateBatchActionBar();
     }
 
+    function updateBatchActionBar() {
+      const bar = document.getElementById('batchActionBar');
+      const count = document.getElementById('selectedCount');
+      if (state.selectedIds.size > 0) {
+        count.innerText = state.selectedIds.size;
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+      } else {
+        bar.classList.add('hidden');
+        bar.classList.remove('flex');
+      }
+    }
+
+    function deleteBookmark(id) {
+      state.bookmarks = state.bookmarks.filter(b => b.id !== id);
+      state.selectedIds.delete(id);
+      saveStateToIndexedDB();
+      renderAll();
+      updateBatchActionBar();
+      showToast('已成功刪除該筆書籤');
+    }
+
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
       container.innerHTML = '';
@@ -1410,28 +1432,6 @@
       }
 
       document.getElementById('similarityModal').classList.remove('hidden');
-    }
-
-    function deleteBookmark(id) {
-      state.bookmarks = state.bookmarks.filter(b => b.id !== id);
-      state.selectedIds.delete(id);
-      saveStateToIndexedDB();
-      renderAll();
-      updateBatchActionBar();
-      showToast('已成功刪除該筆書籤');
-    }
-
-    function updateBatchActionBar() {
-      const bar = document.getElementById('batchActionBar');
-      const count = document.getElementById('selectedCount');
-      if (state.selectedIds.size > 0) {
-        count.innerText = state.selectedIds.size;
-        bar.classList.remove('hidden');
-        bar.classList.add('flex');
-      } else {
-        bar.classList.add('hidden');
-        bar.classList.remove('flex');
-      }
     }
 
     function openSaveModal() {
