@@ -1449,7 +1449,7 @@
               <div class="font-medium text-slate-200 truncate flex-1">${file.name}</div>
               <div class="text-slate-500 text-[10px] uppercase font-bold">${file.type} 格式</div>
             </div>
-            <button onclick="saveBackSingleSource('${file.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
+            <button onclick="saveSingleFile('${file.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
           `;
           container.appendChild(item);
         });
@@ -1458,59 +1458,47 @@
       document.getElementById('saveModal').classList.remove('hidden');
     }
 
-    async function saveBackSingleSource(sourceFileId) {
-      const fileRec = state.sourceFiles.get(sourceFileId);
-      if (!fileRec) return;
+    async function saveSingleFile(fileId) {
+      const file = state.sourceFiles.get(fileId);
+      if (!file) return;
 
-      const sourceBookmarks = state.bookmarks.filter(b => b.source_file_id === sourceFileId);
-      let outputData;
+      const fileBookmarks = state.bookmarks.filter(b => b.source_file_id === fileId);
 
-      if (fileRec.type === 'csv') {
-        const cleanData = sourceBookmarks.map(b => ({
-          id: b.id,
-          title: b.title,
-          url: b.url,
-          article_preview: b.article_preview,
-          tags: (b.tags || []).join(',')
-        }));
-        outputData = Papa.unparse(cleanData);
-      } else if (fileRec.type === 'json') {
-        outputData = JSON.stringify(sourceBookmarks, null, 2);
-      } else if (fileRec.type === 'db' || fileRec.type === 'sqlite') {
+      if (file.type === 'csv') {
+        const csv = Papa.unparse(fileBookmarks);
+        await saveFileWithFallback(csv, file.name, 'text/csv');
+      } else if (file.type === 'json') {
+        const json = JSON.stringify(fileBookmarks, null, 2);
+        await saveFileWithFallback(json, file.name, 'application/json');
+      } else if (file.type === 'sqlite' || file.type === 'db') {
         await initSql();
         const db = new state.SQL.Database();
-        db.run("CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);");
-        sourceBookmarks.forEach(b => {
-          db.run("INSERT INTO bookmarks VALUES (?,?,?,?)", [b.id, b.title, b.url, b.article_preview]);
+        db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);');
+        fileBookmarks.forEach(b => {
+          db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [b.id, b.title, b.url, b.article_preview]);
         });
-        outputData = db.export(); // Returns Uint8Array binary SQLite file
+        const binaryArray = db.export();
+        const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
+        downloadBlob(blob, file.name);
       }
+    }
 
-      // Try File System Access API
-      let success = false;
-      if (fileRec.fileHandle && typeof fileRec.fileHandle.createWritable === 'function') {
+    async function saveFileWithFallback(content, filename, mimeType) {
+      if ('showSaveFilePicker' in window) {
         try {
-          const writable = await fileRec.fileHandle.createWritable();
-          await writable.write(outputData);
+          const handle = await window.showSaveFilePicker({ suggestedName: filename });
+          const writable = await handle.createWritable();
+          await writable.write(content);
           await writable.close();
-          showToast(`已成功覆寫原始檔案 ${fileRec.name}`);
-          success = true;
-        } catch (e) {
-          console.warn('Direct file handle write failed, falling back:', e);
+          showToast(`已成功寫入檔案: ${filename}`);
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('File System Access API failed or cancelled, falling back to download:', err);
         }
       }
-
-      // Fallback: Picker or Blob download
-      if (!success) {
-        if (fileRec.type === 'db' || fileRec.type === 'sqlite') {
-          const blob = new Blob([outputData], { type: 'application/x-sqlite3' });
-          downloadBlob(blob, fileRec.name);
-        } else {
-          const blob = new Blob([outputData], { type: fileRec.type === 'json' ? 'application/json' : 'text/csv' });
-          downloadBlob(blob, fileRec.name);
-        }
-        showToast(`已匯出更新檔案: ${fileRec.name}`);
-      }
+      const blob = new Blob([content], { type: mimeType });
+      downloadBlob(blob, filename);
     }
 
     function downloadBlob(blob, filename) {
