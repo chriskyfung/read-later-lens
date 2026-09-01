@@ -1303,13 +1303,12 @@
 
       // Append Labels
       node.append('text')
-        .text(d => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
-        .attr('x', d => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
+        .text(d => d.title.length > 12 ? d.title.substring(0, 12) + '...' : d.title)
+        .attr('x', 14)
         .attr('y', 4)
+        .attr('fill', '#94a3b8')
         .attr('font-size', '10px')
-        .attr('fill', '#cbd5e1')
-        .style('pointer-events', 'none')
-        .style('text-shadow', '1px 1px 2px #0f172a, -1px -1px 2px #0f172a');
+        .attr('pointer-events', 'none');
 
       // Interactions (Hover & Tooltip)
       node.on('mouseover', function (event, d) {
