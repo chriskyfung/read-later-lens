@@ -1148,6 +1148,15 @@
       });
     }
 
+    function toggleSelectBookmark(id) {
+      if (state.selectedIds.has(id)) {
+        state.selectedIds.delete(id);
+      } else {
+        state.selectedIds.add(id);
+      }
+      updateBatchActionBar();
+    }
+
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
       container.innerHTML = '';
