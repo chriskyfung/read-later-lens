@@ -1185,6 +1185,15 @@
       showToast('已成功刪除該筆書籤');
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
       container.innerHTML = '';
@@ -1542,16 +1551,7 @@
       }, 2500);
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    // Attach Event Listeners
+    // Window Load / Initialization
     window.addEventListener('DOMContentLoaded', async () => {
       await initIndexedDB();
       await loadStateFromIndexedDB();
