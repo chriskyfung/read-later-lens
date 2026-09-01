@@ -1562,6 +1562,11 @@
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
       });
 
+      document.getElementById('allFolderBtn').addEventListener('click', () => {
+        state.activeFolder = 'ALL';
+        renderAll();
+      });
+
       // Language filter pill click listener
       document.getElementById('languageFilters').addEventListener('click', (e) => {
         if (e.target.classList.contains('lang-btn')) {
