@@ -1336,14 +1336,15 @@
         tooltip.style.left = (event.clientX) + 'px';
         tooltip.style.top = (event.clientY - 20) + 'px';
       })
-        .on('mousemove', function (event) {
-          tooltip.style.left = (event.clientX) + 'px';
-          tooltip.style.top = (event.clientY - 20) + 'px';
+        .on('mousemove', (event) => {
+          tooltip.style.left = `${event.clientX}px`;
+          tooltip.style.top = `${event.clientY - 15}px`;
         })
-        .on('mouseout', function () {
-          d3.selectAll('.node-group').style('opacity', 1);
-          link.style('opacity', 0.4).attr('stroke', '#475569');
-          tooltip.style.opacity = 0;
+        .on('mouseout', () => {
+          tooltip.style.opacity = '0';
+          link.style('stroke', '#334155')
+            .style('stroke-opacity', 0.6)
+            .style('stroke-width', d => Math.min(4, Math.max(1, d.weight)));
         })
         .on('click', (event, d) => {
           openReaderModal(d.id);
