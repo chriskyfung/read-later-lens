@@ -1015,7 +1015,7 @@
           <div>
             <label class="flex items-baseline justify-between space-x-2 cursor-pointer">
               <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug align-middle">${escapeHtml(b.title)}</h3>
-              <input type="checkbox" data-id="${b.id}" class="card-checkbox rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900" ${isSelected ? 'checked' : ''}>
+              <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelectBookmark('${b.id}')" class="mt-1 rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900">
             </label>
 
             <p class="text-xs text-slate-400 line-clamp-3 mb-3 leading-relaxed">
