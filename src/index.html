@@ -1220,6 +1220,9 @@
         return;
       }
 
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 500;
+
       // Pre-calculate degrees and domains
       const domains = new Set();
       const nodesMap = new Map(filtered.map(b => {
@@ -1229,7 +1232,6 @@
         return [b.id, { id: b.id, title: b.title, url: b.url, domain: domain, degree: 0, tags: b.tags || [] }];
       }));
 
-      const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(domains));
 
       const links = [];
       const nodesList = Array.from(nodesMap.values());
@@ -1247,14 +1249,13 @@
         }
       }
 
-      const width = container.clientWidth || 600;
-      const height = container.clientHeight || 450;
+      const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(domains);
 
       const svg = d3.select('#d3GraphCanvas')
         .append('svg')
         .attr('width', '100%')
         .attr('height', '100%')
-        .attr('viewBox', [0, 0, width, height]);
+        .attr('viewBox', `0 0 ${width} ${height}`);
 
       currentD3Svg = svg;
 
