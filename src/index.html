@@ -1346,8 +1346,7 @@
           tooltip.style.opacity = 0;
         })
         .on('click', (event, d) => {
-          if (event.defaultPrevented) return;
-          window.open(d.url, '_blank');
+          openReaderModal(d.id);
         });
 
       simulation.on('tick', () => {
