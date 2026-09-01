@@ -663,19 +663,27 @@
 
     function waitForDuplicateResolution() {
       return new Promise(resolve => {
+        const modal = document.getElementById('duplicateModal');
+        const btnOverwrite = document.getElementById('dupBtnOverwrite');
+        const btnKeep = document.getElementById('dupBtnKeepBoth');
+        const btnCancel = document.getElementById('dupBtnCancel');
+
         const cleanup = () => {
-          document.getElementById('dupBtnOverwrite').removeEventListener('click', onOverwrite);
-          document.getElementById('dupBtnKeepBoth').removeEventListener('click', onKeep);
-          document.getElementById('dupBtnCancel').removeEventListener('click', onCancel);
-          document.getElementById('duplicateModal').classList.add('hidden');
+          btnOverwrite.removeEventListener('click', onOverwrite);
+          btnKeep.removeEventListener('click', onKeep);
+          btnCancel.removeEventListener('click', onCancel);
+          modal.classList.add('hidden');
         };
+
         const onOverwrite = () => { cleanup(); resolve('overwrite'); };
         const onKeep = () => { cleanup(); resolve('keep'); };
         const onCancel = () => { cleanup(); resolve('cancel'); };
 
-        document.getElementById('dupBtnOverwrite').addEventListener('click', onOverwrite);
-        document.getElementById('dupBtnKeepBoth').addEventListener('click', onKeep);
-        document.getElementById('dupBtnCancel').addEventListener('click', onCancel);
+        btnOverwrite.addEventListener('click', onOverwrite);
+        btnKeep.addEventListener('click', onKeep);
+        btnCancel.addEventListener('click', onCancel);
+
+        modal.classList.remove('hidden');
       });
     }
 
@@ -696,8 +704,6 @@
 
         if (duplicateId) {
           document.getElementById('duplicateFileText').innerText = `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
-          document.getElementById('duplicateModal').classList.remove('hidden');
-
           const action = await waitForDuplicateResolution();
           if (action === 'overwrite') {
             deleteFolder(duplicateId, false);
