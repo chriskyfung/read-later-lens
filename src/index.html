@@ -1007,20 +1007,19 @@
         card.className = `bg-slate-800/80 hover:bg-slate-800 border ${isSelected ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-700/70'
           } rounded-xl p-4 flex flex-col justify-between transition-all duration-200 shadow-lg group`;
 
-        const langTag = b.detected_language ? b.detected_language.toUpperCase() : 'EN';
-
         let domain = 'web';
         try { domain = new URL(b.url).hostname.replace('www.', ''); } catch (e) { }
 
 
         card.innerHTML = `
           <div>
-            <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="flex items-start items-center justify-between gap-2 mb-2">
               <label class="flex items-center space-x-2 cursor-pointer">
                 <input type="checkbox" data-id="${b.id}" class="card-checkbox rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900" ${isSelected ? 'checked' : ''}>
-                <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-mono">${langTag}</span>
-              </label>
-              <span class="text-[10px] text-slate-500 truncate max-w-[150px]" title="${b.source_file_name}">📁 ${b.source_file_name}</span>
+                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-[140px]">${domain}</span>
+                <span class="text-[9px] font-bold uppercase px-0.5 py-1 text-slate-400 shrink-0">${b.detected_language}</span>
+                </label>
+                <span class="text-[10px] px-2 py-0.5 rounded border border-amber-800/50 bg-amber-900/60 text-amber-200 truncate max-w-[150px]" title="${b.source_file_name}">📁 ${b.source_file_name}</span>
             </div>
 
             <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug">
@@ -1033,9 +1032,9 @@
 
             <!-- Tags list -->
             <div class="flex flex-wrap gap-1 mb-3">
-              <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-[140px]">${domain}</span>
               ${(b.tags || []).map(t => `<span class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded">#${escapeHtml(t)}</span>`).join('')}
             </div>
+          </div>
 
           <!-- Card Actions Footer -->
           <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
