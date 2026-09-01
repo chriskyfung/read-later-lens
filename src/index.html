@@ -1611,10 +1611,10 @@
       document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
         if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1 / 1.3);
       });
-      document.getElementById('resetGraphBtn').onclick = () => {
+      document.getElementById('resetGraphBtn')?.addEventListener('click', () => {
         if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.transform, d3.zoomIdentity);
         renderConceptLinkageGraph();
-      };
+      });
 
       // Modals Close
       document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
@@ -1649,8 +1649,6 @@
         const blob = new Blob([csv], { type: 'text/csv' });
         downloadBlob(blob, 'all_bookmarks_export.csv');
       };
-
-      document.getElementById('resetGraphBtn').onclick = () => renderConceptLinkageGraph();
     });
   </script>
 </body>
