@@ -1068,7 +1068,7 @@
       const sorted = Array.from(wordFreq.entries()).sort((a, b) => b[1] - a[1]).slice(0, 60);
 
       if (sorted.length === 0) {
-        container.innerHTML = '<span class="text-slate-500 text-xs">無足夠文字資料產生關鍵字雲</span>';
+        container.innerHTML = '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>';
         return;
       }
 
