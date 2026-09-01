@@ -240,8 +240,6 @@
           <div id="batchActionBar"
             class="hidden items-center space-x-2 bg-indigo-900/40 border border-indigo-500/40 px-3 py-1 rounded-lg text-xs text-indigo-200">
             <span>已選擇 <strong id="selectedCount">0</strong> 項</span>
-            <button id="batchTagBtn"
-              class="bg-indigo-600 hover:bg-indigo-500 px-2 py-0.5 rounded text-white font-medium">批量新增標籤</button>
             <button id="batchDeleteBtn"
               class="bg-rose-600 hover:bg-rose-500 px-2 py-0.5 rounded text-white font-medium">批量刪除</button>
             <button id="batchCancelBtn" class="text-slate-400 hover:text-slate-200 underline">取消</button>
@@ -796,7 +794,7 @@
           source_file_id: fileRecord.id,
           source_file_name: fileRecord.name,
           detected_language: lang,
-          tags: rec.tags ? (Array.isArray(rec.tags) ? rec.tags : rec.tags.split(',')) : []
+          tags: rec.tags ? (Array.isArray(rec.tags) ? rec.tags : String(rec.tags).split(',')) : []
         };
       });
 
