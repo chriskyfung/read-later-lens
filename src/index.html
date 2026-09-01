@@ -1293,13 +1293,13 @@
           .on('start', dragstarted)
           .on('drag', dragged)
           .on('end', dragended));
-
       // Append Circles
       node.append('circle')
-        .attr('r', d => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
+        .attr('r', d => Math.max(8, Math.min(22, 6 + d.degree * 2)))
         .attr('fill', d => colorScale(d.domain))
-        .attr('stroke', '#1e293b')
-        .attr('stroke-width', 2);
+        .attr('stroke', '#0f172a')
+        .attr('stroke-width', 2)
+        .attr('class', 'cursor-pointer transition-all duration-200');
 
       // Append Labels
       node.append('text')
