@@ -1068,20 +1068,15 @@
         return;
       }
 
-      const maxFreq = sorted[0][1];
-      const minFreq = sorted[sorted.length - 1][1];
+      const maxCount = sorted[0][1];
       container.innerHTML = '';
 
-      sorted.forEach(([word, freq]) => {
+      sorted.forEach(([word, count]) => {
+        const sizeRatio = 0.75 + (count / maxCount) * 1.5;
         const item = document.createElement('span');
-        // Calculate font size between 12px and 36px
-        const size = Math.max(12, Math.min(36, 12 + ((freq - minFreq) / (maxFreq - minFreq || 1)) * 24));
-        const opacity = Math.max(0.6, freq / maxFreq);
-
         item.className = 'word-cloud-item inline-block font-bold cursor-pointer transition p-1.5 text-indigo-300 hover:text-white';
-        item.style.fontSize = `${size}px`;
-        item.style.opacity = opacity;
-        item.innerText = `${word} (${freq})`;
+        item.style.fontSize = `${sizeRatio}rem`;
+        item.innerText = `${word} (${count})`;
         item.onclick = () => {
           state.searchQuery = word;
           document.getElementById('searchInput').value = word;
