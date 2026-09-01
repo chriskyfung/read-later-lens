@@ -943,32 +943,37 @@
     }
 
     function renderTagCloud() {
-      const tagCloud = document.getElementById('tagFilterCloud');
-      const tagCounts = new Map();
+      const container = document.getElementById('tagFilterCloud');
+      const tagsMap = new Map();
+
       state.bookmarks.forEach(b => {
-        (b.tags || []).forEach(t => {
-          const tag = t.trim();
-          if (tag) tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        });
+        if (b.tags && Array.isArray(b.tags)) {
+          b.tags.forEach(t => {
+            const trimmed = t.trim();
+            if (trimmed) tagsMap.set(trimmed, (tagsMap.get(trimmed) || 0) + 1);
+          });
+        }
       });
 
-      if (tagCounts.size === 0) {
-        tagCloud.innerHTML = '<span class="text-xs text-slate-500 italic">尚無自訂標籤</span>';
+      if (tagsMap.size === 0) {
+        container.innerHTML = '<span class="text-xs text-slate-500 italic">尚無標籤</span>';
         return;
       }
 
-      tagCloud.innerHTML = '';
-      tagCounts.forEach((count, tag) => {
+      container.innerHTML = '';
+      tagsMap.forEach((cnt, tag) => {
+        const isSelected = state.activeTag === tag;
         const pill = document.createElement('button');
-        const isActive = state.activeTag === tag;
-        pill.className = `text-[11px] px-2 py-0.5 rounded-full transition ${isActive ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+        pill.className = `text-[11px] px-2 py-0.5 rounded-full border transition ${isSelected
+            ? 'bg-indigo-600 text-white border-indigo-400 font-semibold'
+            : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
           }`;
-        pill.innerText = `#${tag} (${count})`;
+        pill.innerText = `#${tag} (${cnt})`;
         pill.onclick = () => {
-          state.activeTag = isActive ? null : tag;
+          state.activeTag = isSelected ? null : tag;
           renderAll();
         };
-        tagCloud.appendChild(pill);
+        container.appendChild(pill);
       });
     }
 
