@@ -1053,19 +1053,15 @@
 
     function renderWordCloud() {
       const container = document.getElementById('wordCloudContainer');
-      container.innerHTML = '';
-
       const filtered = getFilteredBookmarks();
-      const wordFreq = new Map();
+      const freqMap = new Map();
 
       filtered.forEach(b => {
         const tokens = tokenizeText(b.title + ' ' + b.article_preview);
-        tokens.forEach(t => {
-          wordFreq.set(t, (wordFreq.get(t) || 0) + 1);
-        });
+        tokens.forEach(t => freqMap.set(t, (freqMap.get(t) || 0) + 1));
       });
 
-      const sorted = Array.from(wordFreq.entries()).sort((a, b) => b[1] - a[1]).slice(0, 60);
+      const sorted = Array.from(freqMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 60);
 
       if (sorted.length === 0) {
         container.innerHTML = '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>';
@@ -1074,6 +1070,7 @@
 
       const maxFreq = sorted[0][1];
       const minFreq = sorted[sorted.length - 1][1];
+      container.innerHTML = '';
 
       sorted.forEach(([word, freq]) => {
         const item = document.createElement('span');
