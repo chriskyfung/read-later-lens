@@ -983,14 +983,23 @@
       const filtered = getFilteredBookmarks();
 
       document.getElementById('filteredCount').innerText = filtered.length;
-      grid.innerHTML = '';
+      document.getElementById('selectAllCheckbox').checked = filtered.length > 0 && filtered.every(b => state.selectedIds.has(b.id));
+
+      let folderName = '全部檔案';
+      if (state.activeFolder !== 'ALL') {
+        const f = state.sourceFiles.get(state.activeFolder);
+        folderName = f ? f.name : '未知';
+      }
+      document.getElementById('activeFilterSummary').innerText = `目前分類: ${folderName} | 語系: ${state.activeLang} | 符合: ${filtered.length} 筆`;
 
       if (filtered.length === 0) {
+        grid.innerHTML = '';
         emptyState.classList.remove('hidden');
         return;
-      } else {
-        emptyState.classList.add('hidden');
       }
+
+      emptyState.classList.add('hidden');
+      grid.innerHTML = '';
 
       filtered.forEach(b => {
         const card = document.createElement('div');
