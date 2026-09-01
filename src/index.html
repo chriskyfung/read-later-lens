@@ -1083,6 +1083,45 @@
       });
     }
 
+    function toggleSelectBookmark(id) {
+      if (state.selectedIds.has(id)) {
+        state.selectedIds.delete(id);
+      } else {
+        state.selectedIds.add(id);
+      }
+      updateBatchActionBar();
+    }
+
+    function updateBatchActionBar() {
+      const bar = document.getElementById('batchActionBar');
+      const count = document.getElementById('selectedCount');
+      if (state.selectedIds.size > 0) {
+        count.innerText = state.selectedIds.size;
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+      } else {
+        bar.classList.add('hidden');
+        bar.classList.remove('flex');
+      }
+    }
+
+    function deleteBookmark(id) {
+      state.bookmarks = state.bookmarks.filter(b => b.id !== id);
+      state.selectedIds.delete(id);
+      saveStateToIndexedDB();
+      renderAll();
+      updateBatchActionBar();
+      showToast('已成功刪除該筆書籤');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
     function renderWordCloud() {
       const container = document.getElementById('wordCloudContainer');
       const filtered = getFilteredBookmarks();
@@ -1165,45 +1204,6 @@
       });
     }
 
-    function toggleSelectBookmark(id) {
-      if (state.selectedIds.has(id)) {
-        state.selectedIds.delete(id);
-      } else {
-        state.selectedIds.add(id);
-      }
-      updateBatchActionBar();
-    }
-
-    function updateBatchActionBar() {
-      const bar = document.getElementById('batchActionBar');
-      const count = document.getElementById('selectedCount');
-      if (state.selectedIds.size > 0) {
-        count.innerText = state.selectedIds.size;
-        bar.classList.remove('hidden');
-        bar.classList.add('flex');
-      } else {
-        bar.classList.add('hidden');
-        bar.classList.remove('flex');
-      }
-    }
-
-    function deleteBookmark(id) {
-      state.bookmarks = state.bookmarks.filter(b => b.id !== id);
-      state.selectedIds.delete(id);
-      saveStateToIndexedDB();
-      renderAll();
-      updateBatchActionBar();
-      showToast('已成功刪除該筆書籤');
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
 
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
