@@ -1434,31 +1434,28 @@
       }
     }
 
-    async function openSaveModal() {
-      const modal = document.getElementById('saveModal');
+    function openSaveModal() {
       const container = document.getElementById('saveSourceFilesList');
       container.innerHTML = '';
 
       if (state.sourceFiles.size === 0) {
         container.innerHTML = '<span class="text-xs text-slate-500">尚無載入的來源檔案</span>';
       } else {
-        state.sourceFiles.forEach((fileRec) => {
-          const div = document.createElement('div');
-          div.className = 'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
-          div.innerHTML = `
+        state.sourceFiles.forEach(file => {
+          const item = document.createElement('div');
+          item.className = 'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
+          item.innerHTML = `
             <div>
-              <div class="font-semibold text-slate-200">${fileRec.name}</div>
-              <div class="text-slate-500 text-[10px] uppercase font-bold">${fileRec.type} 格式</div>
+              <div class="font-medium text-slate-200 truncate flex-1">${file.name}</div>
+              <div class="text-slate-500 text-[10px] uppercase font-bold">${file.type} 格式</div>
             </div>
-            <button onclick="saveBackSingleSource('${fileRec.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium shadow">
-              回寫此檔案
-            </button>
+            <button onclick="saveBackSingleSource('${file.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
           `;
-          container.appendChild(div);
+          container.appendChild(item);
         });
       }
 
-      modal.classList.remove('hidden');
+      document.getElementById('saveModal').classList.remove('hidden');
     }
 
     async function saveBackSingleSource(sourceFileId) {
