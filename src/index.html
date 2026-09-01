@@ -503,6 +503,10 @@
       dbCache: null
     };
 
+    // Global D3 SVG reference
+    let currentD3Svg = null;
+    let currentD3Zoom = null;
+
     // English Stopwords List
     const ENGLISH_STOPWORDS = new Set([
       'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at', 'be', 'because',
@@ -1132,9 +1136,6 @@
         container.appendChild(bar);
       });
     }
-
-    let currentD3Zoom = null;
-    let currentD3Svg = null;
 
     function renderConceptLinkageGraph() {
       const container = document.getElementById('d3GraphCanvas');
