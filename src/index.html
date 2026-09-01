@@ -1260,15 +1260,13 @@
       currentD3Svg = svg;
 
       const zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on('zoom', (event) => {
-          g.attr('transform', event.transform);
-        });
+        .scaleExtent([0.2, 5])
+        .on('zoom', (event) => g.attr('transform', event.transform));
 
-      currentD3Zoom = zoom;
       svg.call(zoom);
 
       const g = svg.append('g').attr('id', 'graph-container');
+      currentD3Zoom = zoom;
 
       const simulation = d3.forceSimulation(nodesList)
         .force('link', d3.forceLink(links).id(d => d.id).distance(120))
