@@ -1294,7 +1294,7 @@
           .on('end', dragended));
       // Append Circles
       node.append('circle')
-        .attr('r', d => Math.max(8, Math.min(22, 6 + d.degree * 2)))
+        .attr('r', d => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
         .attr('fill', d => colorScale(d.domain))
         .attr('stroke', '#0f172a')
         .attr('stroke-width', 2)
@@ -1302,8 +1302,8 @@
 
       // Append Labels
       node.append('text')
-        .text(d => d.title.length > 12 ? d.title.substring(0, 12) + '...' : d.title)
-        .attr('x', 14)
+        .text(d => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
+        .attr('x', d => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
         .attr('y', 4)
         .attr('fill', '#94a3b8')
         .attr('font-size', '10px')
