@@ -1417,10 +1417,9 @@
 
     function updateBatchActionBar() {
       const bar = document.getElementById('batchActionBar');
-      const countSpan = document.getElementById('selectedCount');
-      countSpan.innerText = state.selectedIds.size;
-
+      const count = document.getElementById('selectedCount');
       if (state.selectedIds.size > 0) {
+        count.innerText = state.selectedIds.size;
         bar.classList.remove('hidden');
         bar.classList.add('flex');
       } else {
