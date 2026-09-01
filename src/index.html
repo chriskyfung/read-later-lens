@@ -1062,15 +1062,6 @@
             </div>
           </div>
         `;
-
-        // Checkbox event binding
-        const cb = card.querySelector('.card-checkbox');
-        cb.onchange = (e) => {
-          if (e.target.checked) state.selectedIds.add(b.id);
-          else state.selectedIds.delete(b.id);
-          updateBatchActionBar();
-        };
-
         grid.appendChild(card);
       });
     }
