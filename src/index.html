@@ -1535,9 +1535,11 @@
       const toast = document.getElementById('toastNotification');
       document.getElementById('toastMsg').innerText = msg;
       toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
       setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
         toast.classList.add('translate-y-20', 'opacity-0');
-      }, 3000);
+      }, 2500);
     }
 
     function escapeHtml(str) {
