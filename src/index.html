@@ -911,27 +911,29 @@
       });
     }
 
-    window.selectFolder = (id) => {
-      state.activeFolder = id;
+    function selectFolder(folderId) {
+      state.activeFolder = folderId;
       renderAll();
-    };
+    }
 
-    window.confirmDeleteFolder = (e, id) => {
+    function confirmDeleteFolder(e, fileId) {
       e.stopPropagation();
-      const file = state.sourceFiles.get(id);
-      if (confirm(`確定要刪除「${file.name}」與相關的所有書籤資料嗎？`)) {
-        deleteFolder(id, true);
+      const file = state.sourceFiles.get(fileId);
+      if (confirm(`確定要刪除檔案「${file ? file.name : ''}」與其包含的所有書籤嗎？`)) {
+        deleteFolder(fileId);
       }
-    };
+    }
 
-    function deleteFolder(id, reRender) {
-      state.sourceFiles.delete(id);
-      state.bookmarks = state.bookmarks.filter(b => b.source_file_id !== id);
-      if (state.activeFolder === id) state.activeFolder = 'ALL';
+    function deleteFolder(fileId, triggerRender = true) {
+      state.sourceFiles.delete(fileId);
+      state.bookmarks = state.bookmarks.filter(b => b.source_file_id !== fileId);
+      if (state.activeFolder === fileId) {
+        state.activeFolder = 'ALL';
+      }
       saveStateToIndexedDB();
-      if (reRender) {
+      if (triggerRender) {
         renderAll();
-        showToast('已刪除檔案及書籤');
+        showToast('已成功刪除檔案及其書籤');
       }
     }
 
