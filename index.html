@@ -825,31 +825,9 @@
     function escapeHtml(str) {
       return window.IBM.escapeHtml(str);
     }
+    // Word-cloud view now lives in src/views/wordcloud.js (bridged via window.IBM).
     function renderWordCloud() {
-      const container = document.getElementById('wordCloudContainer');
-      // Aggregation lives in src/analytics/wordcloud.js (bridged via window.IBM).
-      const items = window.IBM.wordCloudItems(window.IBM.wordCloudFrequencies(getFilteredBookmarks()));
-
-      if (items.length === 0) {
-        container.innerHTML = '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>';
-        return;
-      }
-
-      container.innerHTML = '';
-
-      items.forEach(({ word, count, sizeRatio }) => {
-        const item = document.createElement('span');
-        item.className = 'word-cloud-item inline-block font-bold cursor-pointer transition p-1.5 text-indigo-300 hover:text-white';
-        item.style.fontSize = `${sizeRatio}rem`;
-        item.innerText = `${word} (${count})`;
-        item.onclick = () => {
-          state.searchQuery = word;
-          document.getElementById('searchInput').value = word;
-          switchTab('bookmarks');
-          renderAll();
-        };
-        container.appendChild(item);
-      });
+      return window.IBM.renderWordCloud();
     }
 
     function renderDomainChart() {
@@ -1131,6 +1109,13 @@
 
     // Window Load / Initialization
     window.addEventListener('DOMContentLoaded', async () => {
+      // Reverse bridge: view modules trigger renderAll (which still lives in
+      // this script) until an app controller is extracted. Must be assigned
+      // inside this handler — window.IBM only exists after the deferred
+      // module entry executes, whereas this classic script evaluates during
+      // HTML parsing.
+      window.IBM.renderAll = renderAll;
+
       await loadStateFromIndexedDB();
 
       // File upload listener

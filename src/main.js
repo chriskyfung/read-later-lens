@@ -20,6 +20,7 @@ import {
   updateBatchActionBar,
 } from './views/bookmarks.js';
 import { activateTab } from './views/tabs.js';
+import { renderWordCloud } from './views/wordcloud.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -55,4 +56,5 @@ window.IBM = {
   toggleSelectBookmark,
   updateBatchActionBar,
   activateTab,
+  renderWordCloud,
 };
