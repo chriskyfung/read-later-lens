@@ -40,6 +40,7 @@ describe('main.js bridge (window.IBM)', () => {
       'renderBookmarkCards',
       'toggleSelectBookmark',
       'updateBatchActionBar',
+      'activateTab',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
