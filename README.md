@@ -137,7 +137,7 @@ Contributions are welcome. Please follow the conventions already established in 
 - **Feature-branch workflow** — work on a topic branch and keep the working tree clean.
 - **Line endings** — `.gitattributes` enforces LF; keep it that way.
 - **UI language** — end-user-facing copy is currently **Traditional Chinese (zh-TW)**; preserve that unless intentionally changing the localization approach.
-- **Single-file discipline** — when changing behavior, keep the self-contained nature of `src/index.html` in mind.
+- **Architecture discipline** — keep `src/main.js` as the thin bootstrap composing extracted modules, and preserve the component-markup vs. view-behavior separation (markup helpers in `src/components/`, listener wiring in `src/views/`).
 
 ## License
 

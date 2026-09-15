@@ -1,0 +1,50 @@
+{
+  "name": "instapaper-bookmark-manager",
+  "version": "0.1.0",
+  "description": "Client-side bookmark aggregator, search tool, and text-analytics dashboard for Instapaper exports.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/ tests/ --no-error-on-unmatched-pattern",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "bookmark",
+    "instapaper",
+    "client-side",
+    "privacy",
+    "offline"
+  ],
+  "license": "GNU AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "author": "chriskyfung",
+  "dependencies": {
+    "d3": "^7.9.0",
+    "idb": "^8.0.3",
+    "papaparse": "^5.4.1",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "eslint": "^9.9.1",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0",
+    "vitest": "^3.0.5"
+  },
+  "packageManager": "pnpm@12.3.4+sha512.961aa41fb077da3a04a441d9f8e15ebc0c96da8ef710b2eb67bf9ee7cb0610eabd48f1fd85f51cffe73846785fa0f87c56a3a872a1d893f8446741b5cce45457"
+}
