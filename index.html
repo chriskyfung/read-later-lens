@@ -570,15 +570,9 @@
       }
     }
 
+    // DOM helpers now live in src/utils/dom.js (bridged via window.IBM).
     function showToast(msg) {
-      const toast = document.getElementById('toastNotification');
-      document.getElementById('toastMsg').innerText = msg;
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-      setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100');
-        toast.classList.add('translate-y-20', 'opacity-0');
-      }, 2500);
+      return window.IBM.showToast(msg);
     }
 
     function detectLanguage(text) {
@@ -1031,12 +1025,7 @@
     }
 
     function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+      return window.IBM.escapeHtml(str);
     }
     function renderWordCloud() {
       const container = document.getElementById('wordCloudContainer');
@@ -1434,34 +1423,13 @@
       }
     }
 
+    // Download helpers now live in src/utils/download.js (bridged via window.IBM).
     async function saveFileWithFallback(content, filename, mimeType) {
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await window.showSaveFilePicker({ suggestedName: filename });
-          const writable = await handle.createWritable();
-          await writable.write(content);
-          await writable.close();
-          showToast(`已成功寫入檔案: ${filename}`);
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-          console.warn('File System Access API failed or cancelled, falling back to download:', err);
-        }
-      }
-      const blob = new Blob([content], { type: mimeType });
-      downloadBlob(blob, filename);
+      return window.IBM.saveFileWithFallback(content, filename, mimeType);
     }
 
     function downloadBlob(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast(`已開始下載檔案: ${filename}`);
+      return window.IBM.downloadBlob(blob, filename);
     }
 
     // Window Load / Initialization

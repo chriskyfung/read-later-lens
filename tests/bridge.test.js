@@ -20,6 +20,10 @@ describe('main.js bridge (window.IBM)', () => {
       'normalizeFields',
       'normalizeTags',
       'makeReaderUrl',
+      'escapeHtml',
+      'showToast',
+      'downloadBlob',
+      'saveFileWithFallback',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
