@@ -33,6 +33,10 @@ describe('main.js bridge (window.IBM)', () => {
       'topDomains',
       'cosineSimilarity',
       'mostSimilar',
+      'openReaderModal',
+      'closeReaderModal',
+      'openSimilarityModal',
+      'closeSimilarityModal',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }

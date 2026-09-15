@@ -1161,51 +1161,21 @@
       if (tabId === 'linkage') { document.getElementById('panelLinkage').classList.remove('hidden'); renderConceptLinkageGraph(); }
     }
 
+    // Reader & similarity modals now live in src/views/* (bridged via window.IBM).
     function openReaderModal(bookmarkId) {
-      const b = state.bookmarks.find(item => item.id === bookmarkId);
-      if (!b) return;
+      return window.IBM.openReaderModal(bookmarkId);
+    }
 
-      document.getElementById('readerTitle').innerText = b.title;
-      document.getElementById('readerLangBadge').innerText = (b.detected_language || 'EN').toUpperCase();
-      document.getElementById('readerOriginalUrl').href = b.url;
-      document.getElementById('readerOriginalUrl').innerText = b.url;
-      document.getElementById('readerPreviewContent').innerText = b.content || b.article_preview || '無內文預覽';
-      document.getElementById('readerInstapaperBtn').href = b.instapaper_url;
-
-      document.getElementById('readerModal').classList.remove('hidden');
+    function closeReaderModal() {
+      return window.IBM.closeReaderModal();
     }
 
     function openSimilarityModal(targetId) {
-      const target = state.bookmarks.find(b => b.id === targetId);
-      if (!target) return;
+      return window.IBM.openSimilarityModal(targetId);
+    }
 
-      document.getElementById('simTargetTitle').innerText = target.title;
-      const resultsContainer = document.getElementById('simResultsList');
-      resultsContainer.innerHTML = '';
-
-      // Similarity ranking lives in src/analytics/similarity.js (bridged via
-      // window.IBM); returns { doc, score } objects identical to the monolith.
-      const simScores = window.IBM.mostSimilar(state.bookmarks, target, 5);
-
-      simScores.forEach(({ doc, score }) => {
-        const item = document.createElement('div');
-        const pct = Math.round(score * 100);
-        item.className = 'p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl flex items-center justify-between hover:border-indigo-500 cursor-pointer transition';
-        item.onclick = () => {
-          document.getElementById('similarityModal').classList.add('hidden');
-          openReaderModal(doc.id);
-        };
-        item.innerHTML = `
-          <div class="truncate flex-1 pr-3">
-            <p class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(doc.title)}</p>
-            <p class="text-[10px] text-slate-400 line-clamp-1">${escapeHtml(doc.article_preview)}</p>
-          </div>
-          <span class="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">${pct}% 相似</span>
-        `;
-        resultsContainer.appendChild(item);
-      });
-
-      document.getElementById('similarityModal').classList.remove('hidden');
+    function closeSimilarityModal() {
+      return window.IBM.closeSimilarityModal();
     }
 
     function openSaveModal() {
@@ -1353,9 +1323,9 @@
       });
 
       // Modals Close
-      document.getElementById('closeReaderBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-      document.getElementById('closeReaderFooterBtn').onclick = () => document.getElementById('readerModal').classList.add('hidden');
-      document.getElementById('closeSimilarityBtn').onclick = () => document.getElementById('similarityModal').classList.add('hidden');
+      document.getElementById('closeReaderBtn').onclick = closeReaderModal;
+      document.getElementById('closeReaderFooterBtn').onclick = closeReaderModal;
+      document.getElementById('closeSimilarityBtn').onclick = closeSimilarityModal;
       document.getElementById('closeSaveBtn').onclick = () => document.getElementById('saveModal').classList.add('hidden');
       document.getElementById('saveBackBtn').onclick = () => openSaveModal();
 
