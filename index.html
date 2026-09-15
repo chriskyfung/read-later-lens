@@ -37,6 +37,9 @@
   <!-- D3.js for visual analytics & concept graphs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
+  <!-- Modular app entry (bridges the extracted core/model modules) -->
+  <script type="module" src="/src/main.js"></script>
+
   <style>
     /* Custom scrollbars */
     ::-webkit-scrollbar {
@@ -486,19 +489,33 @@
 
   <!-- Script Logic -->
   <script>
-    // Global state
+    // Global state facade - delegates to the modular core (window.IBM.state,
+    // wired up by src/main.js). Getter/setter pairs keep the existing `state.x`
+    // call sites working (reads, whole-value assignment, and in-place mutations
+    // such as state.selectedIds.add(...)). Access is lazy because this classic
+    // script evaluates before the deferred module entry runs.
+    const S = () => window.IBM.state;
     const state = {
-      bookmarks: [],           // Array of all BookmarkRecord objects
-      sourceFiles: new Map(),  // source_file_id -> { id, name, type, originalData, fileHandle }
-      activeFolder: 'ALL',     // 'ALL' or source_file_id
-      activeLang: 'ALL',       // 'ALL', 'en', 'zh', 'ja', 'other'
-      activeTag: null,         // Tag string or null
-      activeTab: 'bookmarks',  // 'bookmarks', 'wordcloud', 'domains', 'linkage'
-      searchQuery: '',
-      sortBy: 'relevance',     // 'relevance', 'newer', 'older', 'title_asc', 'title_desc'
-      selectedIds: new Set(),
-      SQL: null,               // SQL.js instance
-      dbCache: null
+      get bookmarks() { return S().bookmarks; },
+      set bookmarks(v) { S().setBookmarks(v); },
+      get sourceFiles() { return S().sourceFiles; },
+      set sourceFiles(v) { S().setSourceFiles(v); },
+      get activeFolder() { return S().activeFolder; },
+      set activeFolder(v) { S().setActiveFolder(v); },
+      get activeLang() { return S().activeLang; },
+      set activeLang(v) { S().setActiveLang(v); },
+      get activeTag() { return S().activeTag; },
+      set activeTag(v) { S().setActiveTag(v); },
+      get activeTab() { return S().activeTab; },
+      set activeTab(v) { S().setActiveTab(v); },
+      get searchQuery() { return S().searchQuery; },
+      set searchQuery(v) { S().setSearchQuery(v); },
+      get sortBy() { return S().sortBy; },
+      set sortBy(v) { S().setSortBy(v); },
+      get selectedIds() { return S().selectedIds; },
+      set selectedIds(v) { S().setSelectedIds(v); },
+      get SQL() { return S().SQL; },
+      set SQL(v) { S().setSQL(v); }
     };
 
     // Global D3 SVG reference
@@ -526,78 +543,30 @@
     // CJK Common Stop Words
     const CJK_STOPWORDS = new Set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一個', '上', '也', '很', '到', '說', '要', '去', '你', '會', '著', '沒有', '看', '好', '自己', '這', '那', '就', '以', '或', '對']);
 
-    // Initialize IndexedDB
-    function initIndexedDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('InstapaperBookmarkManagerDB', 1);
-        request.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains('app_state')) {
-            db.createObjectStore('app_state', { keyPath: 'key' });
-          }
-        };
-        request.onsuccess = (e) => {
-          state.dbCache = e.target.result;
-          updateStorageUsageUI();
-          resolve(state.dbCache);
-        };
-        request.onerror = (e) => reject(e);
-      });
+    // ------------------------------------------------------------------
+    // IndexedDB persistence now lives in src/core/store.js (bridged via
+    // window.IBM). These thin wrappers keep every existing call site working
+    // and reproduce the monolith's UI side-effects exactly.
+    // ------------------------------------------------------------------
+
+    async function updateStorageUsageUI() {
+      const { usageKB, limitMB } = await window.IBM.getStorageUsage();
+      document.getElementById('storageUsageText').innerText = `${usageKB} KB / ${limitMB} MB`;
+      const pct = Math.min(100, (usageKB / (limitMB * 1024)) * 100);
+      document.getElementById('storageProgressBar').style.width = `${pct}%`;
     }
 
     async function saveStateToIndexedDB() {
-      if (!state.dbCache) return;
-      try {
-        const tx = state.dbCache.transaction('app_state', 'readwrite');
-        const store = tx.objectStore('app_state');
-
-        // Convert sourceFiles map to array for JSON serialization
-        const sourcesArray = Array.from(state.sourceFiles.entries()).map(([k, v]) => ({
-          id: v.id,
-          name: v.name,
-          type: v.type,
-          originalData: v.type === 'sqlite' ? null : v.originalData // SQLite buffers saved in memory
-        }));
-
-        store.put({ key: 'bookmarks', data: state.bookmarks });
-        store.put({ key: 'sources', data: sourcesArray });
-        updateStorageUsageUI();
-      } catch (err) {
-        console.warn('IndexedDB save failed:', err);
-      }
+      await window.IBM.saveState();
+      await updateStorageUsageUI();
     }
 
     async function loadStateFromIndexedDB() {
-      if (!state.dbCache) return;
-      return new Promise((resolve) => {
-        const tx = state.dbCache.transaction('app_state', 'readonly');
-        const store = tx.objectStore('app_state');
-        const reqBookmarks = store.get('bookmarks');
-        const reqSources = store.get('sources');
-
-        tx.oncomplete = () => {
-          if (reqBookmarks.result && reqSources.result) {
-            state.bookmarks = reqBookmarks.result.data || [];
-            const sources = reqSources.result.data || [];
-            sources.forEach(s => {
-              state.sourceFiles.set(s.id, s);
-            });
-            renderAll();
-            showToast(`已成功從 IndexedDB 快取復原 ${state.bookmarks.length} 筆書籤`);
-          }
-          resolve();
-        };
-      });
-    }
-
-    async function updateStorageUsageUI() {
-      if (navigator.storage && navigator.storage.estimate) {
-        const estimate = await navigator.storage.estimate();
-        const usedKB = Math.round((estimate.usage || 0) / 1024);
-        const limitMB = 50; // Visual limit indicator
-        document.getElementById('storageUsageText').innerText = `${usedKB} KB / ${limitMB} MB`;
-        const pct = Math.min(100, (usedKB / (limitMB * 1024)) * 100);
-        document.getElementById('storageProgressBar').style.width = `${pct}%`;
+      const restored = await window.IBM.loadState();
+      await updateStorageUsageUI();
+      if (restored) {
+        renderAll();
+        showToast(`已成功從 IndexedDB 快取復原 ${state.bookmarks.length} 筆書籤`);
       }
     }
 
@@ -791,27 +760,24 @@
     }
 
     function processRawRecords(records, fileRecord) {
+      // Field & tag normalization now lives in src/model/normalize.js.
+      const { normalizeFields, normalizeTags, makeReaderUrl } = window.IBM;
+
       const newBookmarks = records.map((rec, index) => {
-        // Uniform ID extraction
-        const id = rec.id || rec.bookmark_id || rec.uid || (Date.now() + index);
-        const title = rec.title || rec.name || 'Untitled Article';
-        const url = rec.url || rec.link || rec.original_url || '#';
-        const article_preview = rec.article_preview || rec.description || rec.preview || rec.excerpt || rec.summary || '';
-        const instapaper_url = "https://www.instapaper.com/read/" + id;
-        const fullContent = rec.content || article_preview;
-        const lang = detectLanguage(title + " " + article_preview);
+        const base = normalizeFields(rec, index);
+        const lang = detectLanguage(base.title + " " + base.preview);
 
         return {
-          id: String(id),
-          instapaper_url: instapaper_url,
-          title: title,
-          url: url,
-          article_preview: article_preview,
-          content: fullContent,
+          id: base.id,
+          instapaper_url: makeReaderUrl('instapaper', base.id),
+          title: base.title,
+          url: base.url,
+          article_preview: base.preview,
+          content: base.content,
           source_file_id: fileRecord.id,
           source_file_name: fileRecord.name,
           detected_language: lang,
-          tags: rec.tags ? (Array.isArray(rec.tags) ? rec.tags : String(rec.tags).split(',')) : []
+          tags: normalizeTags(rec.tags)
         };
       });
 
@@ -824,59 +790,9 @@
       renderAll();
     }
 
+    // Filtering & sorting now live in src/core/filters.js (bridged via window.IBM).
     function getFilteredBookmarks() {
-      let list = [...state.bookmarks];
-
-      if (state.activeFolder !== 'ALL') {
-        list = list.filter(b => b.source_file_id === state.activeFolder);
-      }
-
-      // Language Filter
-      if (state.activeLang !== 'ALL') {
-        if (state.activeLang === 'other') {
-          list = list.filter(b => !['en', 'zh', 'ja'].includes(b.detected_language));
-        } else {
-          list = list.filter(b => b.detected_language === state.activeLang);
-        }
-      }
-
-      // Tag Filter
-      if (state.activeTag) {
-        list = list.filter(b => b.tags && b.tags.includes(state.activeTag));
-      }
-
-      // Keyword Search Query Filter
-      if (state.searchQuery.trim() !== '') {
-        const query = state.searchQuery.toLowerCase().trim();
-        list = list.map(b => {
-          let score = 0;
-          if (b.title.toLowerCase().includes(query)) score += 10;
-          if (b.article_preview.toLowerCase().includes(query)) score += 5;
-          if (b.url.toLowerCase().includes(query)) score += 3;
-          if (b.tags.some(t => t.toLowerCase().includes(query))) score += 8;
-
-          return { bookmark: b, score: score };
-        }).filter(item => item.score > 0);
-
-        // Relevance sort if active
-        if (state.sortBy === 'relevance') {
-          list.sort((a, b) => b.score - a.score);
-        }
-        list = list.map(item => item.bookmark);
-      }
-
-      // Standard Sort options
-      if (state.sortBy === 'newer') {
-        list.sort((a, b) => Number(b.id) - Number(a.id));
-      } else if (state.sortBy === 'older') {
-        list.sort((a, b) => Number(a.id) - Number(b.id));
-      } else if (state.sortBy === 'title_asc') {
-        list.sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-      } else if (state.sortBy === 'title_desc') {
-        list.sort((a, b) => b.title.localeCompare(a.title, 'zh-TW'));
-      }
-
-      return list;
+      return window.IBM.getFilteredBookmarks();
     }
 
     function renderAll() {
@@ -1214,7 +1130,7 @@
       const ttDomain = document.getElementById('ttDomain');
       const ttTags = document.getElementById('ttTags');
 
-      const filtered = getFilteredBookmarks().slice(0, 50); // Limit to top 50 for graph clarity
+      const filtered = window.IBM.getFilteredBookmarksTop(50); // Limit to top 50 for graph clarity
       if (filtered.length < 2) {
         container.innerHTML = '<div class="text-slate-500 text-xs flex items-center justify-center h-full">需要至少 2 筆書籤以構建關聯網絡拓撲圖</div>';
         return;
@@ -1550,7 +1466,6 @@
 
     // Window Load / Initialization
     window.addEventListener('DOMContentLoaded', async () => {
-      await initIndexedDB();
       await loadStateFromIndexedDB();
 
       // File upload listener
