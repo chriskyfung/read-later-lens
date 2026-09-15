@@ -14,6 +14,11 @@ import { topDomains } from './analytics/domains.js';
 import { cosineSimilarity, mostSimilar } from './analytics/similarity.js';
 import { openReaderModal, closeReaderModal } from './views/readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from './views/similarityModal.js';
+import {
+  renderBookmarkCards,
+  toggleSelectBookmark,
+  updateBatchActionBar,
+} from './views/bookmarks.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -45,4 +50,7 @@ window.IBM = {
   closeReaderModal,
   openSimilarityModal,
   closeSimilarityModal,
+  renderBookmarkCards,
+  toggleSelectBookmark,
+  updateBatchActionBar,
 };

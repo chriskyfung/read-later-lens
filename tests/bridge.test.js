@@ -37,6 +37,9 @@ describe('main.js bridge (window.IBM)', () => {
       'closeReaderModal',
       'openSimilarityModal',
       'closeSimilarityModal',
+      'renderBookmarkCards',
+      'toggleSelectBookmark',
+      'updateBatchActionBar',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
