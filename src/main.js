@@ -9,6 +9,9 @@ import { escapeHtml, showToast } from './utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from './utils/download.js';
 import { importJsonOrCsv, importSqlite, providerForExtension } from './providers/index.js';
 import { detectLanguage } from './analytics/detectLanguage.js';
+import { wordCloudFrequencies, wordCloudItems } from './analytics/wordcloud.js';
+import { topDomains } from './analytics/domains.js';
+import { cosineSimilarity, mostSimilar } from './analytics/similarity.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -31,4 +34,9 @@ window.IBM = {
   importSqlite,
   providerForExtension,
   detectLanguage,
+  wordCloudFrequencies,
+  wordCloudItems,
+  topDomains,
+  cosineSimilarity,
+  mostSimilar,
 };

@@ -522,27 +522,6 @@
     let currentD3Svg = null;
     let currentD3Zoom = null;
 
-    // English Stopwords List
-    const ENGLISH_STOPWORDS = new Set([
-      'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at', 'be', 'because',
-      'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'can\'t', 'cannot', 'could', 'couldn\'t', 'did',
-      'didn\'t', 'do', 'does', 'doesn\'t', 'doing', 'don\'t', 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had',
-      'hadn\'t', 'has', 'hasn\'t', 'have', 'haven\'t', 'having', 'he', 'he\'d', 'he\'ll', 'he\'s', 'her', 'here', 'here\'s', 'hers',
-      'herself', 'him', 'himself', 'his', 'how', 'how\'s', 'i', 'i\'d', 'i\'ll', 'i\'m', 'i\'ve', 'if', 'in', 'into', 'is', 'isn\'t',
-      'it', 'it\'s', 'its', 'itself', 'let\'s', 'me', 'more', 'most', 'mustn\'t', 'my', 'myself', 'no', 'nor', 'not', 'of', 'off',
-      'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'shan\'t', 'she',
-      'she\'d', 'she\'ll', 'she\'s', 'should', 'shouldn\'t', 'so', 'some', 'such', 'than', 'that', 'that\'s', 'the', 'their',
-      'theirs', 'them', 'themselves', 'then', 'there', 'there\'s', 'these', 'they', 'they\'d', 'they\'ll', 'they\'re', 'they\'ve',
-      'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', 'wasn\'t', 'we', 'we\'d', 'we\'ll', 'we\'re',
-      'we\'ve', 'were', 'weren\'t', 'what', 'what\'s', 'when', 'when\'s', 'where', 'where\'s', 'which', 'while', 'who', 'who\'s',
-      'whom', 'why', 'why\'s', 'with', 'won\'t', 'would', 'wouldn\'t', 'you', 'you\'d', 'you\'ll', 'you\'re', 'you\'ve', 'your',
-      'yours', 'yourself', 'yourselves', 'http', 'https', 'com', 'org', 'net', 'www', 'html', 'amp',
-      'ever', 'get', 'also', 'like', 'just', 'would', 'make', 'time', 'new', 'way', 'know', 'one', 'two', 'see', 'well', 'much', 'even', 'us'
-    ]);
-
-    // CJK Common Stop Words
-    const CJK_STOPWORDS = new Set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一個', '上', '也', '很', '到', '說', '要', '去', '你', '會', '著', '沒有', '看', '好', '自己', '這', '那', '就', '以', '或', '對']);
-
     // ------------------------------------------------------------------
     // IndexedDB persistence now lives in src/core/store.js (bridged via
     // window.IBM). These thin wrappers keep every existing call site working
@@ -577,45 +556,8 @@
 
     // detectLanguage now lives in src/analytics/detectLanguage.js (bridged via window.IBM).
 
-    // Simple Stemmer Helper
-    function simpleStem(word) {
-      if (word.length < 4) return word;
-      if (word.endsWith('ing') && word.length > 5) return word.slice(0, -3);
-      if (word.endsWith('ies') && word.length > 4) return word.slice(0, -3) + 'y';
-      if (word.endsWith('es') && word.length > 4) return word.slice(0, -2);
-      if (word.endsWith('s') && word.length > 3 && !word.endsWith('ss')) return word.slice(0, -1);
-      if (word.endsWith('ed') && word.length > 4) return word.slice(0, -2);
-      return word;
-    }
-
-    // Lightweight Character & N-Gram Tokenizer for English & CJK
-    function tokenizeText(text) {
-      if (!text) return [];
-      const cleaned = text.toLowerCase().replace(/[^\w\s\u4e00-\u9fa5\u3040-\u30ff]/g, ' ');
-      const rawTokens = cleaned.split(/\s+/);
-      const tokens = [];
-
-      for (let word of rawTokens) {
-        if (!word || word.length < 2) continue;
-
-        // English word check
-        if (/^[a-z0-9]+$/.test(word)) {
-          if (!ENGLISH_STOPWORDS.has(word) && !/^\d+$/.test(word)) {
-            tokens.push(simpleStem(word));
-          }
-        }
-        // CJK character processing with bi-grams
-        else if (/[\u4e00-\u9fa5\u3040-\u30ff]/.test(word)) {
-          for (let i = 0; i < word.length - 1; i++) {
-            const bigram = word.substring(i, i + 2);
-            if (!CJK_STOPWORDS.has(bigram)) {
-              tokens.push(bigram);
-            }
-          }
-        }
-      }
-      return tokens;
-    }
+    // Tokenization/analytics (stopwords, simpleStem, tokenizeText) now live in
+    // src/analytics/* (bridged via window.IBM / used by the analytics modules).
 
     async function initSql() {
       if (!state.SQL) {
@@ -983,26 +925,17 @@
     }
     function renderWordCloud() {
       const container = document.getElementById('wordCloudContainer');
-      const filtered = getFilteredBookmarks();
-      const freqMap = new Map();
+      // Aggregation lives in src/analytics/wordcloud.js (bridged via window.IBM).
+      const items = window.IBM.wordCloudItems(window.IBM.wordCloudFrequencies(getFilteredBookmarks()));
 
-      filtered.forEach(b => {
-        const tokens = tokenizeText(b.title + ' ' + b.article_preview);
-        tokens.forEach(t => freqMap.set(t, (freqMap.get(t) || 0) + 1));
-      });
-
-      const sorted = Array.from(freqMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 60);
-
-      if (sorted.length === 0) {
+      if (items.length === 0) {
         container.innerHTML = '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>';
         return;
       }
 
-      const maxCount = sorted[0][1];
       container.innerHTML = '';
 
-      sorted.forEach(([word, count]) => {
-        const sizeRatio = 0.75 + (count / maxCount) * 1.5;
+      items.forEach(({ word, count, sizeRatio }) => {
         const item = document.createElement('span');
         item.className = 'word-cloud-item inline-block font-bold cursor-pointer transition p-1.5 text-indigo-300 hover:text-white';
         item.style.fontSize = `${sizeRatio}rem`;
@@ -1019,17 +952,8 @@
 
     function renderDomainChart() {
       const container = document.getElementById('domainChartContainer');
-      const filtered = getFilteredBookmarks();
-      const domainMap = new Map();
-
-      filtered.forEach(b => {
-        try {
-          const d = new URL(b.url).hostname.replace('www.', '');
-          domainMap.set(d, (domainMap.get(d) || 0) + 1);
-        } catch (e) { }
-      });
-
-      const sorted = Array.from(domainMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 15);
+      // Aggregation lives in src/analytics/domains.js (bridged via window.IBM).
+      const sorted = window.IBM.topDomains(getFilteredBookmarks(), 15);
 
       if (sorted.length === 0) {
         container.innerHTML = '<span class="text-slate-500 text-xs flex justify-center py-10">尚無域名資料</span>';
@@ -1099,7 +1023,7 @@
         for (let j = i + 1; j < nodesList.length; j++) {
           const b1 = filtered.find(b => b.id === nodesList[i].id);
           const b2 = filtered.find(b => b.id === nodesList[j].id);
-          const sim = calculateCosineSimilarity(b1, b2);
+          const sim = window.IBM.cosineSimilarity(b1, b2);
           if (sim > 0.15) {
             links.push({ source: b1.id, target: b2.id, value: sim });
             nodesMap.get(b1.id).degree++;
@@ -1219,33 +1143,6 @@
       }
     }
 
-    function calculateCosineSimilarity(docA, docB) {
-      const tokensA = tokenizeText(docA.title + ' ' + docA.article_preview);
-      const tokensB = tokenizeText(docB.title + ' ' + docB.article_preview);
-
-      const freqA = new Map();
-      const freqB = new Map();
-
-      tokensA.forEach(t => freqA.set(t, (freqA.get(t) || 0) + 1));
-      tokensB.forEach(t => freqB.set(t, (freqB.get(t) || 0) + 1));
-
-      const vocab = new Set([...freqA.keys(), ...freqB.keys()]);
-      let dotProduct = 0;
-      let normA = 0;
-      let normB = 0;
-
-      vocab.forEach(term => {
-        const countA = freqA.get(term) || 0;
-        const countB = freqB.get(term) || 0;
-        dotProduct += countA * countB;
-        normA += countA * countA;
-        normB += countB * countB;
-      });
-
-      if (normA === 0 || normB === 0) return 0;
-      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
-
     function switchTab(tabId) {
       state.activeTab = tabId;
       document.querySelectorAll('.main-tab').forEach(b => {
@@ -1286,26 +1183,9 @@
       const resultsContainer = document.getElementById('simResultsList');
       resultsContainer.innerHTML = '';
 
-      const targetTokens = tokenizeText(target.title + ' ' + target.article_preview);
-      const targetMap = new Map();
-      targetTokens.forEach(t => targetMap.set(t, (targetMap.get(t) || 0) + 1));
-
-      const simScores = state.bookmarks
-        .filter(b => b.id !== targetId)
-        .map(b => {
-          const docTokens = tokenizeText(b.title + ' ' + b.article_preview);
-          const docMap = new Map();
-          docTokens.forEach(t => docMap.set(t, (docMap.get(t) || 0) + 1));
-
-          let dot = 0, magA = 0, magB = 0;
-          targetMap.forEach((v, k) => { magA += v * v; if (docMap.has(k)) dot += v * docMap.get(k); });
-          docMap.forEach(v => magB += v * v);
-
-          const sim = (magA > 0 && magB > 0) ? (dot / (Math.sqrt(magA) * Math.sqrt(magB))) : 0;
-          return { doc: b, score: sim };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
+      // Similarity ranking lives in src/analytics/similarity.js (bridged via
+      // window.IBM); returns { doc, score } objects identical to the monolith.
+      const simScores = window.IBM.mostSimilar(state.bookmarks, target, 5);
 
       simScores.forEach(({ doc, score }) => {
         const item = document.createElement('div');

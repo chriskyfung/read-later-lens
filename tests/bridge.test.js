@@ -28,6 +28,11 @@ describe('main.js bridge (window.IBM)', () => {
       'importSqlite',
       'providerForExtension',
       'detectLanguage',
+      'wordCloudFrequencies',
+      'wordCloudItems',
+      'topDomains',
+      'cosineSimilarity',
+      'mostSimilar',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
