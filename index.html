@@ -575,17 +575,7 @@
       return window.IBM.showToast(msg);
     }
 
-    function detectLanguage(text) {
-      if (!text) return 'en';
-      const cjkRegex = /[\u4e00-\u9fa5]/g;
-      const jaRegex = /[\u3040-\u30ff]/g;
-      const cjkMatches = text.match(cjkRegex) || [];
-      const jaMatches = text.match(jaRegex) || [];
-
-      if (jaMatches.length > 3) return 'ja';
-      if (cjkMatches.length > 3) return 'zh';
-      return 'en';
-    }
+    // detectLanguage now lives in src/analytics/detectLanguage.js (bridged via window.IBM).
 
     // Simple Stemmer Helper
     function simpleStem(word) {
@@ -712,7 +702,7 @@
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
-              processRawRecords(results.data, fileRecord);
+              acceptRecords(window.IBM.importJsonOrCsv(results.data, fileRecord.id, fileRecord.name));
             }
           });
         } else if (ext === 'json') {
@@ -720,29 +710,13 @@
           fileRecord.originalData = text;
           const parsed = JSON.parse(text);
           const arrayData = Array.isArray(parsed) ? parsed : (parsed.bookmarks || [parsed]);
-          processRawRecords(arrayData, fileRecord);
+          acceptRecords(window.IBM.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
         } else if (ext === 'db' || ext === 'sqlite') {
           const arrayBuffer = await file.arrayBuffer();
           const uInt8Array = new Uint8Array(arrayBuffer);
           fileRecord.originalData = uInt8Array;
-          const db = new state.SQL.Database(uInt8Array);
-
-          const tablesRes = db.exec("SELECT name FROM sqlite_master WHERE type='table';");
-          let rows = [];
-          if (tablesRes.length > 0) {
-            const tableName = tablesRes[0].values[0][0];
-            // Wrap tableName in double quotes to handle hyphens and special characters
-            const queryRes = db.exec(`SELECT * FROM "${tableName}"`);
-            if (queryRes.length > 0) {
-              const cols = queryRes[0].columns;
-              rows = queryRes[0].values.map(valArr => {
-                let obj = {};
-                cols.forEach((col, idx) => obj[col] = valArr[idx]);
-                return obj;
-              });
-            }
-          }
-          processRawRecords(rows, fileRecord);
+          const records = await window.IBM.importSqlite(uInt8Array, fileRecord.id, fileRecord.name, state.SQL);
+          acceptRecords(records);
         }
 
         state.sourceFiles.set(fileId, fileRecord);
@@ -753,29 +727,9 @@
       }
     }
 
-    function processRawRecords(records, fileRecord) {
-      // Field & tag normalization now lives in src/model/normalize.js.
-      const { normalizeFields, normalizeTags, makeReaderUrl } = window.IBM;
-
-      const newBookmarks = records.map((rec, index) => {
-        const base = normalizeFields(rec, index);
-        const lang = detectLanguage(base.title + " " + base.preview);
-
-        return {
-          id: base.id,
-          instapaper_url: makeReaderUrl('instapaper', base.id),
-          title: base.title,
-          url: base.url,
-          article_preview: base.preview,
-          content: base.content,
-          source_file_id: fileRecord.id,
-          source_file_name: fileRecord.name,
-          detected_language: lang,
-          tags: normalizeTags(rec.tags)
-        };
-      });
-
-      // Merge avoiding duplicate IDs
+    // Records arrive already normalized from src/providers/* (bridged via
+    // window.IBM). This step only merges them into the store and re-renders.
+    function acceptRecords(newBookmarks) {
       const existingMap = new Map(state.bookmarks.map(b => [b.id, b]));
       newBookmarks.forEach(b => existingMap.set(b.id, b));
       state.bookmarks = Array.from(existingMap.values());

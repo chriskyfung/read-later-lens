@@ -24,6 +24,10 @@ describe('main.js bridge (window.IBM)', () => {
       'showToast',
       'downloadBlob',
       'saveFileWithFallback',
+      'importJsonOrCsv',
+      'importSqlite',
+      'providerForExtension',
+      'detectLanguage',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }

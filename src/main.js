@@ -7,6 +7,8 @@ import { normalizeFields, normalizeTags } from './model/normalize.js';
 import { makeReaderUrl } from './model/BookmarkRecord.js';
 import { escapeHtml, showToast } from './utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from './utils/download.js';
+import { importJsonOrCsv, importSqlite, providerForExtension } from './providers/index.js';
+import { detectLanguage } from './analytics/detectLanguage.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -25,4 +27,8 @@ window.IBM = {
   showToast,
   downloadBlob,
   saveFileWithFallback,
+  importJsonOrCsv,
+  importSqlite,
+  providerForExtension,
+  detectLanguage,
 };
