@@ -4,9 +4,8 @@
  * Matches the original monolith exactly: bordered card markup with the
  * `${count} 篇文章 (${pct}%)` caption, rounded percentages, the exact
  * empty-state span, and the click flow (set search query → activateTab
- * ('bookmarks') → renderAll()). `renderAll` still lives in index.html, so it
- * is invoked through the window.IBM reverse bridge until the app controller
- * is extracted.
+ * ('bookmarks') → renderAll()). `renderAll` lives in src/views/main-view.js
+ * (bridged via window.IBM.renderAll, set by src/main.js).
  */
 
 import { escapeHtml } from '../utils/dom.js';

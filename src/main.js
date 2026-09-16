@@ -23,6 +23,7 @@ import { activateTab } from './views/tabs.js';
 import { renderDomainChart } from './views/domains.js';
 import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './views/linkage.js';
 import { renderWordCloud } from './views/wordcloud.js';
+import { renderAll } from './views/main-view.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -63,4 +64,5 @@ window.IBM = {
   renderConceptLinkageGraph,
   zoomGraphBy,
   resetGraphZoom,
+  renderAll,
 };

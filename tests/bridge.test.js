@@ -1,4 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { renderAll } from '../src/views/main-view.js';
+
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // main.js publishes the module bridge that index.html's classic script consumes.
 beforeAll(async () => {
@@ -7,6 +11,18 @@ beforeAll(async () => {
 });
 
 describe('main.js bridge (window.IBM)', () => {
+  it('publishes the actual module-owned renderAll function', () => {
+    expect(globalThis.window.IBM.renderAll).toBe(renderAll);
+  });
+
+  it('keeps the inline delegate without restoring the reverse bridge or duplicate renderers', () => {
+    expect(html).toMatch(/function renderAll\(\)\s*\{\s*return window\.IBM\.renderAll\(\);\s*\}/);
+    expect(html).not.toMatch(/window\.IBM\.renderAll\s*=/);
+    expect(html).not.toMatch(/function (renderSidebarFolders|renderTagCloud)\s*\(/);
+    expect(html).toMatch(/function selectFolder\(/);
+    expect(html).toMatch(/function confirmDeleteFolder\(/);
+  });
+
   it('exposes every dependency the inline script uses', () => {
     const ibm = globalThis.window.IBM;
     expect(ibm).toBeTruthy();
@@ -46,6 +62,7 @@ describe('main.js bridge (window.IBM)', () => {
       'renderConceptLinkageGraph',
       'zoomGraphBy',
       'resetGraphZoom',
+      'renderAll',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }

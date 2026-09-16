@@ -4,9 +4,9 @@
  * Matches the original monolith exactly: monolith span classes, visible
  * `${word} (${count})` labels, the monolith empty-state span, and the click
  * flow (set search query → activateTab('bookmarks') → renderAll()). Tab
- * switching uses the extracted mechanics in ./tabs.js; `renderAll` still
- * lives in index.html, so it is invoked through the window.IBM reverse
- * bridge until the app controller is extracted.
+ * switching uses the extracted mechanics in ./tabs.js; `renderAll` lives
+ * in src/views/main-view.js (bridged via window.IBM.renderAll, set by
+ * src/main.js).
  */
 
 import { getFilteredBookmarks } from '../core/filters.js';
