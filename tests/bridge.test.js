@@ -42,6 +42,7 @@ describe('main.js bridge (window.IBM)', () => {
       'updateBatchActionBar',
       'activateTab',
       'renderWordCloud',
+      'renderDomainChart',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
