@@ -21,6 +21,7 @@ import {
 } from './views/bookmarks.js';
 import { activateTab } from './views/tabs.js';
 import { renderDomainChart } from './views/domains.js';
+import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './views/linkage.js';
 import { renderWordCloud } from './views/wordcloud.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
@@ -59,4 +60,7 @@ window.IBM = {
   activateTab,
   renderWordCloud,
   renderDomainChart,
+  renderConceptLinkageGraph,
+  zoomGraphBy,
+  resetGraphZoom,
 };

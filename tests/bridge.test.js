@@ -43,6 +43,9 @@ describe('main.js bridge (window.IBM)', () => {
       'activateTab',
       'renderWordCloud',
       'renderDomainChart',
+      'renderConceptLinkageGraph',
+      'zoomGraphBy',
+      'resetGraphZoom',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }

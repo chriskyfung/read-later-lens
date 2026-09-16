@@ -518,9 +518,7 @@
       set SQL(v) { S().setSQL(v); }
     };
 
-    // Global D3 SVG reference
-    let currentD3Svg = null;
-    let currentD3Zoom = null;
+    // D3 zoom/pan state now lives in src/views/linkage.js.
 
     // ------------------------------------------------------------------
     // IndexedDB persistence now lives in src/core/store.js (bridged via
@@ -836,163 +834,13 @@
     }
 
 
+    // Concept-linkage graph view now lives in src/views/linkage.js (bridged via window.IBM).
     function renderConceptLinkageGraph() {
-      const container = document.getElementById('d3GraphCanvas');
-      container.innerHTML = '';
-
-      const tooltip = document.getElementById('graphTooltip');
-      const ttTitle = document.getElementById('ttTitle');
-      const ttDomain = document.getElementById('ttDomain');
-      const ttTags = document.getElementById('ttTags');
-
-      const filtered = window.IBM.getFilteredBookmarksTop(50); // Limit to top 50 for graph clarity
-      if (filtered.length < 2) {
-        container.innerHTML = '<div class="text-slate-500 text-xs flex items-center justify-center h-full">需要至少 2 筆書籤以構建關聯網絡拓撲圖</div>';
-        return;
-      }
-
-      const width = container.clientWidth || 800;
-      const height = container.clientHeight || 500;
-
-      // Pre-calculate degrees and domains
-      const domains = new Set();
-      const nodesMap = new Map(filtered.map(b => {
-        let domain = 'unknown';
-        try { domain = new URL(b.url).hostname.replace('www.', ''); } catch (e) { }
-        domains.add(domain);
-        return [b.id, { id: b.id, title: b.title, url: b.url, domain: domain, degree: 0, tags: b.tags || [] }];
-      }));
-
-
-      const links = [];
-      const nodesList = Array.from(nodesMap.values());
-
-      for (let i = 0; i < nodesList.length; i++) {
-        for (let j = i + 1; j < nodesList.length; j++) {
-          const b1 = filtered.find(b => b.id === nodesList[i].id);
-          const b2 = filtered.find(b => b.id === nodesList[j].id);
-          const sim = window.IBM.cosineSimilarity(b1, b2);
-          if (sim > 0.15) {
-            links.push({ source: b1.id, target: b2.id, value: sim });
-            nodesMap.get(b1.id).degree++;
-            nodesMap.get(b2.id).degree++;
-          }
-        }
-      }
-
-      const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(domains);
-
-      const svg = d3.select('#d3GraphCanvas')
-        .append('svg')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .attr('viewBox', `0 0 ${width} ${height}`);
-
-      const g = svg.append('g');
-
-      const zoom = d3.zoom()
-        .scaleExtent([0.2, 5])
-        .on('zoom', (event) => g.attr('transform', event.transform));
-
-      svg.call(zoom);
-
-      currentD3Svg = svg;
-      currentD3Zoom = zoom;
-
-      const simulation = d3.forceSimulation(nodesList)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(120))
-        .force('charge', d3.forceManyBody().strength(-300))
-        .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collide', d3.forceCollide().radius(d => Math.max(12, 6 + d.degree * 2)));
-
-      const link = g.append('g')
-        .selectAll('line')
-        .data(links)
-        .enter()
-        .append('line')
-        .attr('stroke', '#334155')
-        .attr('stroke-opacity', 0.6)
-        .attr('stroke-width', d => Math.min(4, Math.max(1, d.weight)));
-
-      const node = g.append('g')
-        .selectAll('g')
-        .data(nodesList)
-        .enter()
-        .append('g')
-        .call(d3.drag()
-          .on('start', dragstarted)
-          .on('drag', dragged)
-          .on('end', dragended));
-      // Append Circles
-      node.append('circle')
-        .attr('r', d => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
-        .attr('fill', d => colorScale(d.domain))
-        .attr('stroke', '#0f172a')
-        .attr('stroke-width', 2)
-        .attr('class', 'cursor-pointer transition-all duration-200');
-
-      // Append Labels
-      node.append('text')
-        .text(d => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
-        .attr('x', d => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
-        .attr('y', 4)
-        .attr('fill', '#94a3b8')
-        .attr('font-size', '10px')
-        .attr('pointer-events', 'none');
-
-      // Interactions (Hover & Tooltip)
-      node.on('mouseover', (event, d) => {
-        tooltip.style.opacity = '1';
-        ttTitle.innerText = d.title;
-        ttDomain.innerText = d.domain;
-        ttTags.innerHTML = (d.tags || []).map(t => `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${t}</span>`).join('');
-
-        link.style('stroke', l => (l.source.id === d.id || l.target.id === d.id) ? '#6366f1' : '#334155')
-          .style('stroke-opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.2)
-          .style('stroke-width', l => (l.source.id === d.id || l.target.id === d.id) ? 3 : 1);
-      })
-        .on('mousemove', (event) => {
-          tooltip.style.left = `${event.clientX}px`;
-          tooltip.style.top = `${event.clientY - 15}px`;
-        })
-        .on('mouseout', () => {
-          tooltip.style.opacity = '0';
-          link.style('stroke', '#334155')
-            .style('stroke-opacity', 0.6)
-            .style('stroke-width', d => Math.min(4, Math.max(1, d.weight)));
-        })
-        .on('click', (event, d) => {
-          openReaderModal(d.id);
-        });
-
-      simulation.on('tick', () => {
-        link
-          .attr('x1', d => d.source.x)
-          .attr('y1', d => d.source.y)
-          .attr('x2', d => d.target.x)
-          .attr('y2', d => d.target.y);
-
-        node.attr('transform', d => `translate(${d.x},${d.y})`);
-      });
-
-      function dragstarted(event, d) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      }
-      function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
-      }
-      function dragended(event, d) {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-      }
+      return window.IBM.renderConceptLinkageGraph();
     }
 
-    // Tab navigation now lives in src/views/tabs.js (bridged via window.IBM);
-    // content renderers stay here until the analytics views are extracted.
+    // Tab navigation lives in src/views/tabs.js (bridged via window.IBM); the
+    // per-tab content renderers live in src/views/*.
     function switchTab(tabId) {
       window.IBM.activateTab(tabId);
       if (tabId === 'wordcloud') renderWordCloud();
@@ -1156,17 +1004,10 @@
         updateBatchActionBar();
       });
 
-      // D3 Zoom Controls
-      document.getElementById('zoomInBtn')?.addEventListener('click', () => {
-        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1.3);
-      });
-      document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
-        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.scaleBy, 1 / 1.3);
-      });
-      document.getElementById('resetGraphBtn')?.addEventListener('click', () => {
-        if (currentD3Svg && currentD3Zoom) currentD3Svg.transition().call(currentD3Zoom.transform, d3.zoomIdentity);
-        renderConceptLinkageGraph();
-      });
+      // D3 Zoom Controls (zoom/pan state lives in src/views/linkage.js)
+      document.getElementById('zoomInBtn')?.addEventListener('click', () => window.IBM.zoomGraphBy(1.3));
+      document.getElementById('zoomOutBtn')?.addEventListener('click', () => window.IBM.zoomGraphBy(1 / 1.3));
+      document.getElementById('resetGraphBtn')?.addEventListener('click', () => window.IBM.resetGraphZoom());
 
       // Modals Close
       document.getElementById('closeReaderBtn').onclick = closeReaderModal;
