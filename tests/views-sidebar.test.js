@@ -89,8 +89,8 @@ describe('renderSidebarFolders', () => {
       expect(rows[i].innerHTML).toContain(`bg-${colors[i]}-900/60 text-${colors[i]}-200`);
       expect(rows[i].innerHTML).toContain(`shrink-0">${file.type}</span>`);
       expect(rows[i].innerHTML).toContain(`rounded">${counts[i]}</span>`);
-      expect(rows[i].innerHTML).toContain(`onclick="selectFolder('${file.id}')"`);
-      expect(rows[i].innerHTML).toContain(`onclick="confirmDeleteFolder(event, '${file.id}')"`);
+      expect(rows[i].innerHTML).toContain(`onclick="window.IBM.selectFolder('${file.id}')"`);
+      expect(rows[i].innerHTML).toContain(`onclick="window.IBM.confirmDeleteFolder(event, '${file.id}')"`);
       expect(rows[i].innerHTML).toContain('title="刪除檔案與其書籤"');
     });
   });

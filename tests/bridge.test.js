@@ -24,6 +24,8 @@ beforeAll(async () => {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     appendChild: vi.fn(),
+    // mountHeader/mountSidebar/mountModals inject markup via insertAdjacentHTML.
+    insertAdjacentHTML: vi.fn(),
     onclick: null,
   });
 
@@ -47,8 +49,9 @@ describe('main.js bridge (window.IBM)', () => {
     expect(html).toMatch(/function renderAll\(\)\s*\{\s*return window\.IBM\.renderAll\(\);\s*\}/);
     expect(html).not.toMatch(/window\.IBM\.renderAll\s*=/);
     expect(html).not.toMatch(/function (renderSidebarFolders|renderTagCloud)\s*\(/);
-    expect(html).toMatch(/function selectFolder\(/);
-    expect(html).toMatch(/function confirmDeleteFolder\(/);
+    expect(html).not.toMatch(/function (selectFolder|confirmDeleteFolder|deleteFolder)\s*\(/);
+    // Sidebar rows route through the module bridge (src/views/sidebarActions.js).
+    expect(html).not.toMatch(/onclick="selectFolder\(/);
   });
 
   it('exposes every dependency the inline script uses', () => {

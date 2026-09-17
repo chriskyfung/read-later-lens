@@ -28,8 +28,17 @@ import { renderAll } from './views/main-view.js';
 import { initImporter, registerImporterListeners, handleFileUploads } from './io/importer.js';
 import { registerExporterListeners, openSaveModal, saveSingleFile } from './io/exporter.js';
 import { mountHeader } from './components/header.js';
+import { mountSidebar } from './components/sidebar.js';
 import { mountModals } from './components/modals.js';
 import { initHeader, registerHeaderListeners } from './views/header.js';
+import {
+  initSidebarActions,
+  registerSidebarListeners,
+  selectFolder,
+  confirmDeleteFolder,
+  deleteFolder,
+  updateStorageUsageUI,
+} from './views/sidebarActions.js';
 import { registerModalListeners } from './views/modalListeners.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
@@ -76,40 +85,43 @@ window.IBM = {
   handleFileUploads,
   openSaveModal,
   saveSingleFile,
+  // Sidebar actions (called from generated row onclick in views/sidebar.js)
+  selectFolder,
+  confirmDeleteFolder,
+  deleteFolder,
+  updateStorageUsageUI,
 };
 
 // Helper for I/O modules to trigger persistence and UI updates
 async function persistAndRender() {
   await saveState();
-  if (window.IBM.updateStorageUsageUI) {
-    await window.IBM.updateStorageUsageUI();
-  }
+  await updateStorageUsageUI();
   renderAll();
 }
 
-// Initialize I/O modules
+// Initialize I/O modules — the importer's overwrite flow reuses the same
+// module-owned deleteFolder as the sidebar (monolith used the same function).
 initImporter({
   persistAndRender: persistAndRender,
-  deleteFolder: (fileId, triggerRender = true) => {
-    state.removeSourceFile(fileId);
-    // Mirrors the original monolith's deleteFolder side-effects
-    saveState();
-    if (window.IBM.updateStorageUsageUI) {
-      window.IBM.updateStorageUsageUI();
-    }
-    if (triggerRender) {
-      renderAll();
-      showToast('已成功刪除檔案及其書籤');
-    }
-  }
+  deleteFolder: deleteFolder,
 });
 
-// Mount overlay markup (header + modals + toast), then register listeners.
-// Order matters: every register* call targets elements created by the mounts.
+// Mount overlay markup (header + sidebar + modals + toast), then register
+// listeners. Order matters: every register* call targets elements created
+// by the mounts.
 mountHeader();
+mountSidebar();
 mountModals();
 initHeader({ render: renderAll, persistAndRender });
+initSidebarActions({
+  persist: async () => {
+    await saveState();
+    await updateStorageUsageUI();
+  },
+  render: renderAll,
+});
 registerHeaderListeners();
+registerSidebarListeners();
 registerModalListeners();
 registerImporterListeners();
 registerExporterListeners();
