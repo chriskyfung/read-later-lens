@@ -1,12 +1,36 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { renderAll } from '../src/views/main-view.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // main.js publishes the module bridge that index.html's classic script consumes.
+// registerImporterListeners / registerExporterListeners run at module import
+// time, so DOM stubs must exist before main.js is imported.
 beforeAll(async () => {
+  const els = {};
+  const makeEl = () => ({
+    innerText: '',
+    innerHTML: '',
+    className: '',
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      contains(c) { return this._s.has(c); },
+    },
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    appendChild: vi.fn(),
+    onclick: null,
+  });
+
   globalThis.window = globalThis.window || {};
+  globalThis.document = {
+    getElementById: (id) => (els[id] = els[id] || makeEl()),
+    createElement: () => makeEl(),
+  };
+
   await import('../src/main.js');
 });
 
@@ -63,6 +87,9 @@ describe('main.js bridge (window.IBM)', () => {
       'zoomGraphBy',
       'resetGraphZoom',
       'renderAll',
+      'handleFileUploads',
+      'openSaveModal',
+      'saveSingleFile',
     ]) {
       expect(ibm[key], key).toBeDefined();
     }
@@ -84,5 +111,23 @@ describe('main.js bridge (window.IBM)', () => {
     ]) {
       expect(typeof state[fn], fn).toBe('function');
     }
+  });
+
+  it('contains no remaining monolith-style I/O handlers in HTML', () => {
+    expect(html).not.toMatch(/function openSaveModal\(/);
+    expect(html).not.toMatch(/async function saveSingleFile\(/);
+    expect(html).not.toMatch(/function saveFileWithFallback\(/);
+    expect(html).not.toMatch(/function downloadBlob\(/);
+    expect(html).not.toMatch(/async function handleFileUploads\(/);
+    expect(html).not.toMatch(/function acceptRecords\(/);
+    expect(html).not.toMatch(/Papa\.parse\(/);
+    expect(html).not.toMatch(/initSql\(/);
+  });
+
+  it('retains the essential UI markup for I/O targets', () => {
+    expect(html).toMatch(/id="fileInput"/);
+    expect(html).toMatch(/id="saveBackBtn"/);
+    expect(html).toMatch(/id="exportAllUnifiedJsonBtn"/);
+    expect(html).toMatch(/id="exportAllUnifiedCsvBtn"/);
   });
 });
