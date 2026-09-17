@@ -1,32 +1,14 @@
 import './styles/main.css';
 
 import * as state from './core/state.js';
-import { getFilteredBookmarks, getFilteredBookmarksTop } from './core/filters.js';
-import { saveState, loadState, getStorageUsage } from './core/store.js';
-import { normalizeFields, normalizeTags } from './model/normalize.js';
-import { makeReaderUrl } from './model/BookmarkRecord.js';
-import { escapeHtml, showToast } from './utils/dom.js';
-import { downloadBlob, saveFileWithFallback } from './utils/download.js';
-import { importJsonOrCsv, importSqlite, providerForExtension } from './providers/index.js';
-import { detectLanguage } from './analytics/detectLanguage.js';
-import { wordCloudFrequencies, wordCloudItems } from './analytics/wordcloud.js';
-import { topDomains } from './analytics/domains.js';
-import { cosineSimilarity, mostSimilar } from './analytics/similarity.js';
-import { openReaderModal, closeReaderModal } from './views/readerModal.js';
-import { openSimilarityModal, closeSimilarityModal } from './views/similarityModal.js';
-import {
-  renderBookmarkCards,
-  toggleSelectBookmark,
-  updateBatchActionBar,
-} from './views/bookmarks.js';
-import { activateTab } from './views/tabs.js';
-import { renderDomainChart } from './views/domains.js';
-import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './views/linkage.js';
-import { renderWordCloud } from './views/wordcloud.js';
+import { saveState, loadState } from './core/store.js';
+import { showToast } from './utils/dom.js';
+import { initDomains } from './views/domains.js';
+import { initWordCloud } from './views/wordcloud.js';
 import { renderAll } from './views/main-view.js';
 
-import { initImporter, registerImporterListeners, handleFileUploads } from './io/importer.js';
-import { registerExporterListeners, openSaveModal, saveSingleFile } from './io/exporter.js';
+import { initImporter, registerImporterListeners } from './io/importer.js';
+import { registerExporterListeners } from './io/exporter.js';
 import { mountHeader } from './components/header.js';
 import { mountSidebar } from './components/sidebar.js';
 import { mountWorkspace } from './components/workspace.js';
@@ -35,72 +17,14 @@ import { initHeader, registerHeaderListeners } from './views/header.js';
 import {
   initSidebarActions,
   registerSidebarListeners,
-  selectFolder,
-  confirmDeleteFolder,
   deleteFolder,
   updateStorageUsageUI,
 } from './views/sidebarActions.js';
 import {
   initWorkspaceActions,
   registerWorkspaceListeners,
-  deleteBookmark,
-  switchTab,
 } from './views/workspaceActions.js';
 import { registerModalListeners } from './views/modalListeners.js';
-
-// Bridge for the legacy inline <script> in index.html while the monolith is
-// being decomposed. Module scripts execute after HTML parsing but before
-// DOMContentLoaded, so every runtime handler in index.html sees window.IBM.
-window.IBM = {
-  state,
-  getFilteredBookmarks,
-  getFilteredBookmarksTop,
-  saveState,
-  loadState,
-  getStorageUsage,
-  normalizeFields,
-  normalizeTags,
-  makeReaderUrl,
-  escapeHtml,
-  showToast,
-  downloadBlob,
-  saveFileWithFallback,
-  importJsonOrCsv,
-  importSqlite,
-  providerForExtension,
-  detectLanguage,
-  wordCloudFrequencies,
-  wordCloudItems,
-  topDomains,
-  cosineSimilarity,
-  mostSimilar,
-  openReaderModal,
-  closeReaderModal,
-  openSimilarityModal,
-  closeSimilarityModal,
-  renderBookmarkCards,
-  toggleSelectBookmark,
-  updateBatchActionBar,
-  activateTab,
-  renderWordCloud,
-  renderDomainChart,
-  renderConceptLinkageGraph,
-  zoomGraphBy,
-  resetGraphZoom,
-  renderAll,
-  // Added for I/O extraction
-  handleFileUploads,
-  openSaveModal,
-  saveSingleFile,
-  // Sidebar actions (called from generated row onclick in views/sidebar.js)
-  selectFolder,
-  confirmDeleteFolder,
-  deleteFolder,
-  updateStorageUsageUI,
-  // Workspace actions (called from generated card onclick in views/bookmarks.js)
-  deleteBookmark,
-  switchTab,
-};
 
 // Helper for I/O modules to trigger persistence and UI updates
 async function persistAndRender() {
@@ -109,39 +33,52 @@ async function persistAndRender() {
   renderAll();
 }
 
-// Initialize I/O modules — the importer's overwrite flow reuses the same
-// module-owned deleteFolder as the sidebar (monolith used the same function).
-initImporter({
-  persistAndRender: persistAndRender,
-  deleteFolder: deleteFolder,
-});
+// Boot sequence — mount UI, wire listeners, restore persisted state, render.
+async function boot() {
+  mountHeader();
+  mountSidebar();
+  mountWorkspace();
+  mountModals();
+  initHeader({ render: renderAll, persistAndRender });
+  initSidebarActions({
+    persist: async () => {
+      await saveState();
+      await updateStorageUsageUI();
+    },
+    render: renderAll,
+  });
+  initWordCloud({ render: renderAll });
+  initDomains({ render: renderAll });
+  initImporter({ persistAndRender, deleteFolder });
+  initWorkspaceActions({
+    persist: async () => {
+      await saveState();
+      await updateStorageUsageUI();
+    },
+    render: renderAll,
+  });
+  registerHeaderListeners();
+  registerSidebarListeners();
+  registerWorkspaceListeners();
+  registerModalListeners();
+  registerImporterListeners();
+  registerExporterListeners();
 
-// Mount overlay markup (header + sidebar + workspace + modals + toast), then
-// register listeners. Order matters: every register* call targets elements
-// created by the mounts.
-mountHeader();
-mountSidebar();
-mountWorkspace();
-mountModals();
-initHeader({ render: renderAll, persistAndRender });
-initSidebarActions({
-  persist: async () => {
-    await saveState();
+  // Restore cached state, then render the live UI.
+  try {
+    const restored = await loadState();
+    if (restored) {
+      showToast(`已成功從 IndexedDB 快取復原 ${state.bookmarks.length} 筆書籤`);
+    }
+  } catch (err) {
+    console.error('Cache restoration failed:', err);
+  }
+  try {
     await updateStorageUsageUI();
-  },
-  render: renderAll,
-});
-initWorkspaceActions({
-  persist: async () => {
-    await saveState();
-    await updateStorageUsageUI();
-  },
-  render: renderAll,
-});
-registerHeaderListeners();
-registerSidebarListeners();
-registerWorkspaceListeners();
-registerModalListeners();
-registerImporterListeners();
-registerExporterListeners();
+  } catch (err) {
+    console.error('Storage usage update failed:', err);
+  }
+  renderAll();
+}
 
+export const ready = boot();

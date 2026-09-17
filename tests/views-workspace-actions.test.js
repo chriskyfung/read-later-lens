@@ -10,7 +10,6 @@ import {
   setSortBy,
   setSelectedIds,
   selectedIds,
-  sortBy,
   setSourceFiles,
 } from '../src/core/state.js';
 import { getFilteredBookmarks } from '../src/core/filters.js';

@@ -105,7 +105,7 @@ export function renderBookmarkCards() {
                 <a href="${b.instapaper_url}" target="_blank" title="於 Instapaper 開啟" class="text-slate-400 hover:text-amber-400 p-1">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
                 </a>
-                <button onclick="window.IBM.deleteBookmark('${b.id}')" title="刪除此書籤" class="text-slate-400 hover:text-rose-400 p-1">
+                <button data-delete-bookmark title="刪除此書籤" class="text-slate-400 hover:text-rose-400 p-1">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
               </div>
@@ -119,6 +119,7 @@ export function renderBookmarkCards() {
     card
       .querySelector('.open-similarity-btn')
       .addEventListener('click', () => openSimilarityModal(b.id));
+    card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = b.id;
     grid.appendChild(card);
   });
 }

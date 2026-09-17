@@ -1,12 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderSidebarFolders, renderTagCloud, renderSidebar } from '../src/views/sidebar.js';
+import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebarActions.js';
 import * as state from '../src/core/state.js';
 
 // Model only the DOM operations used by the sidebar, including replacement
 // and removal so repeated-render tests detect stale or duplicate children.
 function makeEl() {
   return {
+    querySelector(selector) {
+      this.elements ||= {};
+      return this.elements[selector] ||= makeEl();
+    },
     innerText: '',
+    dataset: {},
+    listeners: {},
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+    closest() { return this; },
     className: '',
     children: [],
     parent: null,
@@ -49,7 +58,7 @@ beforeEach(() => {
   resetState();
   els = Object.fromEntries(ids.map((id) => [id, makeEl()]));
   requestRender = vi.fn();
-  vi.stubGlobal('window', { IBM: { renderAll: requestRender } });
+  vi.stubGlobal('window', {});
   vi.stubGlobal('document', {
     getElementById: (id) => els[id] || null,
     createElement: () => makeEl(),
@@ -89,8 +98,8 @@ describe('renderSidebarFolders', () => {
       expect(rows[i].innerHTML).toContain(`bg-${colors[i]}-900/60 text-${colors[i]}-200`);
       expect(rows[i].innerHTML).toContain(`shrink-0">${file.type}</span>`);
       expect(rows[i].innerHTML).toContain(`rounded">${counts[i]}</span>`);
-      expect(rows[i].innerHTML).toContain(`onclick="window.IBM.selectFolder('${file.id}')"`);
-      expect(rows[i].innerHTML).toContain(`onclick="window.IBM.confirmDeleteFolder(event, '${file.id}')"`);
+      expect(rows[i].dataset.selectFolder).toBe(file.id);
+      expect(rows[i].querySelector('[data-delete-folder]').dataset.deleteFolder).toBe(file.id);
       expect(rows[i].innerHTML).toContain('title="刪除檔案與其書籤"');
     });
   });
@@ -155,14 +164,16 @@ describe('renderTagCloud', () => {
       observed.push(state.activeTag);
       renderTagCloud();
     });
+    initSidebarActions({ persist: vi.fn(), render: requestRender });
+    registerSidebarListeners();
     renderTagCloud();
-    els.tagFilterCloud.children[0].onclick();
+    els.tagFilterCloud.listeners.click({ target: els.tagFilterCloud.children[0] });
     expect(state.activeTag).toBe('tech');
     expect(requestRender).toHaveBeenCalledTimes(1);
-    els.tagFilterCloud.children[1].onclick();
+    els.tagFilterCloud.listeners.click({ target: els.tagFilterCloud.children[1] });
     expect(state.activeTag).toBe('fruit');
     expect(requestRender).toHaveBeenCalledTimes(2);
-    els.tagFilterCloud.children[1].onclick();
+    els.tagFilterCloud.listeners.click({ target: els.tagFilterCloud.children[1] });
     expect(state.activeTag).toBeNull();
     expect(requestRender).toHaveBeenCalledTimes(3);
     expect(observed).toEqual(['tech', 'fruit', null]);

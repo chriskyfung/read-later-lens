@@ -5,8 +5,7 @@
  * `${word} (${count})` labels, the monolith empty-state span, and the click
  * flow (set search query → activateTab('bookmarks') → renderAll()). Tab
  * switching uses the extracted mechanics in ./tabs.js; `renderAll` lives
- * in src/views/main-view.js (bridged via window.IBM.renderAll, set by
- * src/main.js).
+ * in src/views/main-view.js (set by src/main.js).
  */
 
 import { getFilteredBookmarks } from '../core/filters.js';
@@ -14,9 +13,13 @@ import { wordCloudFrequencies, wordCloudItems } from '../analytics/wordcloud.js'
 import { setSearchQuery } from '../core/state.js';
 import { activateTab } from './tabs.js';
 
-/**
- * Render the word-cloud tab.
- */
+let deps = { render: () => {} };
+
+export function initWordCloud(injectedDeps) {
+  deps = { ...deps, ...injectedDeps };
+}
+
+/** Render the word-cloud tab. */
 export function renderWordCloud() {
   const container = document.getElementById('wordCloudContainer');
   const items = wordCloudItems(wordCloudFrequencies(getFilteredBookmarks()));
@@ -38,7 +41,7 @@ export function renderWordCloud() {
       setSearchQuery(word);
       document.getElementById('searchInput').value = word;
       activateTab('bookmarks');
-      window.IBM.renderAll();
+      deps.render();
     };
     container.appendChild(item);
   });

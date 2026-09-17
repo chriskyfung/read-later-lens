@@ -8,6 +8,7 @@ import { setBookmarks, setActiveFolder, selectedIds, sourceFiles } from '../src/
 
 function makeEl() {
   return {
+    dataset: {},
     innerText: '',
     innerHTML: '',
     className: '',
@@ -107,7 +108,7 @@ describe('renderBookmarkCards', () => {
     expect(html).toContain('#tech');
     expect(html).toContain('#fruit');
     expect(html).toContain('href="https://www.instapaper.com/read/1"');
-    expect(html).toContain('onclick="window.IBM.deleteBookmark(\'1\')"');
+    expect(html).toContain('data-delete-bookmark');
     expect(html).toContain('zh'); // raw detected_language (CSS uppercases it)
   });
 

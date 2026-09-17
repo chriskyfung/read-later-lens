@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { renderWordCloud } from '../src/views/wordcloud.js';
+import { renderWordCloud, initWordCloud } from '../src/views/wordcloud.js';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state.js';
 
 function makeEl() {
@@ -36,7 +36,6 @@ function makePanel(id) {
 
 const els = {};
 const created = [];
-const calls = { renderAll: 0 };
 const tabStubs = [
   { dataset: { tab: 'bookmarks' }, className: '' },
   { dataset: { tab: 'wordcloud' }, className: '' },
@@ -64,10 +63,6 @@ beforeAll(() => {
   });
   globalThis.document.querySelectorAll = (sel) => (sel === '.main-tab' ? tabStubs : panels);
   globalThis.window = globalThis.window || {};
-  globalThis.window.IBM = globalThis.window.IBM || {};
-  globalThis.window.IBM.renderAll = () => {
-    calls.renderAll += 1;
-  };
 
   setSearchQuery('');
   setBookmarks([
@@ -105,9 +100,12 @@ describe('renderWordCloud', () => {
   });
 
   it('click flow sets search, activates the bookmarks tab, renders', () => {
-    calls.renderAll = 0;
+    let renderCount = 0;
+    const renderCb = () => { renderCount += 1; };
     setSearchQuery('');
 
+    initWordCloud({ render: renderCb });
+    created.length = 0;
     renderWordCloud();
     created[0].onclick();
 
@@ -118,7 +116,7 @@ describe('renderWordCloud', () => {
     expect(tabStubs[0].className).toContain('main-tab active');
     // The bookmarks panel is unhidden by activateTab.
     expect(panelStubs.panelBookmarks.classList.contains('hidden')).toBe(false);
-    expect(calls.renderAll).toBe(1);
+    expect(renderCount).toBe(1);
   });
 
   it('searchQuery state is set from the clicked word', () => {

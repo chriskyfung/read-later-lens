@@ -2,11 +2,8 @@
  * @fileoverview Sidebar actions — folder select/delete, language filters,
  * and the IndexedDB storage usage indicator.
  *
- * Extracted from the monolith's inline script in index.html. Folder rows are
- * rendered by src/views/sidebar.js with inline onclick that routes through
- * window.IBM.selectFolder / window.IBM.confirmDeleteFolder.
- *
- * Must be mounted AFTER mountSidebar() (src/components/sidebar.js).
+ * Extracted from the monolith's inline script in index.html.
+ * Register listeners AFTER mountSidebar() (src/components/sidebar.js).
  */
 
 import * as state from '../core/state.js';
@@ -38,7 +35,7 @@ export async function updateStorageUsageUI() {
 }
 
 /**
- * Select a source folder (window.IBM.selectFolder, generated row onclick).
+ * Select a source folder (generated row data-select-folder).
  * @param {string} folderId
  */
 export function selectFolder(folderId) {
@@ -47,8 +44,7 @@ export function selectFolder(folderId) {
 }
 
 /**
- * Confirm and delete a source file with its bookmarks
- * (window.IBM.confirmDeleteFolder, generated row delete button onclick).
+ * Confirm and delete a source file with its bookmarks (generated row data-delete-folder).
  * @param {Event} e
  * @param {string} fileId
  */
@@ -82,6 +78,26 @@ export function deleteFolder(fileId, triggerRender = true) {
  * Attach the all-bookmarks and language-filter listeners.
  */
 export function registerSidebarListeners() {
+  document.getElementById('tagFilterCloud')?.addEventListener('click', (e) => {
+    const pill = e.target.closest('[data-filter-tag]');
+    if (!pill) return;
+    const tag = pill.dataset.filterTag;
+    state.setActiveTag(state.activeTag === tag ? null : tag);
+    deps.render();
+  });
+  // Folder list — delegated select/delete
+  document.getElementById('folderList')?.addEventListener('click', (e) => {
+    const deleteBtn = e.target.closest('[data-delete-folder]');
+    if (deleteBtn) {
+      confirmDeleteFolder(e, deleteBtn.dataset.deleteFolder);
+      return;
+    }
+    const selectBtn = e.target.closest('[data-select-folder]');
+    if (selectBtn) {
+      selectFolder(selectBtn.dataset.selectFolder);
+    }
+  });
+
   // "All bookmarks" folder button
   document.getElementById('allFolderBtn')?.addEventListener('click', () => {
     state.setActiveFolder('ALL');

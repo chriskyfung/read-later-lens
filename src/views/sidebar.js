@@ -1,26 +1,15 @@
 /**
  * @fileoverview Sidebar rendering — folders/source files and the tag cloud.
  *
- * Faithful port of the monolith's `renderSidebarFolders` and `renderTagCloud`
- * (previously inline in index.html). Same DOM ids, the exact folder-button
- * template (type badge, count badge, inline `selectFolder` /
- * `confirmDeleteFolder` onclick globals), the tag-cloud pill classes, the
- * `#tag (count)` label, and the exact `尚無標籤` placeholder span.
+ * Preserves the monolith's folder counts, badges, tag-pill classes and empty
+ * placeholder. Missing sidebar elements are skipped; counts are explicitly
+ * converted to strings to match browser innerText coercion.
  *
- * Defensive difference: missing sidebar elements are skipped rather than
- * throwing as in the monolith. Count values are explicitly converted to strings;
- * this matches browser innerText coercion. Template indentation is not preserved.
- *
- * The language filter is static HTML driven by an inline click listener in
- * index.html — the monolith has no language-filter render function, so there
- * is none here either (the buttons are never re-rendered).
- *
- * Folder selection / deletion go through the inline `selectFolder` /
- * `confirmDeleteFolder` globals (unchanged); tag clicks write state via the
- * core setter and re-render through the `window.IBM.renderAll` bridge.
+ * Folder, tag and language interactions are registered by sidebarActions.js.
+ * Generated controls carry IDs/tags as DOM data, not inline JavaScript.
  */
 
-import { bookmarks, sourceFiles, activeFolder, activeTag, setActiveTag } from '../core/state.js';
+import { bookmarks, sourceFiles, activeFolder, activeTag } from '../core/state.js';
 
 /**
  * Render the folder / source-file list in the sidebar.
@@ -62,18 +51,20 @@ export function renderSidebarFolders() {
             ? 'bg-emerald-900/60 text-emerald-200'
             : 'bg-sky-900/60 text-sky-200';
 
+      btn.dataset.selectFolder = file.id;
       btn.innerHTML = `
-        <div class="flex items-center space-x-2 truncate flex-1" onclick="window.IBM.selectFolder('${file.id}')">
+        <div class="flex items-center space-x-2 truncate flex-1">
           <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor} shrink-0">${file.type}</span>
           <span class="truncate">${file.name}</span>
         </div>
         <div class="flex items-center space-x-1 shrink-0">
             <span class="block group-hover:hidden bg-slate-800 text-slate-400 text-xs px-1.5 py-0.5 rounded">${count}</span>
-            <button onclick="window.IBM.confirmDeleteFolder(event, '${file.id}')" class="hidden group-hover:block text-slate-400 hover:text-rose-400 p-1" title="刪除檔案與其書籤">
+            <button data-delete-folder class="hidden group-hover:block text-slate-400 hover:text-rose-400 p-1" title="刪除檔案與其書籤">
                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
         </div>
       `;
+      btn.querySelector('[data-delete-folder]').dataset.deleteFolder = file.id;
       folderList.appendChild(btn);
     });
   }
@@ -112,10 +103,7 @@ export function renderTagCloud() {
         : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
     }`;
     pill.innerText = `#${tag} (${cnt})`;
-    pill.onclick = () => {
-      setActiveTag(isSelected ? null : tag);
-      window.IBM.renderAll();
-    };
+    pill.dataset.filterTag = tag;
     container.appendChild(pill);
   });
 }

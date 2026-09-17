@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { renderDomainChart } from '../src/views/domains.js';
+import { renderDomainChart, initDomains } from '../src/views/domains.js';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state.js';
 
 function makeEl() {
@@ -36,7 +36,6 @@ function makePanel(id) {
 
 const els = {};
 const created = [];
-const calls = { renderAll: 0 };
 const tabStubs = [
   { dataset: { tab: 'bookmarks' }, className: '' },
   { dataset: { tab: 'wordcloud' }, className: '' },
@@ -77,10 +76,6 @@ beforeAll(() => {
   });
   globalThis.document.querySelectorAll = (sel) => (sel === '.main-tab' ? tabStubs : panels);
   globalThis.window = globalThis.window || {};
-  globalThis.window.IBM = globalThis.window.IBM || {};
-  globalThis.window.IBM.renderAll = () => {
-    calls.renderAll += 1;
-  };
 
   setSearchQuery('');
 });
@@ -131,10 +126,12 @@ describe('renderDomainChart', () => {
   });
 
   it('click flow sets search, activates the bookmarks tab, renders', () => {
-    calls.renderAll = 0;
+    let renderCount = 0;
+    const renderCb = () => { renderCount += 1; };
     setSearchQuery('');
     setBookmarks([bm(1, 'https://example.com/a'), bm(2, 'https://other.org/b')]);
     created.length = 0;
+    initDomains({ render: renderCb });
     renderDomainChart();
 
     created[0].onclick();
@@ -146,7 +143,7 @@ describe('renderDomainChart', () => {
     expect(activeTab).toBe('bookmarks');
     expect(tabStubs[0].className).toContain('main-tab active');
     expect(panelStubs.panelBookmarks.classList.contains('hidden')).toBe(false);
-    expect(calls.renderAll).toBe(1);
+    expect(renderCount).toBe(1);
   });
 
   it('renders the domain label text (escapeHtml is applied defensively)', () => {

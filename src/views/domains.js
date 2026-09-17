@@ -5,7 +5,7 @@
  * `${count} 篇文章 (${pct}%)` caption, rounded percentages, the exact
  * empty-state span, and the click flow (set search query → activateTab
  * ('bookmarks') → renderAll()). `renderAll` lives in src/views/main-view.js
- * (bridged via window.IBM.renderAll, set by src/main.js).
+ * (set by src/main.js).
  */
 
 import { escapeHtml } from '../utils/dom.js';
@@ -14,9 +14,13 @@ import { topDomains } from '../analytics/domains.js';
 import { setSearchQuery } from '../core/state.js';
 import { activateTab } from './tabs.js';
 
-/**
- * Render the domain chart tab.
- */
+let deps = { render: () => {} };
+
+export function initDomains(injectedDeps) {
+  deps = { ...deps, ...injectedDeps };
+}
+
+/** Render the domain chart tab. */
 export function renderDomainChart() {
   const container = document.getElementById('domainChartContainer');
   if (!container) return;
@@ -41,7 +45,7 @@ export function renderDomainChart() {
       setSearchQuery(domain);
       document.getElementById('searchInput').value = domain;
       activateTab('bookmarks');
-      window.IBM.renderAll();
+      deps.render();
     };
     bar.innerHTML = `
         <div class="flex justify-between items-center text-xs mb-1.5">

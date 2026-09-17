@@ -19,6 +19,11 @@ const els = {};
 const created = [];
 function makeEl() {
   return {
+    dataset: {},
+    querySelector(selector) {
+      this.elements ||= {};
+      return this.elements[selector] ||= makeEl();
+    },
     innerText: '',
     innerHTML: '',
     className: '',
@@ -81,7 +86,7 @@ describe('openSaveModal', () => {
     expect(el('saveModal').classList.contains('hidden')).toBe(false);
   });
 
-  it('renders one row per source file with the window.IBM.saveSingleFile bridge', () => {
+  it('renders one row per source file with the data-save-file attribute', () => {
     setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
 
     openSaveModal();
@@ -90,7 +95,7 @@ describe('openSaveModal', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].innerHTML).toContain('a.csv');
     expect(rows[0].innerHTML).toContain('csv 格式');
-    expect(rows[0].innerHTML).toContain("onclick=\"window.IBM.saveSingleFile('F1')\"");
+    expect(rows[0].querySelector('[data-save-file]').dataset.saveFile).toBe('F1');
     expect(el('saveModal').classList.contains('hidden')).toBe(false);
   });
 });
@@ -198,5 +203,3 @@ describe('registerExporterListeners', () => {
     expect(downloadBlob.mock.calls[1][1]).toBe('all_bookmarks_export.csv');
   });
 });
-
-

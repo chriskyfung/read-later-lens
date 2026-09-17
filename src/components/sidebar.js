@@ -4,7 +4,7 @@
  * Extracted byte-for-byte from the original monolith (index.html
  * "Left Sidebar"). Behavior mapping:
  *  - folder rows (dynamic)  → src/views/sidebar.js (renderer)
- *  - folder select/delete   → src/views/sidebarActions.js (window.IBM.* onclick)
+ *  - folder select/delete   → src/views/sidebarActions.js (delegated listeners)
  *  - allFolderBtn / languageFilters → src/views/sidebarActions.js
  *  - storage usage          → src/views/sidebarActions.js (updateStorageUsageUI)
  *  - tag cloud (dynamic)    → src/views/sidebar.js

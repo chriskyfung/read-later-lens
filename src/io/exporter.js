@@ -27,8 +27,9 @@ export function openSaveModal() {
           <div class="font-medium text-slate-200 truncate flex-1">${file.name}</div>
           <div class="text-slate-500 text-[10px] uppercase font-bold">${file.type} 格式</div>
         </div>
-        <button onclick="window.IBM.saveSingleFile('${file.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
+        <button data-save-file class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
       `;
+      item.querySelector('[data-save-file]').dataset.saveFile = file.id;
       container.appendChild(item);
     });
   }
@@ -86,7 +87,11 @@ export function exportAllUnifiedCsv() {
  * Register DOM listeners for export buttons.
  */
 export function registerExporterListeners() {
-  document.getElementById('saveBackBtn').addEventListener('click', openSaveModal);
+  document.getElementById('saveSourceFilesList')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-save-file]');
+    if (btn) saveSingleFile(btn.dataset.saveFile);
+  });
+  document.getElementById('saveBackBtn')?.addEventListener('click', openSaveModal);
   document.getElementById('closeSaveBtn').addEventListener('click', () => {
     document.getElementById('saveModal').classList.add('hidden');
   });

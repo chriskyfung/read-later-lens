@@ -34,8 +34,8 @@ export function initWorkspaceActions(injectedDeps) {
 }
 
 /**
- * Activate a tab and lazily render heavy panel content
- * (window.IBM.switchTab contract; called by the .main-tab delegation).
+ * Activate a tab and lazily render heavy panel content.
+ * Called by the registered tab-button listeners.
  * @param {string} tabId
  */
 export function switchTab(tabId) {
@@ -46,7 +46,7 @@ export function switchTab(tabId) {
 }
 
 /**
- * Delete a single bookmark (window.IBM.deleteBookmark, generated card onclick).
+ * Delete a single bookmark (generated card data-delete-bookmark).
  * @param {string} id
  */
 export function deleteBookmark(id) {
@@ -100,6 +100,12 @@ export function registerWorkspaceListeners() {
     state.selectedIds.clear();
     renderBookmarkCards();
     updateBatchActionBar();
+  });
+
+  // Bookmark delete — delegated from bookmark grid
+  document.getElementById('bookmarkCardsGrid')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-delete-bookmark]');
+    if (btn) deleteBookmark(btn.dataset.deleteBookmark);
   });
 
   // D3 Zoom Controls (zoom/pan state lives in src/views/linkage.js)
