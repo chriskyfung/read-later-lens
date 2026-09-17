@@ -4,6 +4,8 @@ import { renderAll } from '../src/views/main-view.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
+let _bodyHtml = '';
+
 // main.js publishes the module bridge that index.html's classic script consumes.
 // registerImporterListeners / registerExporterListeners run at module import
 // time, so DOM stubs must exist before main.js is imported.
@@ -29,6 +31,8 @@ beforeAll(async () => {
   globalThis.document = {
     getElementById: (id) => (els[id] = els[id] || makeEl()),
     createElement: () => makeEl(),
+    // main.js calls mountModals() at import time; we don't parse HTML here.
+    body: { insertAdjacentHTML: (position, html) => { _bodyHtml += html; } },
   };
 
   await import('../src/main.js');
@@ -124,10 +128,24 @@ describe('main.js bridge (window.IBM)', () => {
     expect(html).not.toMatch(/initSql\(/);
   });
 
+  it('contains no remaining modal markup or delegates (moved to src/components)', () => {
+    for (const id of [
+      'readerModal',
+      'similarityModal',
+      'saveModal',
+      'duplicateModal',
+      'toastNotification',
+    ]) {
+      expect(html, id).not.toContain(`id="${id}"`);
+    }
+    expect(html).not.toMatch(/function (openReaderModal|closeReaderModal|openSimilarityModal|closeSimilarityModal)\(/);
+    expect(html).not.toContain('MODAL 1: Reader View Modal');
+  });
+
   it('retains the essential UI markup for I/O targets', () => {
     expect(html).toMatch(/id="fileInput"/);
     expect(html).toMatch(/id="saveBackBtn"/);
-    expect(html).toMatch(/id="exportAllUnifiedJsonBtn"/);
-    expect(html).toMatch(/id="exportAllUnifiedCsvBtn"/);
+    // The export buttons live inside the save modal, which is now mounted
+    // from src/components/saveModal.js (see components-modals.test.js).
   });
 });

@@ -27,6 +27,8 @@ import { renderAll } from './views/main-view.js';
 
 import { initImporter, registerImporterListeners, handleFileUploads } from './io/importer.js';
 import { registerExporterListeners, openSaveModal, saveSingleFile } from './io/exporter.js';
+import { mountModals } from './components/modals.js';
+import { registerModalListeners } from './views/modalListeners.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
@@ -100,6 +102,10 @@ initImporter({
   }
 });
 
+// Mount overlay markup (modals + toast), then register listeners.
+// Order matters: every register* call targets elements created by mountModals.
+mountModals();
+registerModalListeners();
 registerImporterListeners();
 registerExporterListeners();
 
