@@ -25,6 +25,9 @@ import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './views/
 import { renderWordCloud } from './views/wordcloud.js';
 import { renderAll } from './views/main-view.js';
 
+import { initImporter, registerImporterListeners, handleFileUploads } from './io/importer.js';
+import { registerExporterListeners, openSaveModal, saveSingleFile } from './io/exporter.js';
+
 // Bridge for the legacy inline <script> in index.html while the monolith is
 // being decomposed. Module scripts execute after HTML parsing but before
 // DOMContentLoaded, so every runtime handler in index.html sees window.IBM.
@@ -65,4 +68,38 @@ window.IBM = {
   zoomGraphBy,
   resetGraphZoom,
   renderAll,
+  // Added for I/O extraction
+  handleFileUploads,
+  openSaveModal,
+  saveSingleFile,
 };
+
+// Helper for I/O modules to trigger persistence and UI updates
+async function persistAndRender() {
+  await saveState();
+  if (window.IBM.updateStorageUsageUI) {
+    await window.IBM.updateStorageUsageUI();
+  }
+  renderAll();
+}
+
+// Initialize I/O modules
+initImporter({
+  persistAndRender: persistAndRender,
+  deleteFolder: (fileId, triggerRender = true) => {
+    state.removeSourceFile(fileId);
+    // Mirrors the original monolith's deleteFolder side-effects
+    saveState();
+    if (window.IBM.updateStorageUsageUI) {
+      window.IBM.updateStorageUsageUI();
+    }
+    if (triggerRender) {
+      renderAll();
+      showToast('已成功刪除檔案及其書籤');
+    }
+  }
+});
+
+registerImporterListeners();
+registerExporterListeners();
+
