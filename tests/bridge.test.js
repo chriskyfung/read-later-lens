@@ -142,10 +142,14 @@ describe('main.js bridge (window.IBM)', () => {
     expect(html).not.toContain('MODAL 1: Reader View Modal');
   });
 
-  it('retains the essential UI markup for I/O targets', () => {
-    expect(html).toMatch(/id="fileInput"/);
-    expect(html).toMatch(/id="saveBackBtn"/);
-    // The export buttons live inside the save modal, which is now mounted
-    // from src/components/saveModal.js (see components-modals.test.js).
+  it('retains no header markup (moved to src/components/header.js)', () => {
+    expect(html).not.toMatch(/<header/);
+    expect(html).not.toContain('id="searchInput"');
+    expect(html).not.toContain('id="clearCacheBtn"');
+    expect(html).not.toContain('id="fileInput"');
+    expect(html).not.toContain('id="saveBackBtn"');
+    // Header handlers also moved (no double registration).
+    expect(html).not.toMatch(/clearCacheBtn'\)\.onclick/);
+    expect(html).not.toMatch(/searchInput'\)\.addEventListener/);
   });
 });
