@@ -29,6 +29,7 @@ import { initImporter, registerImporterListeners, handleFileUploads } from './io
 import { registerExporterListeners, openSaveModal, saveSingleFile } from './io/exporter.js';
 import { mountHeader } from './components/header.js';
 import { mountSidebar } from './components/sidebar.js';
+import { mountWorkspace } from './components/workspace.js';
 import { mountModals } from './components/modals.js';
 import { initHeader, registerHeaderListeners } from './views/header.js';
 import {
@@ -39,6 +40,12 @@ import {
   deleteFolder,
   updateStorageUsageUI,
 } from './views/sidebarActions.js';
+import {
+  initWorkspaceActions,
+  registerWorkspaceListeners,
+  deleteBookmark,
+  switchTab,
+} from './views/workspaceActions.js';
 import { registerModalListeners } from './views/modalListeners.js';
 
 // Bridge for the legacy inline <script> in index.html while the monolith is
@@ -90,6 +97,9 @@ window.IBM = {
   confirmDeleteFolder,
   deleteFolder,
   updateStorageUsageUI,
+  // Workspace actions (called from generated card onclick in views/bookmarks.js)
+  deleteBookmark,
+  switchTab,
 };
 
 // Helper for I/O modules to trigger persistence and UI updates
@@ -106,11 +116,12 @@ initImporter({
   deleteFolder: deleteFolder,
 });
 
-// Mount overlay markup (header + sidebar + modals + toast), then register
-// listeners. Order matters: every register* call targets elements created
-// by the mounts.
+// Mount overlay markup (header + sidebar + workspace + modals + toast), then
+// register listeners. Order matters: every register* call targets elements
+// created by the mounts.
 mountHeader();
 mountSidebar();
+mountWorkspace();
 mountModals();
 initHeader({ render: renderAll, persistAndRender });
 initSidebarActions({
@@ -120,8 +131,16 @@ initSidebarActions({
   },
   render: renderAll,
 });
+initWorkspaceActions({
+  persist: async () => {
+    await saveState();
+    await updateStorageUsageUI();
+  },
+  render: renderAll,
+});
 registerHeaderListeners();
 registerSidebarListeners();
+registerWorkspaceListeners();
 registerModalListeners();
 registerImporterListeners();
 registerExporterListeners();

@@ -107,7 +107,7 @@ describe('renderBookmarkCards', () => {
     expect(html).toContain('#tech');
     expect(html).toContain('#fruit');
     expect(html).toContain('href="https://www.instapaper.com/read/1"');
-    expect(html).toContain('onclick="deleteBookmark(\'1\')"');
+    expect(html).toContain('onclick="window.IBM.deleteBookmark(\'1\')"');
     expect(html).toContain('zh'); // raw detected_language (CSS uppercases it)
   });
 

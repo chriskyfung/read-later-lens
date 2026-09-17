@@ -33,6 +33,7 @@ beforeAll(async () => {
   globalThis.document = {
     getElementById: (id) => (els[id] = els[id] || makeEl()),
     createElement: () => makeEl(),
+    querySelectorAll: (sel) => [],
     // main.js calls mountModals() at import time; we don't parse HTML here.
     body: { insertAdjacentHTML: (position, html) => { _bodyHtml += html; } },
   };
