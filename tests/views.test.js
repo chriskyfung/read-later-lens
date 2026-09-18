@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { openReaderModal, closeReaderModal } from '../src/views/readerModal.js';
+import {
+  openReaderModal,
+  closeReaderModal,
+  getReaderBookmarkId,
+} from '../src/views/readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from '../src/views/similarityModal.js';
 import { setBookmarks } from '../src/core/state.js';
 
@@ -111,6 +115,24 @@ describe('openReaderModal', () => {
 
   it('no-ops for unknown ids', () => {
     expect(() => openReaderModal('missing')).not.toThrow();
+  });
+
+  it('exposes the open bookmark id via getReaderBookmarkId', () => {
+    openReaderModal('1');
+    expect(getReaderBookmarkId()).toBe('1');
+  });
+
+  it('clears the bookmark id when the reader closes', () => {
+    openReaderModal('2');
+    expect(getReaderBookmarkId()).toBe('2');
+    closeReaderModal();
+    expect(getReaderBookmarkId()).toBeNull();
+  });
+
+  it('does not set an id for unknown bookmarks', () => {
+    closeReaderModal(); // reset to a known-null baseline
+    openReaderModal('missing'); // no-ops
+    expect(getReaderBookmarkId()).toBeNull();
   });
 });
 

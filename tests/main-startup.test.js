@@ -66,6 +66,26 @@ describe('entry-point feature wiring', () => {
     expect(saveState).not.toHaveBeenCalled();
   });
 
+  it('deletes the open bookmark from the reader modal after confirm (e2e)', async () => {
+    await start();
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    );
+    const state = await import('../src/core/state.js');
+    const { saveState } = await import('../src/core/store.js');
+    const { openReaderModal } = await import('../src/views/readerModal.js');
+    state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
+
+    openReaderModal('r1');
+    expect(els.readerModal.classList.contains('hidden')).toBe(false);
+    els.readerDeleteBtn.dispatch('click');
+
+    expect(state.bookmarks).toEqual([]);
+    expect(els.readerModal.classList.contains('hidden')).toBe(true);
+    expect(saveState).toHaveBeenCalled();
+  });
+
   it('keeps folder deletion separate from selection and handles nested clicks', async () => {
     await start();
     const state = await import('../src/core/state.js');
