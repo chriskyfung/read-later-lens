@@ -1,6 +1,85 @@
 /**
  * @fileoverview Tiny DOM helpers so views don't sprinkle boilerplate everywhere.
+ *
+ * Includes modal focus helpers (openModal / closeModal / trapFocus) that give
+ * every overlay role="dialog" / aria-modal focus management: moving focus into
+ * the modal on open, restoring it to the opener on close, and keeping Tab
+ * focus inside the modal while it is open.
  */
+
+/**
+ * Selector for elements that can receive focus inside a modal overlay.
+ * Disabled buttons/inputs are excluded so the trap skips them.
+ */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), ' +
+  'select:not([disabled]), textarea:not([disabled]), ' +
+  '[tabindex]:not([tabindex="-1"])';
+
+/**
+ * Show a modal overlay, moving focus into it and remembering the element that
+ * had focus so closeModal can restore focus later.
+ *
+ * @param {HTMLElement} modal
+ */
+export function openModal(modal) {
+  if (!modal) return;
+  modal.previouslyFocused = document.activeElement || null;
+  modal.classList.remove('hidden');
+  if (typeof modal.focus === 'function') modal.focus();
+}
+
+/**
+ * Hide a modal overlay and hand focus back to the element that opened it.
+ *
+ * @param {HTMLElement} modal
+ */
+export function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.add('hidden');
+  const target = modal.previouslyFocused;
+  modal.previouslyFocused = null;
+  if (target && typeof target.focus === 'function') target.focus();
+}
+
+/**
+ * Return the list of focusable elements inside a modal.
+ *
+ * @param {HTMLElement} modal
+ * @returns {HTMLElement[]}
+ */
+export function focusableWithin(modal) {
+  if (!modal || typeof modal.querySelectorAll !== 'function') return [];
+  return Array.from(modal.querySelectorAll(FOCUSABLE_SELECTOR));
+}
+
+/**
+ * Keep Tab/Shift+Tab focus inside a modal: when the user tabs past the last
+ * (or shift+tabs before the first) focusable element, fold focus back to the
+ * other end. Designed to be called from a document-level Tab keydown handler.
+ *
+ * @param {HTMLElement} modal
+ * @param {KeyboardEvent} event
+ */
+export function trapFocus(modal, event) {
+  const items = focusableWithin(modal);
+  if (items.length === 0) {
+    event.preventDefault();
+    return;
+  }
+  const idx = items.indexOf(document.activeElement);
+  const atStart = idx <= 0;
+  const atEnd = idx === -1 || idx === items.length - 1;
+  if (event.shiftKey) {
+    if (atStart) {
+      event.preventDefault();
+      items[items.length - 1].focus();
+    }
+  } else if (atEnd) {
+    event.preventDefault();
+    items[0].focus();
+  }
+}
 
 /**
  * Escape a string for safe insertion into `innerHTML` contexts.

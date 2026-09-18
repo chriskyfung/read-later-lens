@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { escapeHtml, showToast } from '../src/utils/dom.js';
+import {
+  escapeHtml,
+  showToast,
+  openModal,
+  closeModal,
+  focusableWithin,
+  trapFocus,
+} from '../src/utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 
 function setupDom() {
@@ -157,5 +164,131 @@ describe('saveFileWithFallback', () => {
     await saveFileWithFallback('data', 'out.txt', 'text/plain');
     expect(anchors).toHaveLength(1);
     expect(anchors[0].download).toBe('out.txt');
+  });
+});
+
+// ---- Modal focus helpers -------------------------------------------------
+
+const makeModal = (focusable = []) => {
+  const classes = new Set(['hidden']);
+  return {
+    focused: 0,
+    focus() {
+      this.focused += 1;
+    },
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+    },
+    querySelectorAll: () => focusable,
+  };
+};
+
+const makeFocusable = () => ({
+  focused: 0,
+  focus() {
+    this.focused += 1;
+  },
+});
+
+describe('openModal / closeModal', () => {
+  it('reveals the modal, moves focus in and remembers the opener', () => {
+    const opener = makeFocusable();
+    vi.stubGlobal('document', { activeElement: opener });
+    const modal = makeModal();
+
+    openModal(modal);
+
+    expect(modal.classList.contains('hidden')).toBe(false);
+    expect(modal.focused).toBe(1);
+    expect(modal.previouslyFocused).toBe(opener);
+  });
+
+  it('hides the modal and restores focus to the opener', () => {
+    const opener = makeFocusable();
+    vi.stubGlobal('document', { activeElement: opener });
+    const modal = makeModal();
+
+    openModal(modal);
+    closeModal(modal);
+
+    expect(modal.classList.contains('hidden')).toBe(true);
+    expect(opener.focused).toBe(1);
+    expect(modal.previouslyFocused).toBeNull();
+  });
+
+  it('no-ops safely when the modal is missing', () => {
+    vi.stubGlobal('document', { activeElement: null });
+    expect(() => openModal(null)).not.toThrow();
+    expect(() => closeModal(undefined)).not.toThrow();
+  });
+});
+
+describe('trapFocus', () => {
+  const arrange = (count) => {
+    const items = Array.from({ length: count }, makeFocusable);
+    const modal = makeModal(items);
+    vi.stubGlobal('document', { activeElement: items[0] });
+    return { items, modal };
+  };
+
+  it('wraps Tab from the last element back to the first', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = items[2];
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[0].focused).toBe(1);
+  });
+
+  it('leaves Tab alone while focus sits between the ends', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = items[1];
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(items[0].focused).toBe(0);
+    expect(items[2].focused).toBe(0);
+  });
+
+  it('wraps Shift+Tab from the first element back to the last', () => {
+    const { items, modal } = arrange(3);
+    const event = { shiftKey: true, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[2].focused).toBe(1);
+  });
+
+  it('sends Shift+Tab to the last element when the container itself is focused', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = modal;
+    const event = { shiftKey: true, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[2].focused).toBe(1);
+  });
+
+  it('blocks Tab when the modal has no focusable elements', () => {
+    vi.stubGlobal('document', { activeElement: null });
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(makeModal([]), event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
+  it('is null-safe for a missing modal', () => {
+    vi.stubGlobal('document', { activeElement: null });
+    expect(() => trapFocus(null, { shiftKey: false, preventDefault: vi.fn() })).not.toThrow();
+    expect(focusableWithin(null)).toEqual([]);
   });
 });

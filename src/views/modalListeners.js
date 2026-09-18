@@ -1,5 +1,5 @@
 /**
- * @fileoverview Modal listener registration — close buttons + reader actions.
+ * @fileoverview Modal listener registration — close buttons + keyboard + reader actions.
  *
  * Extracted from the monolith's DOMContentLoaded block in index.html. Must be
  * called AFTER mountModals() (src/components/modals.js) so the buttons exist.
@@ -7,17 +7,62 @@
  * resolution, file input) lives with its owning feature module (src/io/*).
  *
  * This module is a leaf (imported only by src/main.js and its test) and is the
- * safe wiring surface for the reader's 🗑️ 刪除 and ⚡ 相似 buttons: it can import
- * confirmDeleteBookmark from workspaceActions.js without closing the
- * workspaceActions → bookmarks → readerModal cycle.
+ * safe wiring surface for the reader's delete and similarity buttons: it can
+ * import confirmDeleteBookmark from workspaceActions.js and closeSaveModal from
+ * exporter.js without closing the workspaceActions -> bookmarks -> readerModal
+ * cycle. A single document-level keydown handler closes the topmost modal on
+ * Escape and folds Tab focus back inside the active modal.
  */
 
 import { closeReaderModal, getReaderBookmarkId } from './readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark } from './workspaceActions.js';
+import { closeSaveModal } from '../io/exporter.js';
+import { trapFocus } from '../utils/dom.js';
 
 /**
- * Attach close handlers for the reader and similarity modals.
+ * Overlay ids in document order (bottom -> top). Escape unwinds them one at a
+ * time, always targeting the topmost visible overlay.
+ */
+const MODAL_LAYERS = [
+  { id: 'readerModal', close: closeReaderModal },
+  { id: 'similarityModal', close: closeSimilarityModal },
+  { id: 'saveModal', close: closeSaveModal },
+];
+
+/**
+ * Find the topmost currently-visible modal layer.
+ *
+ * @returns {{id: string, close: Function}|null}
+ */
+function topmostOpenModal() {
+  for (let i = MODAL_LAYERS.length - 1; i >= 0; i -= 1) {
+    const overlay = document.getElementById(MODAL_LAYERS[i].id);
+    if (overlay && !overlay.classList.contains('hidden')) return MODAL_LAYERS[i];
+  }
+  return null;
+}
+
+/**
+ * Close the topmost modal on Escape and keep Tab focus inside it. No-ops when
+ * no modal is open, so background keyboard behaviour is untouched.
+ *
+ * @param {KeyboardEvent} event
+ */
+function handleKeydown(event) {
+  const layer = topmostOpenModal();
+  if (!layer) return;
+  if (event.key === 'Escape') {
+    layer.close();
+    event.preventDefault();
+  } else if (event.key === 'Tab') {
+    trapFocus(document.getElementById(layer.id), event);
+  }
+}
+
+/**
+ * Attach close handlers for the reader and similarity modals plus the shared
+ * keyboard handler (Escape to close, Tab to stay inside).
  */
 export function registerModalListeners() {
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
@@ -38,4 +83,6 @@ export function registerModalListeners() {
       openSimilarityModal(id);
     }
   });
+
+  document.addEventListener('keydown', handleKeydown);
 }

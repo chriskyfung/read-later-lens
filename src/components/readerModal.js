@@ -14,7 +14,8 @@ export function readerModalHtml() {
   return `
   <!-- MODAL 1: Reader View Modal -->
   <div id="readerModal"
-    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="readerTitle" tabindex="-1">
     <div
       class="bg-slate-800 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
       <!-- Modal Header -->

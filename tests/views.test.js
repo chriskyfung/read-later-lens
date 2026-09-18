@@ -32,6 +32,10 @@ function makeEl() {
       this.children.push(c);
     },
     onclick: null,
+    focused: 0,
+    focus() {
+      this.focused += 1;
+    },
   };
 }
 
@@ -56,6 +60,7 @@ const simIds = ['similarityModal', 'simTargetTitle', 'simResultsList'];
 beforeAll(() => {
   globalThis.document = globalThis.document || {};
   globalThis.document.getElementById = (id) => (els[id] ? el(id) : null);
+  globalThis.document.activeElement = null;
   globalThis.document.createElement = () => {
     const e = makeEl();
     created.push(e);
@@ -129,6 +134,20 @@ describe('openReaderModal', () => {
     expect(getReaderBookmarkId()).toBeNull();
   });
 
+  it('moves focus into the reader modal and restores it to the opener on close', () => {
+    for (const id of readerIds) el(id);
+    const modal = el('readerModal');
+    const opener = makeEl();
+    modal.focused = 0;
+    globalThis.document.activeElement = opener;
+
+    openReaderModal('1');
+    expect(modal.focused).toBe(1);
+
+    closeReaderModal();
+    expect(opener.focused).toBe(1);
+  });
+
   it('does not set an id for unknown bookmarks', () => {
     closeReaderModal(); // reset to a known-null baseline
     openReaderModal('missing'); // no-ops
@@ -176,5 +195,19 @@ describe('openSimilarityModal', () => {
 
   it('no-ops for unknown ids', () => {
     expect(() => openSimilarityModal('missing')).not.toThrow();
+  });
+
+  it('moves focus into the similarity modal and restores it to the opener on close', () => {
+    for (const id of simIds) el(id);
+    const modal = el('similarityModal');
+    const opener = makeEl();
+    modal.focused = 0;
+    globalThis.document.activeElement = opener;
+
+    openSimilarityModal('1');
+    expect(modal.focused).toBe(1);
+
+    closeSimilarityModal();
+    expect(opener.focused).toBe(1);
   });
 });

@@ -88,6 +88,7 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 ### Reader & similarity
 
 - **Reader modal** opens on card click: shows the preview, the original URL, and a button to open the bookmark in the Instapaper reader. Its footer also exposes inline actions — 🗑️ 刪除 (confirm-gated, reuses the grid delete prompt) and ⚡ 相似 (opens the similarity drawer for the same bookmark).
+- **Dialog accessibility & keyboard** — every dialog is `role="dialog"` / `aria-modal`, moves focus inside when opened and restores it to the trigger when closed; press **Esc** to close the topmost open dialog and **Tab** stays contained within it.
 - **Similarity modal** tokenizes the target article and your library into TF-IDF vectors, then ranks the most similar articles by **cosine similarity** (shown as a percentage).
 
 ## Storage & Privacy

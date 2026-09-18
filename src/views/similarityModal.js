@@ -3,12 +3,13 @@
  *
  * Matches the original monolith exactly: Tailwind `hidden` class toggling and
  * the monolith's row markup, where clicking a result closes this modal and
- * opens the article in the reader modal.
+ * opens the article in the reader modal. Opening/closing goes through
+ * openModal/closeModal (src/utils/dom.js) for dialog focus management.
  */
 
 import { bookmarks } from '../core/state.js';
 import { mostSimilar } from '../analytics/similarity.js';
-import { escapeHtml } from '../utils/dom.js';
+import { escapeHtml, openModal, closeModal } from '../utils/dom.js';
 import { openReaderModal } from './readerModal.js';
 
 /**
@@ -52,7 +53,7 @@ export function openSimilarityModal(bookmarkId) {
     });
   }
 
-  modal.classList.remove('hidden');
+  openModal(modal);
 }
 
 /**
@@ -60,5 +61,5 @@ export function openSimilarityModal(bookmarkId) {
  */
 export function closeSimilarityModal() {
   const modal = document.getElementById('similarityModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) closeModal(modal);
 }

@@ -10,10 +10,11 @@ export function saveModalHtml() {
   return `
   <!-- MODAL 3: Save Back / Export Options Modal -->
   <div id="saveModal"
-    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="saveTitle" tabindex="-1">
     <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-5">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 class="font-bold text-base text-white">💾 儲存與匯出變更</h3>
+        <h3 id="saveTitle" class="font-bold text-base text-white">💾 儲存與匯出變更</h3>
         <button id="closeSaveBtn" class="text-slate-400 hover:text-white">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

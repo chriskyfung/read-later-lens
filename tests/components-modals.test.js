@@ -108,6 +108,23 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('translate-y-20 opacity-0');
   });
 
+  it('marks each dialog with role, aria-modal, tabindex and a labelled heading', () => {
+    const html = allHtml();
+    for (const [id, label] of [
+      ['readerModal', 'readerTitle'],
+      ['similarityModal', 'similarityTitle'],
+      ['saveModal', 'saveTitle'],
+    ]) {
+      expect(html).toContain(`id="${id}"`);
+      expect(html).toContain(
+        `role="dialog" aria-modal="true" aria-labelledby="${label}" tabindex="-1"`,
+      );
+    }
+    // Labelled headings live on the existing <h3> titles.
+    expect(html).toContain('id="similarityTitle"');
+    expect(html).toContain('id="saveTitle"');
+  });
+
   it('starts every overlay hidden (Tailwind hidden class on the fixed containers)', () => {
     const html = allHtml();
     for (const id of ['readerModal', 'similarityModal', 'saveModal', 'duplicateModal']) {

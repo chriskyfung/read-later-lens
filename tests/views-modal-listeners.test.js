@@ -23,7 +23,8 @@ function makeEl() {
       (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
     },
     classList: {
-      _s: new Set(),
+      // Real overlays mount with the Tailwind `hidden` class already applied.
+      _s: new Set(['hidden']),
       add(c) {
         this._s.add(c);
       },
@@ -39,6 +40,11 @@ function makeEl() {
       this.children.push(c);
     },
     onclick: null,
+    focused: 0,
+    focus() {
+      this.focused += 1;
+    },
+    querySelectorAll: () => [],
   };
 }
 function el(id) {
@@ -52,6 +58,17 @@ beforeAll(() => {
     // Auto-create elements like a real DOM after mountModals() has run.
     getElementById: (id) => el(id),
     createElement: () => makeEl(),
+    activeElement: null,
+    _doc: {},
+    addEventListener(type, fn) {
+      (this._doc[type] = this._doc[type] || []).push(fn);
+    },
+    removeEventListener(type, fn) {
+      this._doc[type] = (this._doc[type] || []).filter((f) => f !== fn);
+    },
+    dispatch(type, ev) {
+      (this._doc[type] || []).forEach((fn) => fn(ev));
+    },
   };
 });
 
@@ -61,6 +78,8 @@ beforeEach(() => {
     vi.fn(() => true),
   );
   for (const k of Object.keys(els)) delete els[k];
+  globalThis.document._doc = {};
+  globalThis.document.activeElement = null;
   // Reset every stubbed element so classList state does not leak between tests.
   setBookmarks([
     {
@@ -149,5 +168,76 @@ describe('registerModalListeners', () => {
     expect(el('readerModal').classList.contains('hidden')).toBe(true);
     expect(el('similarityModal').classList.contains('hidden')).toBe(false);
     expect(el('simTargetTitle').innerText).toBe('apple pie recipe');
+  });
+
+  it('closes the reader modal when Escape is pressed', () => {
+    registerModalListeners();
+    openReaderModal('1');
+    expect(el('readerModal').classList.contains('hidden')).toBe(false);
+
+    const event = { key: 'Escape', preventDefault: vi.fn() };
+    globalThis.document.dispatch('keydown', event);
+
+    expect(el('readerModal').classList.contains('hidden')).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
+  it('closes the similarity modal when Escape is pressed', () => {
+    registerModalListeners();
+    openSimilarityModal('1');
+    expect(el('similarityModal').classList.contains('hidden')).toBe(false);
+
+    globalThis.document.dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() });
+
+    expect(el('similarityModal').classList.contains('hidden')).toBe(true);
+  });
+
+  it('closes the save modal when Escape is pressed', () => {
+    registerModalListeners();
+    el('saveModal').classList.remove('hidden');
+
+    globalThis.document.dispatch('keydown', { key: 'Escape', preventDefault: vi.fn() });
+
+    expect(el('saveModal').classList.contains('hidden')).toBe(true);
+  });
+
+  it('does not consume Escape when no modal is open', () => {
+    registerModalListeners();
+    for (const id of ['readerModal', 'similarityModal', 'saveModal']) {
+      el(id).classList.add('hidden');
+    }
+    const event = { key: 'Escape', preventDefault: vi.fn() };
+
+    globalThis.document.dispatch('keydown', event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('closes only the topmost modal so stacked overlays unwind one per press', () => {
+    registerModalListeners();
+    openReaderModal('1');
+    openSimilarityModal('1');
+
+    const event = { key: 'Escape', preventDefault: vi.fn() };
+    globalThis.document.dispatch('keydown', event);
+    expect(el('similarityModal').classList.contains('hidden')).toBe(true);
+    expect(el('readerModal').classList.contains('hidden')).toBe(false);
+
+    globalThis.document.dispatch('keydown', event);
+    expect(el('readerModal').classList.contains('hidden')).toBe(true);
+  });
+
+  it('folds Tab focus back inside the open modal', () => {
+    registerModalListeners();
+    openReaderModal('1');
+    const only = makeEl();
+    el('readerModal').querySelectorAll = () => [only];
+    globalThis.document.activeElement = only;
+
+    const event = { key: 'Tab', shiftKey: false, preventDefault: vi.fn() };
+    globalThis.document.dispatch('keydown', event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(only.focused).toBe(1);
   });
 });

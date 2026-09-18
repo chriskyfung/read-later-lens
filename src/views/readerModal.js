@@ -6,11 +6,12 @@
  * `instapaper_url` (the stored record contract). In addition to close
  * behaviour, the id of the open bookmark is tracked (getReaderBookmarkId) so
  * src/views/modalListeners.js can drive the 🗑️ 刪除 / ⚡ 相似 buttons without an
- * import cycle into workspaceActions.js.
+ * import cycle into workspaceActions.js. Opening/closing goes through
+ * openModal/closeModal (src/utils/dom.js) for dialog focus management.
  */
 
 import { bookmarks } from '../core/state.js';
-import { safeUrl } from '../utils/dom.js';
+import { openModal, closeModal, safeUrl } from '../utils/dom.js';
 
 /**
  * Currently-open bookmark id, consumed by the reader action buttons (🗑️ 刪除
@@ -51,7 +52,7 @@ export function openReaderModal(bookmarkId) {
     bookmark.content || bookmark.article_preview || '無內文預覽';
   document.getElementById('readerInstapaperBtn').href = safeUrl(bookmark.instapaper_url) || '#';
 
-  modal.classList.remove('hidden');
+  openModal(modal);
 }
 
 /**
@@ -59,6 +60,6 @@ export function openReaderModal(bookmarkId) {
  */
 export function closeReaderModal() {
   const modal = document.getElementById('readerModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) closeModal(modal);
   currentReaderBookmarkId = null;
 }

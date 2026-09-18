@@ -86,6 +86,27 @@ describe('entry-point feature wiring', () => {
     expect(saveState).toHaveBeenCalled();
   });
 
+  it('closes the reader modal with Escape (e2e)', async () => {
+    await start();
+    const state = await import('../src/core/state.js');
+    const { openReaderModal } = await import('../src/views/readerModal.js');
+    state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
+
+    // The stub markup does not carry the Tailwind `hidden` class, so mark the
+    // other overlays closed the way the real mount does.
+    els.similarityModal.classList.add('hidden');
+    els.saveModal.classList.add('hidden');
+
+    openReaderModal('r1');
+    expect(els.readerModal.classList.contains('hidden')).toBe(false);
+
+    const event = { key: 'Escape', preventDefault: vi.fn() };
+    document.dispatch('keydown', event);
+
+    expect(els.readerModal.classList.contains('hidden')).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
   it('keeps folder deletion separate from selection and handles nested clicks', async () => {
     await start();
     const state = await import('../src/core/state.js');
@@ -279,6 +300,13 @@ beforeEach(async () => {
     body: makeEl(),
     getElementById: (id) => els[id] || null,
     createElement: () => makeEl(),
+    _doc: {},
+    addEventListener(type, fn) {
+      (this._doc[type] = this._doc[type] || []).push(fn);
+    },
+    dispatch(type, ev) {
+      (this._doc[type] || []).forEach((fn) => fn(ev));
+    },
     querySelectorAll: (selector) =>
       Object.entries(els)
         .filter(([id, el]) =>
