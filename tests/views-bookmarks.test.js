@@ -3,8 +3,18 @@ import {
   renderBookmarkCards,
   toggleSelectBookmark,
   updateBatchActionBar,
+  getBookmarkDomain,
+  resolveFolderName,
+  updateBookmarksHeader,
+  createBookmarkCard,
 } from '../src/views/bookmarks.js';
-import { setBookmarks, setActiveFolder, selectedIds, sourceFiles } from '../src/core/state.js';
+import {
+  setBookmarks,
+  setActiveFolder,
+  selectedIds,
+  sourceFiles,
+  bookmarks,
+} from '../src/core/state.js';
 
 function makeEl() {
   return {
@@ -189,5 +199,97 @@ describe('updateBatchActionBar', () => {
     selectedIds.clear();
     updateBatchActionBar();
     expect(els.batchActionBar.classList.contains('hidden')).toBe(true);
+  });
+});
+
+describe('getBookmarkDomain', () => {
+  it('strips www. from a valid URL', () => {
+    expect(getBookmarkDomain('https://www.apple.com/x')).toBe('apple.com');
+  });
+  it('leaves non-www hostnames intact', () => {
+    expect(getBookmarkDomain('https://news.ycombinator.com/item?id=1')).toBe(
+      'news.ycombinator.com',
+    );
+  });
+  it('falls back to web for an invalid URL', () => {
+    expect(getBookmarkDomain('not a url')).toBe('web');
+  });
+});
+
+describe('resolveFolderName', () => {
+  it('returns 全部檔案 for the ALL folder', () => {
+    setActiveFolder('ALL');
+    expect(resolveFolderName()).toBe('全部檔案');
+  });
+  it('returns the source file name for a known folder', () => {
+    setActiveFolder('f1');
+    expect(resolveFolderName()).toBe('My Export.csv');
+  });
+  it('returns 未知 for an unknown folder', () => {
+    setActiveFolder('missing');
+    expect(resolveFolderName()).toBe('未知');
+    setActiveFolder('ALL');
+  });
+});
+
+describe('updateBookmarksHeader', () => {
+  it('writes count, checkbox state and the filter summary', () => {
+    setBookmarks([
+      { id: '1', title: 't', url: 'https://a.com', source_file_id: 'f1' },
+      { id: '2', title: 't', url: 'https://a.com', source_file_id: 'f1' },
+    ]);
+    updateBookmarksHeader(bookmarks);
+    expect(els.filteredCount.innerText).toBe(2);
+    expect(els.selectAllCheckbox.checked).toBe(false);
+    expect(els.activeFilterSummary.innerText).toContain('全部檔案');
+    expect(els.activeFilterSummary.innerText).toContain('符合: 2 筆');
+  });
+  it('checks selectAll when every visible bookmark is selected', () => {
+    selectedIds.add('1');
+    selectedIds.add('2');
+    updateBookmarksHeader(bookmarks);
+    expect(els.selectAllCheckbox.checked).toBe(true);
+    selectedIds.clear();
+  });
+});
+
+describe('createBookmarkCard', () => {
+  it('builds a card element with markup, listeners and the delete button', () => {
+    setBookmarks([
+      {
+        id: '1',
+        title: 'Apple <News>',
+        url: 'https://www.apple.com/x',
+        instapaper_url: 'https://www.instapaper.com/read/1',
+        article_preview: 'pie text',
+        detected_language: 'en',
+        source_file_name: 'My Export.csv',
+        tags: ['tech', 'fruit'],
+      },
+    ]);
+    const card = createBookmarkCard(bookmarks[0]);
+    expect(card.className).toContain('bg-slate-800');
+    expect(card.innerHTML).toContain('Apple &lt;News&gt;');
+    expect(card.innerHTML).toContain('📁 My Export.csv');
+    expect(card.innerHTML).toContain('#tech');
+    expect(card.innerHTML).toContain('apple.com');
+    expect(card.innerHTML).toContain('data-delete-bookmark');
+    expect(card.innerHTML).toContain('📖 閱讀');
+    expect(card.innerHTML).toContain('⚡ 相似');
+    expect(card.innerHTML).toContain('href="https://www.instapaper.com/read/1"');
+  });
+
+  it('checks the checkbox when the bookmark is selected', () => {
+    setBookmarks([{ id: '1', title: 'Apple <News>', url: 'https://www.apple.com/x', tags: [] }]);
+    selectedIds.add('1');
+    const card = createBookmarkCard(bookmarks[0]);
+    expect(card.innerHTML).toContain('checked');
+    selectedIds.delete('1');
+  });
+
+  it('derives the web domain fallback for invalid URLs', () => {
+    setBookmarks([{ id: '2', title: 'Banana bread', url: 'not a url', tags: [] }]);
+    const card = createBookmarkCard(bookmarks[0]);
+    expect(card.innerHTML).toContain('web');
   });
 });

@@ -13,7 +13,7 @@
  */
 
 import { controlBarHtml } from './controlBar.js';
-import { panelBookmarksHtml } from './panelBookmarks.js';
+import { panelBookmarksHtml } from './bookmarks/panel.js';
 import { panelWordcloudHtml } from './panelWordcloud.js';
 import { panelDomainsHtml } from './panelDomains.js';
 import { panelLinkageHtml } from './panelLinkage.js';
