@@ -30,6 +30,19 @@ function makeEl() {
     querySelector() {
       return makeEl();
     },
+    style: {},
+    inert: false,
+    parentElement: null,
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
     classList: {
       _s: new Set(['hidden']),
       add(c) {
@@ -40,6 +53,12 @@ function makeEl() {
       },
       contains(c) {
         return this._s.has(c);
+      },
+      toggle(c, force) {
+        const on = force === undefined ? !this._s.has(c) : Boolean(force);
+        if (on) this._s.add(c);
+        else this._s.delete(c);
+        return on;
       },
     },
     listeners: {},

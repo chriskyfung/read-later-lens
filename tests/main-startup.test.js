@@ -234,6 +234,18 @@ function makeEl() {
     innerText: '',
     value: '',
     style: {},
+    inert: false,
+    parentElement: null,
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
     dataset: {},
     children: [],
     className: '',
@@ -243,6 +255,12 @@ function makeEl() {
       add: (...names) => names.forEach((name) => classes.add(name)),
       remove: (...names) => names.forEach((name) => classes.delete(name)),
       contains: (name) => classes.has(name),
+      toggle: (name, force) => {
+        const on = force === undefined ? !classes.has(name) : Boolean(force);
+        if (on) classes.add(name);
+        else classes.delete(name);
+        return on;
+      },
     },
     get innerHTML() {
       return this._html;
@@ -293,7 +311,8 @@ function makeEl() {
 beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
-  els = { appBody: makeEl() };
+  // The header is a sibling of #appBody; both go inert while a modal is open.
+  els = { appBody: makeEl(), appHeader: makeEl() };
   mounts = [];
   vi.stubGlobal('window', { initSqlJs: vi.fn(async () => ({})) });
   vi.stubGlobal('document', {

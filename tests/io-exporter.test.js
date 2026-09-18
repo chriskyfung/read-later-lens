@@ -9,6 +9,7 @@ import {
 } from '../src/io/exporter.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
+import { resetLayers } from '../src/utils/dom.js';
 
 vi.mock('../src/utils/download.js', () => ({
   downloadBlob: vi.fn(),
@@ -38,6 +39,19 @@ function makeEl() {
     dispatch(type, ev) {
       (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
     },
+    style: {},
+    inert: false,
+    parentElement: null,
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
     classList: {
       _s: new Set(),
       add(c) {
@@ -48,6 +62,12 @@ function makeEl() {
       },
       contains(c) {
         return this._s.has(c);
+      },
+      toggle(c, force) {
+        const on = force === undefined ? !this._s.has(c) : Boolean(force);
+        if (on) this._s.add(c);
+        else this._s.delete(c);
+        return on;
       },
     },
     children: [],
@@ -83,6 +103,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  resetLayers();
   for (const k of Object.keys(els)) delete els[k];
   globalThis.document.activeElement = null;
   created.length = 0;

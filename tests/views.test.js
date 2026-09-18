@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import {
   openReaderModal,
   closeReaderModal,
@@ -6,6 +6,7 @@ import {
 } from '../src/views/readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from '../src/views/similarityModal.js';
 import { setBookmarks } from '../src/core/state.js';
+import { resetLayers } from '../src/utils/dom.js';
 
 // ---- DOM stubs ----------------------------------------------------------
 function makeEl() {
@@ -15,6 +16,18 @@ function makeEl() {
     className: '',
     style: {},
     href: '',
+    inert: false,
+    parentElement: null,
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
     classList: {
       _s: new Set(),
       add(c) {
@@ -25,6 +38,12 @@ function makeEl() {
       },
       contains(c) {
         return this._s.has(c);
+      },
+      toggle(c, force) {
+        const on = force === undefined ? !this._s.has(c) : Boolean(force);
+        if (on) this._s.add(c);
+        else this._s.delete(c);
+        return on;
       },
     },
     children: [],
@@ -89,6 +108,10 @@ beforeAll(() => {
       tags: [],
     },
   ]);
+});
+
+beforeEach(() => {
+  resetLayers();
 });
 
 // ---- Reader modal -------------------------------------------------------
@@ -173,19 +196,24 @@ describe('openSimilarityModal', () => {
     expect(el('similarityModal').classList.contains('hidden')).toBe(false);
   });
 
-  it('row click closes similarity and opens the reader for that doc', () => {
+  it('row click stacks the reader on top and keeps the drawer open', () => {
+    for (const id of [...readerIds, ...simIds]) el(id);
     created.length = 0;
     openSimilarityModal('1');
     const rows = created.filter((e) => e.onclick);
     expect(rows.length).toBeGreaterThan(0);
-    // Reset reader state, then click the first row.
-    el('readerModal').classList.add('hidden');
-    rows[0].onclick();
-    // Similarity modal hidden again...
-    expect(el('similarityModal').classList.contains('hidden')).toBe(true);
-    // ...and the reader modal opened for the most similar doc (id '2').
+
+    rows[0].onclick(); // opens the reader for the most similar doc (id '2')
+
+    // The drawer stays open beneath, so closing the reader returns to it...
+    expect(el('similarityModal').classList.contains('hidden')).toBe(false);
+    expect(el('similarityModal').inert).toBe(true);
+    // ...and the reader is on top: paint order follows the stack, not DOM order.
     expect(el('readerModal').classList.contains('hidden')).toBe(false);
     expect(el('readerTitle').innerText).toBe('apple tart recipe');
+    expect(Number(el('readerModal').style.zIndex)).toBeGreaterThan(
+      Number(el('similarityModal').style.zIndex),
+    );
   });
 
   it('closeSimilarityModal re-adds hidden', () => {

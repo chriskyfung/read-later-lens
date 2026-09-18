@@ -16,7 +16,7 @@
 export function headerHtml() {
   return `
   <!-- Top Navigation Header -->
-  <header
+  <header id="appHeader"
     class="bg-slate-800/90 backdrop-blur border-b border-slate-700 px-6 py-3 flex items-center justify-between z-20 shrink-0">
     <div class="flex items-center space-x-3">
       <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-500/30">

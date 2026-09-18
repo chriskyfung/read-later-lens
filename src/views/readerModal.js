@@ -7,11 +7,12 @@
  * behaviour, the id of the open bookmark is tracked (getReaderBookmarkId) so
  * src/views/modalListeners.js can drive the 🗑️ 刪除 / ⚡ 相似 buttons without an
  * import cycle into workspaceActions.js. Opening/closing goes through
- * openModal/closeModal (src/utils/dom.js) for dialog focus management.
+ * pushLayer/popLayer (src/utils/dom.js), so a reader opened from a
+ * similarity drawer stacks on top of it and unwinds back to it.
  */
 
 import { bookmarks } from '../core/state.js';
-import { openModal, closeModal, safeUrl } from '../utils/dom.js';
+import { pushLayer, popLayer, safeUrl } from '../utils/dom.js';
 
 /**
  * Currently-open bookmark id, consumed by the reader action buttons (🗑️ 刪除
@@ -27,17 +28,26 @@ export function getReaderBookmarkId() {
   return currentReaderBookmarkId;
 }
 
+/** Drop the reader's module state whenever its layer leaves the stack. */
+function retireReader() {
+  currentReaderBookmarkId = null;
+}
+
 /**
- * Open the reader modal for a given bookmark.
+ * Render the reader overlay for a bookmark without touching the layer stack.
+ *
+ * Doubles as the layer's `restore`, so a reader revealed by closing a modal
+ * stacked above it re-renders the article it was originally opened with.
  *
  * @param {string} bookmarkId
+ * @returns {boolean} Whether the overlay was rendered.
  */
-export function openReaderModal(bookmarkId) {
+export function renderReaderModal(bookmarkId) {
   const modal = document.getElementById('readerModal');
-  if (!modal) return;
+  if (!modal) return false;
 
   const bookmark = bookmarks.find((b) => b.id === bookmarkId);
-  if (!bookmark) return;
+  if (!bookmark) return false;
 
   currentReaderBookmarkId = bookmarkId;
 
@@ -52,14 +62,28 @@ export function openReaderModal(bookmarkId) {
     bookmark.content || bookmark.article_preview || '無內文預覽';
   document.getElementById('readerInstapaperBtn').href = safeUrl(bookmark.instapaper_url) || '#';
 
-  openModal(modal);
+  return true;
 }
 
 /**
- * Close the reader modal.
+ * Open the reader modal for a given bookmark, stacking it on top of any modal
+ * that is already open.
+ *
+ * @param {string} bookmarkId
+ */
+export function openReaderModal(bookmarkId) {
+  if (!renderReaderModal(bookmarkId)) return;
+  pushLayer('readerModal', {
+    payload: bookmarkId,
+    restore: renderReaderModal,
+    onRetire: retireReader,
+  });
+}
+
+/**
+ * Close the reader modal, revealing the layer beneath it if there is one.
  */
 export function closeReaderModal() {
-  const modal = document.getElementById('readerModal');
-  if (modal) closeModal(modal);
-  currentReaderBookmarkId = null;
+  retireReader();
+  popLayer('readerModal');
 }

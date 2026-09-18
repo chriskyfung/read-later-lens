@@ -19,11 +19,13 @@ export function similarityModalHtml() {
           <h3 id="similarityTitle" class="font-bold text-base text-white">⚡ 相似文章推薦分析 (Cosine Similarity)</h3>
           <p class="text-xs text-slate-400">基於 TF-IDF 向量演算法計算當前文章與庫存其他文章的相似度。</p>
         </div>
-        <button id="closeSimilarityBtn" class="text-slate-400 hover:text-white">
+        <div class="flex items-center space-x-2">
+          <button id="closeSimilarityBtn" class="text-slate-400 hover:text-white">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
+        </div>
       </div>
       <div class="p-6 overflow-y-auto space-y-4">
         <div class="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl">

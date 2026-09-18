@@ -1,28 +1,33 @@
 /**
  * @fileoverview Similarity modal — ranks bookmarks by cosine similarity.
  *
- * Matches the original monolith exactly: Tailwind `hidden` class toggling and
- * the monolith's row markup, where clicking a result closes this modal and
- * opens the article in the reader modal. Opening/closing goes through
- * openModal/closeModal (src/utils/dom.js) for dialog focus management.
+ * Keeps the monolith's Tailwind `hidden` class toggling and row markup, except
+ * that clicking a result now *stacks* the reader on top of this drawer: the
+ * drawer stays open beneath it, so closing the reader returns to the
+ * recommendation list. Opening/closing goes through pushLayer/popLayer
+ * (src/utils/dom.js) so nested dialogs stack and unwind in reverse order.
  */
 
 import { bookmarks } from '../core/state.js';
 import { mostSimilar } from '../analytics/similarity.js';
-import { escapeHtml, openModal, closeModal } from '../utils/dom.js';
+import { escapeHtml, pushLayer, popLayer } from '../utils/dom.js';
 import { openReaderModal } from './readerModal.js';
 
 /**
- * Open the similarity modal for a given bookmark.
+ * Render the similarity drawer for a bookmark without touching the stack.
+ *
+ * Doubles as the layer's `restore`, so a drawer revealed by closing a reader
+ * stacked above it re-renders the recommendations it was opened with.
  *
  * @param {string} bookmarkId
+ * @returns {boolean} Whether the drawer was rendered.
  */
-export function openSimilarityModal(bookmarkId) {
+export function renderSimilarityModal(bookmarkId) {
   const modal = document.getElementById('similarityModal');
-  if (!modal) return;
+  if (!modal) return false;
 
   const target = bookmarks.find((b) => b.id === bookmarkId);
-  if (!target) return;
+  if (!target) return false;
 
   document.getElementById('simTargetTitle').innerText = target.title;
   const resultsList = document.getElementById('simResultsList');
@@ -38,10 +43,8 @@ export function openSimilarityModal(bookmarkId) {
       const pct = Math.round(score * 100);
       item.className =
         'p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl flex items-center justify-between hover:border-indigo-500 cursor-pointer transition';
-      item.onclick = () => {
-        closeSimilarityModal();
-        openReaderModal(doc.id);
-      };
+      // Stack the reader on top; the drawer stays open and is restored on close.
+      item.onclick = () => openReaderModal(doc.id);
       item.innerHTML = `
         <div class="truncate flex-1 pr-3">
           <p class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(doc.title)}</p>
@@ -53,13 +56,26 @@ export function openSimilarityModal(bookmarkId) {
     });
   }
 
-  openModal(modal);
+  return true;
 }
 
 /**
- * Close the similarity modal.
+ * Open the similarity drawer for a bookmark, stacking it on top of any modal
+ * that is already open.
+ *
+ * @param {string} bookmarkId
+ */
+export function openSimilarityModal(bookmarkId) {
+  if (!renderSimilarityModal(bookmarkId)) return;
+  pushLayer('similarityModal', {
+    payload: bookmarkId,
+    restore: renderSimilarityModal,
+  });
+}
+
+/**
+ * Close the similarity modal, revealing the layer beneath it if there is one.
  */
 export function closeSimilarityModal() {
-  const modal = document.getElementById('similarityModal');
-  if (modal) closeModal(modal);
+  popLayer('similarityModal');
 }

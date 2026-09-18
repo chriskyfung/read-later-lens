@@ -6,14 +6,20 @@
 import * as state from '../core/state.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { initSql } from './sqlLoader.js';
-import { openModal, closeModal } from '../utils/dom.js';
+import { pushLayer, popLayer } from '../utils/dom.js';
 
 /**
- * Opens the save/export modal and populates the list of source files.
+ * Populate the source-file list of the save/export modal without touching
+ * the layer stack.
+ *
+ * Doubles as the layer's `restore`, so a save modal revealed by closing a
+ * modal stacked above it re-populates itself.
+ *
+ * @returns {boolean} Whether the modal content was rendered.
  */
-export function openSaveModal() {
+export function renderSaveModal() {
   const container = document.getElementById('saveSourceFilesList');
-  if (!container) return;
+  if (!container) return false;
 
   container.innerHTML = '';
 
@@ -36,15 +42,23 @@ export function openSaveModal() {
     });
   }
 
-  openModal(document.getElementById('saveModal'));
+  return true;
 }
 
 /**
- * Hide the save/export modal.
+ * Opens the save/export modal and populates the list of source files,
+ * stacking it on top of any modal that is already open.
+ */
+export function openSaveModal() {
+  if (!renderSaveModal()) return;
+  pushLayer('saveModal', { restore: renderSaveModal });
+}
+
+/**
+ * Hide the save/export modal, revealing the layer beneath it if there is one.
  */
 export function closeSaveModal() {
-  const modal = document.getElementById('saveModal');
-  if (modal) closeModal(modal);
+  popLayer('saveModal');
 }
 
 /**

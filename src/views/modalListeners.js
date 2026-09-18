@@ -10,78 +10,59 @@
  * safe wiring surface for the reader's delete and similarity buttons: it can
  * import confirmDeleteBookmark from workspaceActions.js and closeSaveModal from
  * exporter.js without closing the workspaceActions -> bookmarks -> readerModal
- * cycle. A single document-level keydown handler closes the topmost modal on
- * Escape and folds Tab focus back inside the active modal.
+ * cycle.
+ *
+ * It also registers every stackable overlay with the layer stack
+ * (src/utils/dom.js) and owns the single document-level keydown handler: Escape
+ * unwinds one layer per press, Tab stays inside the topmost layer.
  */
 
 import { closeReaderModal, getReaderBookmarkId } from './readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark } from './workspaceActions.js';
 import { closeSaveModal } from '../io/exporter.js';
-import { trapFocus } from '../utils/dom.js';
+import { closeLayer, registerModalLayer, topLayer, topLayerId, trapFocus } from '../utils/dom.js';
 
 /**
- * Overlay ids in document order (bottom -> top). Escape unwinds them one at a
- * time, always targeting the topmost visible overlay.
- */
-const MODAL_LAYERS = [
-  { id: 'readerModal', close: closeReaderModal },
-  { id: 'similarityModal', close: closeSimilarityModal },
-  { id: 'saveModal', close: closeSaveModal },
-];
-
-/**
- * Find the topmost currently-visible modal layer.
- *
- * @returns {{id: string, close: Function}|null}
- */
-function topmostOpenModal() {
-  for (let i = MODAL_LAYERS.length - 1; i >= 0; i -= 1) {
-    const overlay = document.getElementById(MODAL_LAYERS[i].id);
-    if (overlay && !overlay.classList.contains('hidden')) return MODAL_LAYERS[i];
-  }
-  return null;
-}
-
-/**
- * Close the topmost modal on Escape and keep Tab focus inside it. No-ops when
+ * Close the topmost layer on Escape and keep Tab focus inside it. No-ops when
  * no modal is open, so background keyboard behaviour is untouched.
  *
  * @param {KeyboardEvent} event
  */
 function handleKeydown(event) {
-  const layer = topmostOpenModal();
-  if (!layer) return;
+  const id = topLayerId();
+  if (!id) return;
   if (event.key === 'Escape') {
-    layer.close();
+    closeLayer(id);
     event.preventDefault();
   } else if (event.key === 'Tab') {
-    trapFocus(document.getElementById(layer.id), event);
+    trapFocus(topLayer(), event);
   }
 }
 
 /**
- * Attach close handlers for the reader and similarity modals plus the shared
- * keyboard handler (Escape to close, Tab to stay inside).
+ * Register each overlay's chrome with the layer stack, attach the close
+ * handlers, and install the shared keydown handler.
  */
 export function registerModalListeners() {
+  registerModalLayer('readerModal', { close: closeReaderModal });
+  registerModalLayer('similarityModal', { close: closeSimilarityModal });
+  registerModalLayer('saveModal', { close: closeSaveModal });
+
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
   document.getElementById('closeSimilarityBtn')?.addEventListener('click', closeSimilarityModal);
 
-  // Reader actions (Phase 2). Confirm-gated delete reuses the workspaceActions
-  // primitive; a cancelled confirm leaves the reader open. The similarity button
-  // closes the reader and opens the similarity drawer for the same bookmark
-  // (mirrors the similarity-row click ordering in src/views/similarityModal.js).
+  // Reader actions. Confirm-gated delete reuses the workspaceActions primitive;
+  // a cancelled confirm leaves the reader open. The similarity button stacks the
+  // drawer on top of the reader instead of replacing it, so closing the drawer
+  // reveals the article again.
   document.getElementById('readerDeleteBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();
     if (id && confirmDeleteBookmark(id)) closeReaderModal();
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();
-    if (id) {
-      closeReaderModal();
-      openSimilarityModal(id);
-    }
+    if (id) openSimilarityModal(id);
   });
 
   document.addEventListener('keydown', handleKeydown);
