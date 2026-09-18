@@ -59,6 +59,52 @@ export function deleteBookmark(id) {
 }
 
 /**
+ * Confirm and delete a single bookmark (card-grid delete).
+ *
+ * Mirrors confirmDeleteFolder() in src/views/sidebarActions.js so every
+ * destructive bookmark action shares one confirmation step. deleteBookmark()
+ * itself is kept as the pure state mutation so it stays unit-testable on its
+ * own.
+ *
+ * @param {string} id
+ * @returns {boolean} True when the bookmark was deleted.
+ */
+export function confirmDeleteBookmark(id) {
+  const bookmark = state.bookmarks.find((b) => b.id === id);
+  if (!confirm(`確定要刪除書籤「${bookmark ? bookmark.title : ''}」嗎？`)) {
+    return false;
+  }
+  deleteBookmark(id);
+  return true;
+}
+
+/**
+ * Batch-delete body (monolith order: persist, render, batch bar, toast).
+ * Extracted verbatim from the former #batchDeleteBtn click handler so the pure
+ * operation stays unit-testable independent of the confirm() prompt.
+ */
+export function deleteSelectedBookmarks() {
+  state.setBookmarks(state.bookmarks.filter((b) => !state.selectedIds.has(b.id)));
+  state.selectedIds.clear();
+  deps.persist();
+  deps.render();
+  updateBatchActionBar();
+  showToast('已批量刪除選擇的書籤');
+}
+
+/**
+ * Confirm and delete every selected bookmark (batch delete).
+ * @returns {boolean} True when the batch delete ran.
+ */
+export function confirmDeleteSelectedBookmarks() {
+  if (!confirm(`確定要刪除已選擇的 ${state.selectedIds.size} 筆書籤嗎？`)) {
+    return false;
+  }
+  deleteSelectedBookmarks();
+  return true;
+}
+
+/**
  * Attach the workspace listeners (sort, tabs, select-all, batch, zoom).
  */
 export function registerWorkspaceListeners() {
@@ -85,15 +131,10 @@ export function registerWorkspaceListeners() {
     updateBatchActionBar();
   });
 
-  // Batch Delete — monolith order: persist, then render, then batch bar, toast.
-  document.getElementById('batchDeleteBtn')?.addEventListener('click', () => {
-    state.setBookmarks(state.bookmarks.filter((b) => !state.selectedIds.has(b.id)));
-    state.selectedIds.clear();
-    deps.persist();
-    deps.render();
-    updateBatchActionBar();
-    showToast('已批量刪除選擇的書籤');
-  });
+  // Batch Delete — confirm first, then the extracted monolith-order body.
+  document
+    .getElementById('batchDeleteBtn')
+    ?.addEventListener('click', confirmDeleteSelectedBookmarks);
 
   // Batch Cancel
   document.getElementById('batchCancelBtn')?.addEventListener('click', () => {
@@ -102,10 +143,10 @@ export function registerWorkspaceListeners() {
     updateBatchActionBar();
   });
 
-  // Bookmark delete — delegated from bookmark grid
+  // Bookmark delete — delegated from bookmark grid (confirm first).
   document.getElementById('bookmarkCardsGrid')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-delete-bookmark]');
-    if (btn) deleteBookmark(btn.dataset.deleteBookmark);
+    if (btn) confirmDeleteBookmark(btn.dataset.deleteBookmark);
   });
 
   // D3 Zoom Controls (zoom/pan state lives in src/views/linkage.js)

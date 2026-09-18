@@ -66,7 +66,7 @@ Duplicate IDs are merged on import.
 
 ### Bookmark cards (書籤列表)
 
-A responsive card grid with select-all, batch delete, and per-card actions including **similarity analysis** (⚡ 相似) and opening the reader. Cards honor the current search, folder, language, and tag filters.
+A responsive card grid with select-all, batch delete, and per-card actions including **similarity analysis** (⚡ 相似) and opening the reader. Destructive deletes — per-card and batch — are confirmed with a dialog before mutating state. Cards honor the current search, folder, language, and tag filters.
 
 ### Word cloud (☁️ 文字雲)
 
