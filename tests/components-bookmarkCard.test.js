@@ -24,6 +24,12 @@ describe('bookmarkCardClass', () => {
     expect(cls).toContain('border-slate-700/80 hover:border-slate-600');
     expect(cls).not.toContain('border-indigo-500 ring-1');
   });
+
+  it('is keyboard-focusable (cursor-pointer + focus ring)', () => {
+    const cls = bookmarkCardClass(false);
+    expect(cls).toContain('cursor-pointer');
+    expect(cls).toContain('focus-visible:ring-2 focus-visible:ring-indigo-500');
+  });
 });
 
 describe('bookmarkCardHtml', () => {
@@ -70,11 +76,13 @@ describe('bookmarkCardHtml', () => {
     expect(html).toContain('title="於 Instapaper 開啟"');
   });
 
-  it('renders the delete button and both action buttons', () => {
+  it('renders the delete and similarity buttons (reader opens on card click)', () => {
     const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
     expect(html).toContain('data-delete-bookmark');
-    expect(html).toContain('📖 閱讀');
+    expect(html).toContain('open-similarity-btn');
     expect(html).toContain('⚡ 相似');
+    expect(html).not.toContain('open-reader-btn');
+    expect(html).not.toContain('📖 閱讀');
   });
 
   it('renders badges: language, domain and source file with its tooltip', () => {
