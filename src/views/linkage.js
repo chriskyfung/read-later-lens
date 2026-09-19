@@ -10,12 +10,21 @@
  *
  * One deliberate improvement over the monolith: the previous force simulation
  * is stopped before a re-render (the monolith leaked it).
+ *
+ * The string-built markup (the empty-state div and the tooltip tag pills) has
+ * been moved to src/components/linkage/graph.js to keep components pure; this
+ * file now handles only D3 rendering, DOM creation, and delegates those two
+ * snippets via helpers from ../components/linkage/graph.js.
  */
 
 import * as d3 from 'd3';
 import { getFilteredBookmarksTop } from '../core/filters.js';
 import { buildLinkageGraph } from '../analytics/linkage.js';
 import { openReaderModal } from './readerModal.js';
+import {
+  linkageEmptyStateHtml,
+  linkageTooltipTagsHtml,
+} from '../components/linkage/graph.js';
 
 let currentSvg = null;
 let currentZoom = null;
@@ -37,8 +46,7 @@ export function renderConceptLinkageGraph() {
 
   const filtered = getFilteredBookmarksTop(50); // Limit to top 50 for graph clarity
   if (filtered.length < 2) {
-    container.innerHTML =
-      '<div class="text-slate-500 text-xs flex items-center justify-center h-full">需要至少 2 筆書籤以構建關聯網絡拓撲圖</div>';
+    container.innerHTML = linkageEmptyStateHtml();
     return;
   }
 
@@ -129,12 +137,7 @@ export function renderConceptLinkageGraph() {
       tooltip.style.opacity = '1';
       ttTitle.innerText = d.title;
       ttDomain.innerText = d.domain;
-      ttTags.innerHTML = (d.tags || [])
-        .map(
-          (t) =>
-            `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${t}</span>`,
-        )
-        .join('');
+      ttTags.innerHTML = linkageTooltipTagsHtml(d.tags);
 
       link
         .style('stroke', (l) =>

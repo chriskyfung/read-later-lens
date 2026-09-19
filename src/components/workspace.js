@@ -16,7 +16,7 @@ import { controlBarHtml } from './controlBar.js';
 import { panelBookmarksHtml } from './bookmarks/panel.js';
 import { panelWordcloudHtml } from './wordcloud/panel.js';
 import { panelDomainsHtml } from './domains/panel.js';
-import { panelLinkageHtml } from './panelLinkage.js';
+import { panelLinkageHtml } from './linkage/panel.js';
 
 /** @returns {string} The composed workspace markup. */
 export function workspaceHtml() {
