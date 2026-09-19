@@ -6,13 +6,22 @@
  * empty-state span, and the click flow (set search query → activateTab
  * ('bookmarks') → renderAll()). `renderAll` lives in src/views/main-view.js
  * (set by src/main.js).
+ *
+ * The dynamic markup (empty-state span and bar markup) has been moved to
+ * src/components/domains/bar.js to keep components pure; this file now
+ * handles only DOM creation, the click flow, and delegates markup via
+ * helpers from ../components/domains/bar.js.
  */
 
-import { escapeHtml } from '../utils/dom.js';
 import { getFilteredBookmarks } from '../core/filters.js';
 import { topDomains } from '../analytics/domains.js';
 import { setSearchQuery } from '../core/state.js';
 import { activateTab } from './tabs.js';
+import {
+  domainChartEmptyStateHtml,
+  domainBarClass,
+  domainBarHtml,
+} from '../components/domains/bar.js';
 
 let deps = { render: () => {} };
 
@@ -28,8 +37,7 @@ export function renderDomainChart() {
   const sorted = topDomains(getFilteredBookmarks(), 15);
 
   if (sorted.length === 0) {
-    container.innerHTML =
-      '<span class="text-slate-500 text-xs flex justify-center py-10">尚無域名資料</span>';
+    container.innerHTML = domainChartEmptyStateHtml();
     return;
   }
 
@@ -39,23 +47,14 @@ export function renderDomainChart() {
   sorted.forEach(([domain, count]) => {
     const pct = Math.round((count / maxCount) * 100);
     const bar = document.createElement('div');
-    bar.className =
-      'p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl hover:border-indigo-500/50 cursor-pointer transition';
+    bar.className = domainBarClass();
     bar.onclick = () => {
       setSearchQuery(domain);
       document.getElementById('searchInput').value = domain;
       activateTab('bookmarks');
       deps.render();
     };
-    bar.innerHTML = `
-        <div class="flex justify-between items-center text-xs mb-1.5">
-          <span class="font-semibold text-slate-200">${escapeHtml(domain)}</span>
-          <span class="text-slate-400 font-mono">${count} 篇文章 (${pct}%)</span>
-        </div>
-        <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-          <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-        </div>
-      `;
+    bar.innerHTML = domainBarHtml({ domain, count, pct });
     container.appendChild(bar);
   });
 }
