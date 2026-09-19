@@ -6,12 +6,19 @@
  * flow (set search query → activateTab('bookmarks') → renderAll()). Tab
  * switching uses the extracted mechanics in ./tabs.js; `renderAll` lives
  * in src/views/main-view.js (set by src/main.js).
+ *
+ * The dynamic markup (empty‑state span and item spans) has been moved to
+ * src/components/wordcloud/item.js to keep components pure; this file now
+ * handles only DOM creation, the click flow, and delegates markup via
+ * helpers from ./item.js.
  */
 
 import { getFilteredBookmarks } from '../core/filters.js';
 import { wordCloudFrequencies, wordCloudItems } from '../analytics/wordcloud.js';
 import { setSearchQuery } from '../core/state.js';
 import { activateTab } from './tabs.js';
+import { wordCloudEmptyStateHtml } from '../components/wordcloud/item.js';
+import { wordCloudItemClass, wordCloudItemLabel } from '../components/wordcloud/item.js';
 
 let deps = { render: () => {} };
 
@@ -25,7 +32,7 @@ export function renderWordCloud() {
   const items = wordCloudItems(wordCloudFrequencies(getFilteredBookmarks()));
 
   if (items.length === 0) {
-    container.innerHTML = '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>';
+    container.innerHTML = wordCloudEmptyStateHtml();
     return;
   }
 
@@ -33,10 +40,9 @@ export function renderWordCloud() {
 
   items.forEach(({ word, count, sizeRatio }) => {
     const item = document.createElement('span');
-    item.className =
-      'word-cloud-item inline-block font-bold cursor-pointer transition p-1.5 text-indigo-300 hover:text-white';
+    item.className = wordCloudItemClass();
     item.style.fontSize = `${sizeRatio}rem`;
-    item.innerText = `${word} (${count})`;
+    item.innerText = wordCloudItemLabel({ word, count });
     item.onclick = () => {
       setSearchQuery(word);
       document.getElementById('searchInput').value = word;
