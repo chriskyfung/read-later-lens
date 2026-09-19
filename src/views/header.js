@@ -1,5 +1,5 @@
-/**
- * @fileoverview Header behavior — search input and clear-cache flows.
+﻿/**
+ * @fileoverview Header behavior — search input, quick-reset, and clear-cache flows.
  *
  * Extracted from the monolith's DOMContentLoaded block in index.html.
  * Must be called AFTER mountHeader() (src/components/header.js) so the
@@ -25,13 +25,54 @@ export function initHeader(injectedDeps) {
 }
 
 /**
- * Attach the search-input and clear-cache handlers.
+ * Show/hide the quick-reset button depending on whether the input has text.
+ * @param {string} value - Current search input value.
+ */
+function syncClearButton(value) {
+  const btn = document.getElementById('clearSearchBtn');
+  if (!btn || !btn.classList) return; // classList guard keeps stub DOMs safe
+  if (value) {
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+}
+
+/**
+ * Programmatically set the search input value and keep the quick-reset
+ * button in sync. Shared by the domain-chart and word-cloud click-throughs
+ * so the reset button never gets out of step with the rendered query.
+ * @param {string} value
+ */
+export function setSearchInputValue(value) {
+  const input = document.getElementById('searchInput');
+  if (!input) return;
+  input.value = value;
+  syncClearButton(value);
+}
+
+/**
+ * Attach the search-input, quick-reset, and clear-cache handlers.
  */
 export function registerHeaderListeners() {
   // Search input — monolith parity: sets the query and re-renders only
   // (no IndexedDB write on every keystroke).
   document.getElementById('searchInput')?.addEventListener('input', (e) => {
     state.setSearchQuery(e.target.value);
+    syncClearButton(e.target.value);
+    deps.render();
+  });
+
+  // Quick-reset button — clears the query and input, hides itself,
+  // refocuses, and re-renders (never persists).
+  document.getElementById('clearSearchBtn')?.addEventListener('click', () => {
+    state.setSearchQuery('');
+    const input = document.getElementById('searchInput');
+    if (input) {
+      input.value = '';
+      if (typeof input.focus === 'function') input.focus();
+    }
+    syncClearButton('');
     deps.render();
   });
 

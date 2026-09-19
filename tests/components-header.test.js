@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mountHeader } from '../src/components/header.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -42,6 +42,13 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('id="searchInput"');
     expect(html()).toContain('搜尋標題、網址、預覽內容或標籤...（多關鍵字以空格分隔，&quot;...&quot; 為精確比對）');
     expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"'); // search svg
+  });
+
+  it('adds the quick-reset button with room reserved in the input', () => {
+    expect(html()).toContain('id="clearSearchBtn"');
+    expect(html()).toContain('清除搜尋條件');
+    expect(html()).toContain('d="M6 18L18 6M6 6l12 12"'); // reset svg
+    expect(html()).toContain('pr-10'); // input padding leaves room for the button
   });
 
   it('keeps the import label with the hidden file input', () => {

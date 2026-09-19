@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { initHeader, registerHeaderListeners } from '../src/views/header.js';
 import { setSearchQuery, setBookmarks, setSourceFiles, searchQuery, sourceFiles } from '../src/core/state.js';
 
@@ -67,6 +67,34 @@ describe('registerHeaderListeners — search', () => {
     expect(searchQuery).toBe('apple');
     expect(renderFn).toHaveBeenCalledTimes(1);
     expect(persistFn).not.toHaveBeenCalled(); // search never writes IndexedDB
+  });
+});
+
+describe('registerHeaderListeners — search quick-reset', () => {
+  it('shows the reset button while typing and hides it when the input is emptied', () => {
+    registerHeaderListeners();
+
+    el('searchInput').dispatch('input', { target: { value: 'apple' } });
+    expect(el('clearSearchBtn').classList.contains('hidden')).toBe(false);
+
+    el('searchInput').dispatch('input', { target: { value: '' } });
+    expect(el('clearSearchBtn').classList.contains('hidden')).toBe(true);
+  });
+
+  it('clicking reset clears the query and input, hides the button, re-renders without persisting', () => {
+    const renderFn = vi.fn();
+    const persistFn = vi.fn();
+    initHeader({ render: renderFn, persistAndRender: persistFn });
+    registerHeaderListeners();
+
+    el('searchInput').dispatch('input', { target: { value: 'apple' } });
+    el('clearSearchBtn').dispatch('click');
+
+    expect(searchQuery).toBe('');
+    expect(el('searchInput').value).toBe('');
+    expect(el('clearSearchBtn').classList.contains('hidden')).toBe(true);
+    expect(renderFn).toHaveBeenCalledTimes(2); // typing + reset
+    expect(persistFn).not.toHaveBeenCalled(); // reset never writes IndexedDB
   });
 });
 
