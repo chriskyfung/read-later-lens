@@ -40,7 +40,7 @@ describe('mountHeader — markup parity', () => {
 
   it('keeps the search input with its placeholder and icon', () => {
     expect(html()).toContain('id="searchInput"');
-    expect(html()).toContain('搜尋標題、網址、預覽內容或標籤...');
+    expect(html()).toContain('搜尋標題、網址、預覽內容或標籤...（多關鍵字以空格分隔，&quot;...&quot; 為精確比對）');
     expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"'); // search svg
   });
 

@@ -89,6 +89,65 @@ describe('applyFilters', () => {
     expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
   });
 
+  it('matches multi-term queries regardless of term order (AND semantics)', () => {
+    setBookmarks([
+      mk(1, { title: 'term1 middle term2' }),
+      mk(2, { title: 'term2 middle term1' }),
+      mk(3, { title: 'term1 only' }),
+      mk(4, { title: 'term2 only' }),
+    ]);
+    setSearchQuery('term1 term2');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
+    setSearchQuery('term2 term1');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
+  });
+
+  it('matches an exact phrase only when it appears contiguously', () => {
+    setBookmarks([
+      mk(1, { title: 'term1 term2 end' }),
+      mk(2, { title: 'term1 middle term2' }),
+    ]);
+    setSearchQuery('"term1 term2"');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('combines bare terms and quoted phrases with AND', () => {
+    setBookmarks([
+      mk(1, { title: 'foo bar baz qux' }),
+      mk(2, { title: 'foo bar baz missing' }), // no 'qux'
+      mk(3, { title: 'foo bar baz' }), // phrase ok, no 'qux'
+    ]);
+    setSearchQuery('qux "bar baz"');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('multi-term search is case-insensitive', () => {
+    setBookmarks([mk(1, { title: 'ALPHA Beta' })]);
+    setSearchQuery('alpha beta');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('multi-term search matches across fields (title + tags)', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', tags: ['news'] }),
+      mk(2, { title: 'alpha' }),
+      mk(3, { title: 'other', tags: ['news'] }),
+    ]);
+    setSearchQuery('alpha news');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('relevance sorting favors bookmarks matching more fields', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', tags: ['beta'] }), // title + tag
+      mk(2, { title: 'alpha beta' }), // both terms in title → higher score
+    ]);
+    setSearchQuery('alpha beta');
+    setSortBy('relevance');
+    const ids = getFilteredBookmarks().map((b) => b.id);
+    expect(ids).toEqual(['2', '1']);
+  });
+
   it('sorts by title using zh-TW collation', () => {
     setBookmarks([mk(1, { title: 'banana' }), mk(2, { title: 'apple' })]);
     setSortBy('title_asc');
