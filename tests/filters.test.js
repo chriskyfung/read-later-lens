@@ -103,10 +103,7 @@ describe('applyFilters', () => {
   });
 
   it('matches an exact phrase only when it appears contiguously', () => {
-    setBookmarks([
-      mk(1, { title: 'term1 term2 end' }),
-      mk(2, { title: 'term1 middle term2' }),
-    ]);
+    setBookmarks([mk(1, { title: 'term1 term2 end' }), mk(2, { title: 'term1 middle term2' })]);
     setSearchQuery('"term1 term2"');
     expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
   });
@@ -159,5 +156,60 @@ describe('getFilteredBookmarksTop', () => {
   it('caps the result set', () => {
     setBookmarks([mk(1), mk(2), mk(3), mk(4)]);
     expect(getFilteredBookmarksTop(2)).toHaveLength(2);
+  });
+});
+
+describe('link: URL operator', () => {
+  it('limits results to bookmarks whose URL contains the value', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', url: 'https://google.com/maps' }),
+      mk(2, { title: 'google.com mentioned', url: 'https://other.org/x' }),
+      mk(3, { url: 'https://google.com/search' }),
+    ]);
+    setSearchQuery('link:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('ANDs link: with keywords in any order', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', url: 'https://google.com/maps' }),
+      mk(2, { title: 'beta', url: 'https://google.com/maps' }),
+      mk(3, { title: 'alpha', url: 'https://other.org' }),
+    ]);
+    setSearchQuery('link:google.com alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+    setSearchQuery('alpha link:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('does NOT match link: values in title, preview, or tags', () => {
+    setBookmarks([
+      mk(1, { title: 'google.com guide', url: 'https://other.org' }),
+      mk(2, { tags: ['google.com'], url: 'https://other.org' }),
+      mk(3, { article_preview: 'read google.com now', url: 'https://other.org' }),
+    ]);
+    setSearchQuery('link:google.com');
+    expect(getFilteredBookmarks()).toEqual([]);
+  });
+
+  it('ANDs multiple link: terms together', () => {
+    setBookmarks([
+      mk(1, { url: 'https://maps.google.com/route' }),
+      mk(2, { url: 'https://google.com' }),
+    ]);
+    setSearchQuery('link:google.com link:maps');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('is case-insensitive for both the operator and the value', () => {
+    setBookmarks([mk(1, { url: 'https://docs.GOOGLE.com' }), mk(2, { url: 'https://other.org' })]);
+    setSearchQuery('LINK:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('treats a bare link: with no value as a literal keyword', () => {
+    setBookmarks([mk(1, { title: 'what is link:' }), mk(2, { title: 'nothing relevant' })]);
+    setSearchQuery('link:');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
   });
 });

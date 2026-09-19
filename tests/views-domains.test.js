@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { renderDomainChart, initDomains } from '../src/views/domains.js';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state.js';
 
@@ -127,7 +127,9 @@ describe('renderDomainChart', () => {
 
   it('click flow sets search, activates the bookmarks tab, renders', () => {
     let renderCount = 0;
-    const renderCb = () => { renderCount += 1; };
+    const renderCb = () => {
+      renderCount += 1;
+    };
     setSearchQuery('');
     setBookmarks([bm(1, 'https://example.com/a'), bm(2, 'https://other.org/b')]);
     created.length = 0;
@@ -136,8 +138,9 @@ describe('renderDomainChart', () => {
 
     created[0].onclick();
 
-    expect(searchQuery).toBe('example.com');
-    expect(els.searchInput.value).toBe('example.com');
+    // The domain chart is URL-derived: the click applies a URL-scoped query.
+    expect(searchQuery).toBe('link:example.com');
+    expect(els.searchInput.value).toBe('link:example.com');
     // Extracted tab-switch mechanics (not just setActiveTab): the panel is
     // unhidden and the tab bar restyled.
     expect(activeTab).toBe('bookmarks');

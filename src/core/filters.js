@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Filtering & sorting logic — pure functions, no DOM.
  *
  * Every view calls `getFilteredBookmarks()` as the single entry point so
@@ -52,10 +52,15 @@ export function applyFilters(list) {
           // Every term must match in at least one field (AND semantics);
           // quoted phrases match as contiguous substrings within each field.
           let score = 0;
-          if (titleLower.includes(term.terms)) score += 10;
-          if (previewLower.includes(term.terms)) score += 5;
-          if (urlLower.includes(term.terms)) score += 3;
-          if (tagsLower.some((t) => t.includes(term.terms))) score += 8;
+          if (term.urlOnly) {
+            // 'link:' field operator — only the URL is examined.
+            if (urlLower.includes(term.terms)) score += 3;
+          } else {
+            if (titleLower.includes(term.terms)) score += 10;
+            if (previewLower.includes(term.terms)) score += 5;
+            if (urlLower.includes(term.terms)) score += 3;
+            if (tagsLower.some((t) => t.includes(term.terms))) score += 8;
+          }
           if (score === 0) return { bookmark: b, score: 0 };
           totalScore += score;
         }
