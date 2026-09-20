@@ -20,11 +20,9 @@ import {
   deleteFolder,
   updateStorageUsageUI,
 } from './views/sidebarActions.js';
-import {
-  initWorkspaceActions,
-  registerWorkspaceListeners,
-} from './views/workspaceActions.js';
+import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspaceActions.js';
 import { registerModalListeners } from './views/modalListeners.js';
+import { initTrash, registerTrashListeners } from './views/trash.js';
 
 // Helper for I/O modules to trigger persistence and UI updates
 async function persistAndRender() {
@@ -57,9 +55,17 @@ async function boot() {
     },
     render: renderAll,
   });
+  initTrash({
+    persist: async () => {
+      await saveState();
+      await updateStorageUsageUI();
+    },
+    render: renderAll,
+  });
   registerHeaderListeners();
   registerSidebarListeners();
   registerWorkspaceListeners();
+  registerTrashListeners();
   registerModalListeners();
   registerImporterListeners();
   registerExporterListeners();

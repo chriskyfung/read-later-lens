@@ -12,6 +12,10 @@ import {
   setSQL,
   mergeBookmarks,
   removeSourceFile,
+  isTrashed,
+  trashBookmarks,
+  restoreBookmarks,
+  purgeBookmarks,
 } from '../src/core/state.js';
 
 const mk = (id, sourceId = 'f1') => ({ id: String(id), source_file_id: sourceId });
@@ -67,5 +71,59 @@ describe('removeSourceFile', () => {
     expect(sourceFiles.has('f1')).toBe(false);
     expect(bookmarks.map((b) => b.id)).toEqual(['2']);
     expect(activeFolder).toBe('ALL');
+  });
+});
+
+describe('trash transitions', () => {
+  it('stamps deleted_at on the requested ids only and reports trashed state', () => {
+    setBookmarks([mk(1), mk(2)]);
+
+    trashBookmarks(['1']);
+
+    expect(isTrashed(bookmarks[0])).toBe(true);
+    expect(bookmarks[0].deleted_at).toBeTruthy();
+    expect(isTrashed(bookmarks[1])).toBe(false);
+    expect(bookmarks[1].deleted_at).toBeUndefined();
+  });
+
+  it('keeps the original stamp when a batch overlaps the trash', () => {
+    const first = '2026-01-01T00:00:00.000Z';
+    setBookmarks([mk(1, 'f1'), { ...mk(2, 'f1'), deleted_at: first }]);
+
+    trashBookmarks(['1', '2']);
+
+    expect(bookmarks[0].deleted_at).toBeTruthy();
+    expect(bookmarks[1].deleted_at).toBe(first);
+  });
+
+  it('restores trashed ids by clearing the stamp', () => {
+    setBookmarks([{ ...mk(1), deleted_at: '2026-01-01T00:00:00.000Z' }, mk(2)]);
+
+    restoreBookmarks(['1', '2']);
+
+    expect(bookmarks[0].deleted_at).toBeNull();
+    expect(isTrashed(bookmarks[0])).toBe(false);
+    // A live record is untouched by a restore.
+    expect(bookmarks[1].deleted_at).toBeUndefined();
+  });
+
+  it('purges records permanently, trashed or not', () => {
+    setBookmarks([mk(1), { ...mk(2), deleted_at: '2026-01-01T00:00:00.000Z' }]);
+
+    purgeBookmarks(['1', '2']);
+
+    expect(bookmarks).toEqual([]);
+  });
+});
+
+describe('mergeBookmarks over the trash', () => {
+  it('lets a fresh import replace (resurrect) a trashed record', () => {
+    setBookmarks([{ id: 'dup', title: 'deleted', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+
+    mergeBookmarks([{ id: 'dup', title: 'imported' }]);
+
+    expect(bookmarks).toHaveLength(1);
+    expect(bookmarks[0].title).toBe('imported');
+    expect(isTrashed(bookmarks[0])).toBe(false);
   });
 });

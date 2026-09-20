@@ -57,20 +57,30 @@ export function confirmDeleteFolder(e, fileId) {
 }
 
 /**
- * Remove a source file and its bookmarks (monolith side-effect order).
+ * Remove a source file and its bookmarks — permanently (monolith side-effect
+ * order, extended with the trash purge).
+ *
+ * Folder deletion is deliberately NOT a soft delete: the file, its active
+ * bookmarks AND its trashed bookmarks all go away in one step. That invariant is
+ * what makes "restore into a deleted folder" impossible, so no trashed record
+ * can ever point at a missing source file.
+ *
  * @param {string} fileId
  * @param {boolean} [triggerRender=true]
  */
 export function deleteFolder(fileId, triggerRender = true) {
+  // Purge every record owned by the file, trashed or not.
+  const doomed = state.bookmarks.filter((b) => b.source_file_id === fileId).map((b) => b.id);
   state.sourceFiles.delete(fileId);
-  state.setBookmarks(state.bookmarks.filter((b) => b.source_file_id !== fileId));
+  state.purgeBookmarks(doomed);
+  doomed.forEach((id) => state.selectedIds.delete(id));
   if (state.activeFolder === fileId) {
     state.setActiveFolder('ALL');
   }
   deps.persist();
   if (triggerRender) {
     deps.render();
-    showToast('已成功刪除檔案及其書籤');
+    showToast('已刪除檔案及其所有書籤（含回收桶）');
   }
 }
 
@@ -101,6 +111,13 @@ export function registerSidebarListeners() {
   // "All bookmarks" folder button
   document.getElementById('allFolderBtn')?.addEventListener('click', () => {
     state.setActiveFolder('ALL');
+    deps.render();
+  });
+
+  // Trash (回收桶) pseudo-folder row — the trash view itself is rendered by
+  // src/views/trash.js, which also owns its row/purge actions.
+  document.getElementById('trashFolderBtn')?.addEventListener('click', () => {
+    state.setActiveFolder('TRASH');
     deps.render();
   });
 

@@ -52,8 +52,9 @@ export function registerModalListeners() {
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
   document.getElementById('closeSimilarityBtn')?.addEventListener('click', closeSimilarityModal);
 
-  // Reader actions. Confirm-gated delete reuses the workspaceActions primitive;
-  // a cancelled confirm leaves the reader open. The similarity button stacks the
+  // Reader actions. Soft delete (the record moves to the trash and can be
+  // restored), so the handler just needs to know whether a live bookmark was
+  // trashed before closing the modal. The similarity button stacks the
   // drawer on top of the reader instead of replacing it, so closing the drawer
   // reveals the article again.
   document.getElementById('readerDeleteBtn')?.addEventListener('click', () => {

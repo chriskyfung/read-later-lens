@@ -93,3 +93,61 @@ export function removeSourceFile(sourceFileId) {
   bookmarks = bookmarks.filter((b) => b.source_file_id !== sourceFileId);
   if (activeFolder === sourceFileId) activeFolder = 'ALL';
 }
+
+// ------------------------------------------------------------------
+// Trash (soft delete) transitions
+//
+// Deleting a bookmark never drops the record: it is *trashed* by stamping
+// `deleted_at`, which makes every active view (filters, sidebar counts, exports)
+// skip it while the trash view can still list and restore it. Only the trash's
+// own permanent actions (還原/永久刪除/清空回收桶) and source-file deletion
+// (which purges the file's trashed bookmarks too, so no orphan can survive)
+// remove records for real.
+// ------------------------------------------------------------------
+
+/**
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} bookmark
+ * @returns {boolean} Whether the record sits in the trash.
+ */
+export function isTrashed(bookmark) {
+  return Boolean(bookmark && bookmark.deleted_at);
+}
+
+/**
+ * Soft-delete bookmarks by stamping `deleted_at`.
+ *
+ * Already-trashed ids keep their original stamp so "newest deleted first"
+ * ordering stays honest when a batch overlaps the trash.
+ *
+ * @param {string[]} ids
+ */
+export function trashBookmarks(ids) {
+  const targets = new Set(ids);
+  const deletedAt = new Date().toISOString();
+  bookmarks = bookmarks.map((b) =>
+    targets.has(b.id) && !b.deleted_at ? { ...b, deleted_at: deletedAt } : b,
+  );
+}
+
+/**
+ * Restore bookmarks from the trash (clears `deleted_at`).
+ *
+ * @param {string[]} ids
+ */
+export function restoreBookmarks(ids) {
+  const targets = new Set(ids);
+  bookmarks = bookmarks.map((b) =>
+    targets.has(b.id) && b.deleted_at ? { ...b, deleted_at: null } : b,
+  );
+}
+
+/**
+ * Remove bookmarks permanently (used by the trash view and by folder deletion,
+ * which purges the file's trashed bookmarks as well as its active ones).
+ *
+ * @param {string[]} ids
+ */
+export function purgeBookmarks(ids) {
+  const targets = new Set(ids);
+  bookmarks = bookmarks.filter((b) => !targets.has(b.id));
+}

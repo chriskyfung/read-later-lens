@@ -6,6 +6,8 @@
  * src/views/bookmarks.js.
  */
 
+import { trashPanelHtml } from './trashPanel.js';
+
 /** @returns {string} The bookmarks panel markup. */
 export function panelBookmarksHtml() {
   return `
@@ -39,6 +41,8 @@ export function panelBookmarksHtml() {
             <h3 class="text-slate-300 font-semibold mb-1">尚未載入書籤或未找到符合的資料</h3>
             <p class="text-slate-500 text-xs max-w-sm mb-4">點擊右上角的「匯入」載入 Instapaper 的 CSV, JSON 或 SQLite (.db) 檔案。</p>
           </div>
+
+${trashPanelHtml()}
         </div>
 `;
 }

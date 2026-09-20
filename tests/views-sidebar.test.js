@@ -1,21 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderSidebarFolders, renderTagCloud, renderSidebar } from '../src/views/sidebar.js';
 import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebarActions.js';
+import { sidebarTrashBtnClass } from '../src/components/sidebar/folderRow.js';
 import * as state from '../src/core/state.js';
 
 // Model only the DOM operations used by the sidebar, including replacement
 // and removal so repeated-render tests detect stale or duplicate children.
 function makeEl() {
-  return {
+  const el = {
     querySelector(selector) {
       this.elements ||= {};
-      return this.elements[selector] ||= makeEl();
+      return (this.elements[selector] ||= makeEl());
     },
     innerText: '',
     dataset: {},
     listeners: {},
-    addEventListener(type, fn) { this.listeners[type] = fn; },
-    closest() { return this; },
+    addEventListener(type, fn) {
+      this.listeners[type] = fn;
+    },
+    closest() {
+      return this;
+    },
     className: '',
     children: [],
     parent: null,
@@ -41,11 +46,45 @@ function makeEl() {
       this.parent = null;
     },
   };
+  // classList backed by el.className so direct className assignment (used by
+  // the renderers) and classList manipulation stay in sync.
+  const parts = () => el.className.split(/\s+/).filter(Boolean);
+  el.classList = {
+    add(...names) {
+      const set = new Set([...parts(), ...names]);
+      el.className = [...set].join(' ');
+    },
+    remove(...names) {
+      const hide = new Set(names);
+      el.className = parts()
+        .filter((c) => !hide.has(c))
+        .join(' ');
+    },
+    toggle(name, force) {
+      const has = parts().includes(name);
+      const target = force === undefined ? !has : force;
+      if (target) el.classList.add(name);
+      else el.classList.remove(name);
+      return target;
+    },
+    contains(name) {
+      return parts().includes(name);
+    },
+  };
+  return el;
 }
 
 let els;
 let requestRender;
-const ids = ['folderList', 'allFolderBtn', 'totalSourceCount', 'allCountBadge', 'tagFilterCloud'];
+const ids = [
+  'folderList',
+  'allFolderBtn',
+  'totalSourceCount',
+  'allCountBadge',
+  'trashFolderBtn',
+  'trashCountBadge',
+  'tagFilterCloud',
+];
 function resetState() {
   state.setBookmarks([]);
   state.setSourceFiles(new Map());
@@ -102,6 +141,51 @@ describe('renderSidebarFolders', () => {
       expect(rows[i].querySelector('[data-delete-folder]').dataset.deleteFolder).toBe(file.id);
       expect(rows[i].innerHTML).toContain('title="刪除檔案與其書籤"');
     });
+  });
+
+  it('counts only active bookmarks and colours the trash row by folder', () => {
+    state.setBookmarks([
+      { id: '1', source_file_id: 'f1' },
+      { id: '2', source_file_id: 'f1', deleted_at: '2026-01-01T00:00:00.000Z' },
+      { id: '3', source_file_id: 'f2', deleted_at: '2026-02-01T00:00:00.000Z' },
+    ]);
+
+    renderSidebarFolders();
+
+    expect(els.allCountBadge.innerText).toBe('1');
+    expect(els.trashCountBadge.innerText).toBe('2');
+    // The f1 badge counts live bookmarks only.
+    expect(els.folderList.children[0].innerHTML).toContain('rounded">1</span>');
+    expect(els.trashFolderBtn.className).toBe(sidebarTrashBtnClass(false));
+
+    state.setActiveFolder('TRASH');
+    renderSidebarFolders();
+
+    expect(els.trashFolderBtn.className).toBe(sidebarTrashBtnClass(true));
+    expect(els.allFolderBtn.className).not.toContain('active');
+  });
+
+  it('hides the trash row when the trash is empty and reveals it once items exist', () => {
+    // beforeEach seeds only active bookmarks → empty trash.
+    renderSidebarFolders();
+    expect(els.trashFolderBtn.classList.contains('hidden')).toBe(true);
+
+    state.setBookmarks([{ id: '1', source_file_id: 'f1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+    renderSidebarFolders();
+    expect(els.trashFolderBtn.classList.contains('hidden')).toBe(false);
+    expect(els.trashFolderBtn.className).toBe(sidebarTrashBtnClass(false));
+  });
+
+  it('falls back to the All-Items view when the trash is emptied while active', () => {
+    state.setBookmarks([{ id: '1', source_file_id: 'f1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+    state.setActiveFolder('TRASH');
+
+    renderSidebarFolders();
+    expect(state.activeFolder).toBe('TRASH');
+
+    state.setBookmarks([]);
+    renderSidebarFolders();
+    expect(state.activeFolder).toBe('ALL');
   });
 
   it('replaces only dynamic rows and observes replaced state bindings', () => {

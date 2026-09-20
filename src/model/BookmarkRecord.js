@@ -19,6 +19,9 @@
  * @property {string[]} tags          List of tag strings.
  * @property {string} instapaper_url Reader deep-link URL (written by the adapter).
  * @property {string} [provider]      Provider slug, e.g. 'instapaper'.
+ * @property {string|null} [deleted_at] ISO timestamp once soft-deleted; null /
+ *   absent while active. The trash view is simply a projection over this field,
+ *   so no separate store or IndexedDB migration is needed.
  */
 
 /** @type {import('./BookmarkRecord.js').BookmarkRecord} */

@@ -1,22 +1,26 @@
 /**
- * @fileoverview Central render orchestrator — always renders the sidebar and
- * bookmark grid, then the active analytics view. Selection-only changes update
- * the batch action bar separately without invoking this full render.
+ * @fileoverview Central render orchestrator — always renders the sidebar, then
+ * either the bookmark grid or the trash view (activeFolder === 'TRASH'), then
+ * the active analytics view. Selection-only changes update the batch action bar
+ * separately without invoking this full render.
  */
 
-import { activeTab } from '../core/state.js';
+import { activeFolder, activeTab } from '../core/state.js';
 import { renderSidebar } from './sidebar.js';
 import { renderBookmarkCards } from './bookmarks.js';
+import { renderTrashView } from './trash.js';
 import { renderWordCloud } from './wordcloud.js';
 import { renderDomainChart } from './domains.js';
 import { renderConceptLinkageGraph } from './linkage.js';
 
 /**
- * Re-render the sidebar and bookmark grid, then the active analytics view.
+ * Re-render the sidebar and the bookmark grid (or the trash view), then the
+ * active analytics view.
  */
 export function renderAll() {
   renderSidebar();
-  renderBookmarkCards();
+  if (activeFolder === 'TRASH') renderTrashView();
+  else renderBookmarkCards();
 
   if (activeTab === 'wordcloud') renderWordCloud();
   if (activeTab === 'domains') renderDomainChart();

@@ -20,6 +20,12 @@ let deps = {
 };
 
 /**
+ * How many trashed records the last merged import replaced (see acceptRecords).
+ * Consumed and reset by processSingleFile()'s success toast.
+ */
+let lastTrashDisplaced = 0;
+
+/**
  * Initialize importer with necessary side-effect callbacks.
  * @param {ImporterDeps} injectedDeps
  */
@@ -31,7 +37,7 @@ export function initImporter(injectedDeps) {
  * Logic for resolving duplicate filename conflicts via a modal promise.
  */
 function waitForDuplicateResolution() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const modal = document.getElementById('duplicateModal');
     const btnOverwrite = document.getElementById('dupBtnOverwrite');
     const btnKeep = document.getElementById('dupBtnKeepBoth');
@@ -44,9 +50,18 @@ function waitForDuplicateResolution() {
       modal.classList.add('hidden');
     };
 
-    const onOverwrite = () => { cleanup(); resolve('overwrite'); };
-    const onKeep = () => { cleanup(); resolve('keep'); };
-    const onCancel = () => { cleanup(); resolve('cancel'); };
+    const onOverwrite = () => {
+      cleanup();
+      resolve('overwrite');
+    };
+    const onKeep = () => {
+      cleanup();
+      resolve('keep');
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve('cancel');
+    };
 
     btnOverwrite.addEventListener('click', onOverwrite);
     btnKeep.addEventListener('click', onKeep);
@@ -65,12 +80,16 @@ async function processSingleFile(file, finalName) {
   const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   const ext = finalName.split('.').pop().toLowerCase();
 
+  // A stale count from a previous file (or a late callback) must never leak
+  // into this file's success toast.
+  lastTrashDisplaced = 0;
+
   const fileRecord = {
     id: fileId,
     name: finalName,
     type: ext,
     originalData: null,
-    fileHandle: file
+    fileHandle: file,
   };
 
   try {
@@ -83,13 +102,13 @@ async function processSingleFile(file, finalName) {
         skipEmptyLines: true,
         complete: (results) => {
           acceptRecords(importJsonOrCsv(results.data, fileRecord.id, fileRecord.name));
-        }
+        },
       });
     } else if (ext === 'json') {
       const text = await file.text();
       fileRecord.originalData = text;
       const parsed = JSON.parse(text);
-      const arrayData = Array.isArray(parsed) ? parsed : (parsed.bookmarks || [parsed]);
+      const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
       acceptRecords(importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
     } else if (ext === 'db' || ext === 'sqlite') {
       const arrayBuffer = await file.arrayBuffer();
@@ -101,8 +120,17 @@ async function processSingleFile(file, finalName) {
     }
 
     state.sourceFiles.set(fileId, fileRecord);
-    showToast(`已成功載入檔案: ${finalName}`);
+    // Re-importing an id that sits in the trash replaces (resurrects) that
+    // record, so say so explicitly instead of letting the trash count drop.
+    const displaced = lastTrashDisplaced;
+    lastTrashDisplaced = 0;
+    showToast(
+      displaced > 0
+        ? `已成功載入檔案: ${finalName}（${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代）`
+        : `已成功載入檔案: ${finalName}`,
+    );
   } catch (err) {
+    lastTrashDisplaced = 0;
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     showToast(`解析檔案 ${finalName} 失敗，請確認格式`);
   }
@@ -110,9 +138,18 @@ async function processSingleFile(file, finalName) {
 
 /**
  * Merge new records into global state and trigger persistence/render.
+ *
+ * Before merging, count how many trashed records the incoming data displaces:
+ * mergeBookmarks() is "incoming wins", so a re-import always overwrites a
+ * trashed record with the fresh one (the item silently returns to the active
+ * list). The count is surfaced in the success toast by processSingleFile() so
+ * the user knows a trash entry disappeared.
+ *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} newBookmarks
  */
 function acceptRecords(newBookmarks) {
+  const incomingIds = new Set(newBookmarks.map((b) => b.id));
+  lastTrashDisplaced = state.bookmarks.filter((b) => b.deleted_at && incomingIds.has(b.id)).length;
   state.mergeBookmarks(newBookmarks);
   deps.persistAndRender();
 }
@@ -137,7 +174,8 @@ export async function handleFileUploads(files) {
     }
 
     if (duplicateId) {
-      document.getElementById('duplicateFileText').innerText = `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+      document.getElementById('duplicateFileText').innerText =
+        `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
       const action = await waitForDuplicateResolution();
       if (action === 'overwrite') {
         deps.deleteFolder(duplicateId, false);

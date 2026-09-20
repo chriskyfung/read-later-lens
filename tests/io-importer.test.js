@@ -10,10 +10,15 @@ vi.mock('../src/providers/index.js', () => ({
       source_file_id: sourceFileId,
       source_file_name: sourceFileName,
       title: r.title ?? '',
-    }))
+    })),
   ),
   importSqlite: vi.fn(async (bytes, sourceFileId, sourceFileName) => [
-    { id: 'sq1', source_file_id: sourceFileId, source_file_name: sourceFileName, bytes: bytes.length },
+    {
+      id: 'sq1',
+      source_file_id: sourceFileId,
+      source_file_name: sourceFileName,
+      bytes: bytes.length,
+    },
   ]),
   providerForExtension: vi.fn(() => 'instapaper'),
 }));
@@ -26,7 +31,9 @@ function makeEl() {
     innerHTML: '',
     className: '',
     _l: {},
-    addEventListener(type, fn) { (this._l[type] = this._l[type] || []).push(fn); },
+    addEventListener(type, fn) {
+      (this._l[type] = this._l[type] || []).push(fn);
+    },
     removeEventListener(type, fn) {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
@@ -35,12 +42,20 @@ function makeEl() {
     },
     classList: {
       _s: new Set(),
-      add(c) { this._s.add(c); },
-      remove(c) { this._s.delete(c); },
-      contains(c) { return this._s.has(c); },
+      add(c) {
+        this._s.add(c);
+      },
+      remove(c) {
+        this._s.delete(c);
+      },
+      contains(c) {
+        return this._s.has(c);
+      },
     },
     children: [],
-    appendChild(c) { this.children.push(c); },
+    appendChild(c) {
+      this.children.push(c);
+    },
     onclick: null,
   };
 }
@@ -83,8 +98,12 @@ async function uploadResolving(files, action) {
   const pending = handleFileUploads(files);
   await new Promise((r) => setTimeout(r, 0));
   if (el('duplicateModal').classList.contains('hidden') === false) {
-    const btn = action === 'overwrite' ? 'dupBtnOverwrite'
-      : action === 'keep' ? 'dupBtnKeepBoth' : 'dupBtnCancel';
+    const btn =
+      action === 'overwrite'
+        ? 'dupBtnOverwrite'
+        : action === 'keep'
+          ? 'dupBtnKeepBoth'
+          : 'dupBtnCancel';
     el(btn).dispatch('click');
   }
   return pending;
@@ -136,13 +155,13 @@ describe('handleFileUploads — format dispatch', () => {
       1,
       [{ id: '1', title: 'w' }],
       expect.stringMatching(/^file_/),
-      'wrapped.json'
+      'wrapped.json',
     );
     expect(importJsonOrCsv).toHaveBeenNthCalledWith(
       2,
       [{ id: '2', title: 's' }],
       expect.stringMatching(/^file_/),
-      'single.json'
+      'single.json',
     );
   });
 
@@ -183,6 +202,41 @@ describe('handleFileUploads — format dispatch', () => {
     expect(dup).toHaveLength(1);
     expect(dup[0].title).toBe('new');
     expect(dup[0].source_file_id).toBe(id);
+  });
+  it('says so when a re-import replaces trashed records', async () => {
+    const persist = vi.fn();
+    initImporter({ persistAndRender: persist });
+    setBookmarks([{ id: 'dup', title: 'deleted copy', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+    // Drive Papa's completion synchronously, the way a real string parse does
+    // (the callback fires inside parse, before the success toast is composed).
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: 'dup', title: 'fresh' }] });
+    });
+
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
+
+    // The trash entry is discarded in favour of the freshly imported record
+    // (mergeBookmarks is incoming-wins), so the toast flags the displacement.
+    expect(el('toastMsg').innerText).toBe(
+      '已成功載入檔案: a.csv（1 筆已存在於回收桶的書籤已被新匯入資料取代）',
+    );
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks).toHaveLength(1);
+    expect(bookmarks[0].title).toBe('fresh');
+    expect(bookmarks[0].deleted_at).toBeUndefined();
+  });
+
+  it('keeps the plain success toast when the import displaces nothing', async () => {
+    setBookmarks([{ id: 'dup', title: 'deleted copy', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: 'other', title: 'new' }] });
+    });
+
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
+
+    expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks).toHaveLength(2);
   });
 });
 
@@ -250,4 +304,3 @@ describe('registerImporterListeners', () => {
     spy.mockRestore();
   });
 });
-

@@ -46,62 +46,71 @@ export function switchTab(tabId) {
 }
 
 /**
- * Delete a single bookmark (generated card data-delete-bookmark).
+ * Move a single bookmark to the trash (generated card data-delete-bookmark).
+ *
+ * Soft delete: the record keeps living in `state.bookmarks` with a `deleted_at`
+ * stamp, so the trash view can restore it. Only the trash's own permanent
+ * actions (src/views/trash.js) and folder deletion remove records for real.
+ *
  * @param {string} id
+ * @returns {boolean} True when a live bookmark was trashed.
  */
 export function deleteBookmark(id) {
-  state.setBookmarks(state.bookmarks.filter((b) => b.id !== id));
+  const bookmark = state.bookmarks.find((b) => b.id === id && !b.deleted_at);
+  if (!bookmark) return false;
+
+  state.trashBookmarks([id]);
   state.selectedIds.delete(id);
   deps.persist();
   deps.render();
   updateBatchActionBar();
-  showToast('已成功刪除該筆書籤');
-}
-
-/**
- * Confirm and delete a single bookmark (card-grid delete).
- *
- * Mirrors confirmDeleteFolder() in src/views/sidebarActions.js so every
- * destructive bookmark action shares one confirmation step. deleteBookmark()
- * itself is kept as the pure state mutation so it stays unit-testable on its
- * own.
- *
- * @param {string} id
- * @returns {boolean} True when the bookmark was deleted.
- */
-export function confirmDeleteBookmark(id) {
-  const bookmark = state.bookmarks.find((b) => b.id === id);
-  if (!confirm(`確定要刪除書籤「${bookmark ? bookmark.title : ''}」嗎？`)) {
-    return false;
-  }
-  deleteBookmark(id);
+  showToast(`已將書籤「${bookmark.title}」移至回收桶`);
   return true;
 }
 
 /**
- * Batch-delete body (monolith order: persist, render, batch bar, toast).
- * Extracted verbatim from the former #batchDeleteBtn click handler so the pure
- * operation stays unit-testable independent of the confirm() prompt.
+ * Trash one bookmark if it is still live (card-grid delete + reader delete).
+ *
+ * No `confirm()` prompt: the action is reversible from the trash, so the
+ * confirmation step now only guards permanent deletions. Kept as a separate
+ * exported wrapper for the reader modal and the delegated grid listener.
+ *
+ * @param {string} id
+ * @returns {boolean} True when the bookmark was trashed.
+ */
+export function confirmDeleteBookmark(id) {
+  return deleteBookmark(id);
+}
+
+/**
+ * Batch-trash every selected bookmark.
+ *
+ * Mirrors deleteBookmark()'s side-effect order (persist, render, batch bar,
+ * toast). Selected ids that are already trashed keep their original stamp.
  */
 export function deleteSelectedBookmarks() {
-  state.setBookmarks(state.bookmarks.filter((b) => !state.selectedIds.has(b.id)));
+  const ids = Array.from(state.selectedIds);
+  if (ids.length === 0) return false;
+
+  state.trashBookmarks(ids);
   state.selectedIds.clear();
   deps.persist();
   deps.render();
   updateBatchActionBar();
-  showToast('已批量刪除選擇的書籤');
+  showToast(`已將 ${ids.length} 筆書籤移至回收桶`);
+  return true;
 }
 
 /**
- * Confirm and delete every selected bookmark (batch delete).
+ * Batch-trash every selected bookmark (batch-delete button).
+ *
+ * Reversible, so no `confirm()`; 取消 in the batch bar still clears selection
+ * without touching the bookmarks.
+ *
  * @returns {boolean} True when the batch delete ran.
  */
 export function confirmDeleteSelectedBookmarks() {
-  if (!confirm(`確定要刪除已選擇的 ${state.selectedIds.size} 筆書籤嗎？`)) {
-    return false;
-  }
-  deleteSelectedBookmarks();
-  return true;
+  return deleteSelectedBookmarks();
 }
 
 /**

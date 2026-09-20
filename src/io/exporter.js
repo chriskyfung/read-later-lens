@@ -4,6 +4,7 @@
  */
 
 import * as state from '../core/state.js';
+import { getActiveBookmarks } from '../core/filters.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer } from '../utils/dom.js';
@@ -63,13 +64,17 @@ export function closeSaveModal() {
 
 /**
  * Saves a single source file's bookmarks back to disk.
+ *
+ * Trashed bookmarks are excluded: the trash is a local holding area, and
+ * exporting it would silently resurrect deleted items in the user's file.
+ *
  * @param {string} fileId
  */
 export async function saveSingleFile(fileId) {
   const file = state.sourceFiles.get(fileId);
   if (!file) return;
 
-  const fileBookmarks = state.bookmarks.filter((b) => b.source_file_id === fileId);
+  const fileBookmarks = getActiveBookmarks().filter((b) => b.source_file_id === fileId);
 
   if (file.type === 'csv') {
     const csv = Papa.unparse(fileBookmarks);
@@ -96,18 +101,20 @@ export async function saveSingleFile(fileId) {
 }
 
 /**
- * Exports all current bookmarks to a unified JSON file.
+ * Exports all current bookmarks to a unified JSON file (trash excluded).
  */
 export function exportAllUnifiedJson() {
-  const blob = new Blob([JSON.stringify(state.bookmarks, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(getActiveBookmarks(), null, 2)], {
+    type: 'application/json',
+  });
   downloadBlob(blob, 'all_bookmarks_export.json');
 }
 
 /**
- * Exports all current bookmarks to a unified CSV file.
+ * Exports all current bookmarks to a unified CSV file (trash excluded).
  */
 export function exportAllUnifiedCsv() {
-  const csv = Papa.unparse(state.bookmarks);
+  const csv = Papa.unparse(getActiveBookmarks());
   const blob = new Blob([csv], { type: 'text/csv' });
   downloadBlob(blob, 'all_bookmarks_export.csv');
 }

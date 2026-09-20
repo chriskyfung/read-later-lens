@@ -197,6 +197,25 @@ describe('saveSingleFile', () => {
     expect(downloadBlob).not.toHaveBeenCalled();
     expect(saveFileWithFallback).not.toHaveBeenCalled();
   });
+
+  it("excludes trashed bookmarks from the file's rows", async () => {
+    seed('csv');
+    setBookmarks([
+      { id: '1', title: 't1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
+      {
+        id: '3',
+        title: 'trashed',
+        url: 'https://c.com',
+        article_preview: 'r',
+        source_file_id: 'F1',
+        deleted_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    expect(globalThis.Papa.unparse).toHaveBeenCalledWith([expect.objectContaining({ id: '1' })]);
+  });
 });
 // END-PART2
 
@@ -223,6 +242,21 @@ describe('unified exports', () => {
     const [blob, filename] = downloadBlob.mock.calls[0];
     expect(filename).toBe('all_bookmarks_export.csv');
     expect(blob.type).toBe('text/csv');
+  });
+
+  it('keeps trashed bookmarks out of both unified exports', async () => {
+    setBookmarks([
+      { id: '1', title: 't1', source_file_id: 'F1' },
+      { id: '9', title: 'trashed', source_file_id: 'F1', deleted_at: '2026-01-01T00:00:00.000Z' },
+    ]);
+
+    exportAllUnifiedJson();
+    const [blob] = downloadBlob.mock.calls[0];
+    expect(JSON.parse(await blob.text()).map((b) => b.id)).toEqual(['1']);
+
+    exportAllUnifiedCsv();
+    const [csvRows] = globalThis.Papa.unparse.mock.calls.at(-1);
+    expect(csvRows.map((b) => b.id)).toEqual(['1']);
   });
 });
 
