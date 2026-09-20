@@ -27,7 +27,7 @@ export function headerHtml() {
         </svg>
       </div>
       <div>
-        <h1 class="font-bold text-lg text-white tracking-wide">Instapaper 書籤管理器</h1>
+        <h1 class="font-bold text-lg text-white tracking-wide">稍後閱讀透鏡 Read Later Lens</h1>
         <p class="text-xs text-slate-400">跨格式書籤聚合、智慧搜尋與動態文字分析系統</p>
       </div>
     </div>
