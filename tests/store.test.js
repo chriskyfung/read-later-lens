@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { deleteDB } from 'idb';
+import { openDB, deleteDB } from 'idb';
 import { saveState, loadState, getStorageUsage, closeDb } from '../src/core/store.js';
 import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '../src/core/state.js';
 
-const DB_NAME = 'InstapaperBookmarkManagerDB';
+const DB_NAME = 'ReadLaterLensDB';
 
 const bookmark = (id) => ({
   id: String(id),
@@ -97,5 +97,68 @@ describe('store (IndexedDB)', () => {
     const { usageKB, limitMB } = await getStorageUsage();
     expect(limitMB).toBe(50);
     expect(typeof usageKB).toBe('number');
+  });
+});
+
+describe('legacy DB migration (InstapaperBookmarkManagerDB → ReadLaterLensDB)', () => {
+  const LEGACY_DB_NAME = 'InstapaperBookmarkManagerDB';
+
+  beforeEach(async () => {
+    await closeDb();
+    await deleteDB(DB_NAME);
+    await deleteDB(LEGACY_DB_NAME);
+    setBookmarks([]);
+    setSourceFiles(new Map());
+  });
+
+  /**
+   * Seed a legacy-format database the way the pre-rebrand app wrote it:
+   * a `app_state` object store keyed by `key` holding the `bookmarks` and
+   * `sources` rows.
+   */
+  async function seedLegacyDb({ bookmarks: bm, sources: src }) {
+    const db = await openDB(LEGACY_DB_NAME, 1, {
+      upgrade(d) {
+        if (!d.objectStoreNames.contains('app_state')) {
+          d.createObjectStore('app_state', { keyPath: 'key' });
+        }
+      },
+    });
+    if (bm) await db.put('app_state', { key: 'bookmarks', data: bm });
+    if (src) await db.put('app_state', { key: 'sources', data: src });
+    db.close();
+  }
+
+  it('migrates a seeded legacy working set into the new DB and removes the legacy DB', async () => {
+    await seedLegacyDb({
+      bookmarks: [bookmark(1), bookmark(2)],
+      sources: [{ id: 'f1', name: 'f.csv', type: 'csv', originalData: 'a,b' }],
+    });
+
+    expect(await loadState()).toBe(true);
+    expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+    expect(sourceFiles.get('f1').name).toBe('f.csv');
+    expect(sourceFiles.get('f1').originalData).toBe('a,b');
+
+    const names = (await indexedDB.databases()).map((d) => d.name);
+    expect(names).not.toContain(LEGACY_DB_NAME);
+    expect(names).toContain(DB_NAME);
+  });
+
+  it('does not re-migrate when the new DB already holds data (idempotency)', async () => {
+    await seedLegacyDb({ bookmarks: [bookmark(1)], sources: [] });
+    expect(await loadState()).toBe(true);
+
+    // Re-create a legacy DB with DIFFERENT data after the first migration —
+    // it must never overwrite the newer state already written to the new DB.
+    await seedLegacyDb({ bookmarks: [bookmark(9)], sources: [] });
+    expect(await loadState()).toBe(true);
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('returns false without error on a fresh install (no legacy DB)', async () => {
+    expect(await loadState()).toBe(false);
+    const names = (await indexedDB.databases()).map((d) => d.name);
+    expect(names).not.toContain(LEGACY_DB_NAME);
   });
 });
