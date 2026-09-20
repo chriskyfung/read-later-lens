@@ -1,8 +1,10 @@
-# Instapaper Bookmark Manager
+# Read Later Lens — 稍後閱讀透鏡
 
-A **fully client-side**, privacy-first bookmark aggregator, search tool, and text-analytics dashboard for [Instapaper](https://www.instapaper.com/) exports. Import your bookmarks, explore them through word clouds, domain statistics, and an interactive D3 concept graph, and discover related articles with TF-IDF / cosine-similarity — all without a server and _without your data ever leaving the browser_.
+A **fully client-side**, privacy-first bookmark aggregator, search tool, and text-analytics **lens** for read-later exports — **Instapaper today, more sources tomorrow**. Import your bookmarks, explore them through word clouds, domain statistics, and an interactive D3 concept graph, and discover related articles with TF-IDF / cosine similarity — all without a server and _without your data ever leaving the browser_.
 
-Everything runs in a single HTML file. Open it, import your `CSV`, `JSON`, or SQLite (`.db`) export, and you’re ready.
+Everything runs as a single-page app powered by Vite. After a one-time install, start the dev server and open it in a modern browser.
+
+---
 
 ## Features
 
@@ -15,32 +17,49 @@ Everything runs in a single HTML file. Open it, import your `CSV`, `JSON`, or SQ
   - ☁️ **Word cloud** — stopword-filtered, stemmed keyword analysis with CJK character/n-gram tokenization.
   - 📊 **Domain analytics** — top-15 source-domain breakdown with click-to-filter.
   - 🕸️ **Concept linkage graph** — an interactive D3 force-directed graph built from shared keywords and domains.
-- **In-app reader** — preview article text without leaving the app, open the original URL, or jump straight to Instapaper’s reader.
+- **In-app reader** — preview article text without leaving the app, open the original URL, or jump straight to Instapaper's reader.
 - **Similarity recommendations** — pick any article to see related items ranked by TF-IDF vector cosine similarity.
 - **Export** — save your changes back as unified `JSON` / `CSV`, or re-export each source in its original format.
 - **Local persistence** — your working set is cached in IndexedDB and restored automatically on your next visit.
 
+---
+
 ## Getting Started
 
-There is **no build step and no package manager** — this is a single, self-contained file.
+The app is a Vite-powered single-page app with bundled npm dependencies. There is a build/serve step; it is **not** a self-contained single file.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (current LTS or newer)
+- [pnpm](https://pnpm.io/)
 
 ### Quick start
 
-1. Clone or download the repository.
-2. Open `src/index.html` in a modern browser (or double-click the file).
-
-### Recommended: serve it over HTTP
-
-Serving via a local HTTP server is recommended so the browser’s **File System Access API** (`showSaveFilePicker`) and D3 graph load reliably:
-
 ```bash
-# From the project root
-python -m http.server 8000
+# 1. Install dependencies (one-time)
+pnpm install
+
+# 2. Start the dev server
+pnpm dev
 ```
 
-Then visit <http://localhost:8000/src/index.html>.
+Then open the URL the dev server prints (usually `http://localhost:5173`).
 
-> Works best in modern Chrome/Edge/Firefox (Chromium-family browsers have the fullest File System Access API support). Basic browsing works offline; the app’s only network calls are its CDN library loads (see [Technology](#technology-stack)).
+> Works best in modern Chrome/Edge/Firefox. The app is not designed for fully offline operation — its dependencies load from npm at dev/build time, and first load in the browser still needs an internet connection to load the CDN libraries listed below.
+
+### Building and previewing
+
+```bash
+# Produce the production bundle
+pnpm build
+
+# Preview the production build locally
+pnpm preview
+```
+
+`pnpm build` emits the deployable single-page app under `dist/`. `pnpm preview` serves that output locally so you can verify the built artifact before shipping it.
+
+---
 
 ## Import & Data Model
 
@@ -94,7 +113,7 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 ## Storage & Privacy
 
 - **Everything runs locally in your browser.** No account, no server, no analytics; your bookmarks and source files are never transmitted anywhere.
-- Your working set is cached in your browser’s **IndexedDB** (database `InstapaperBookmarkManagerDB`) and automatically restored when you revisit the page.
+- Your working set is cached in your browser’s **IndexedDB** (database `ReadLaterLensDB`) and automatically restored when you revisit the page.
 - **Cache caveat for SQLite files:** while `.db` files are parsed with in-memory SQL.js SQLite (safe for browsing/searching), the raw SQLite buffer is retained in **memory only** and is _not_ persisted to IndexedDB. To reliably re-export a `.db` source after closing the page, re-import it — or use the unified `JSON` / `CSV` export, which is always persisted and available.
 - Use the **清除快取 (Clear cache)** button in the header to wipe the stored bookmark cache.
 
@@ -111,24 +130,14 @@ All libraries are loaded from public CDNs at runtime — there are no bundled or
 
 ## Project Structure
 
-```
-instapaper-bookmark-manager/
-├── src/
-│   └── index.html   # The entire application (markup, styles, and logic)
-├── LICENSE          # GNU AGPL-3.0
-├── README.md
-├── .gitattributes   # LF line-ending normalization
-└── .gitignore
-```
-
-The whole app — interface, data processing, NLP/analytics, and visualizations — lives in `src/index.html`.
+The whole app — interface, data processing, NLP/analytics, and visualizations — is split across the modules above, with `src/main.js` as the Vite entry that composes them and `index.html` as the single HTML shell.
 
 ## Known Limitations
 
 - The **concept graph is capped at the top 50** filtered bookmarks to keep the topology readable.
 - **SQLite source re-export** depends on an in-memory SQL.js database; raw `.db` buffers are not cached to IndexedDB (see [Storage & Privacy](#storage--privacy)).
 - CDN-loaded libraries require an internet connection on first load; the app is not designed for fully offline operation.
-- The project is a **single-file monolith** by design — there is no build system or package distribution.
+- The project is a **single-page app with bundled dependencies** — there is a dev/build step (Vite + pnpm), not a self-contained single file.
 
 ## Contributing
 
