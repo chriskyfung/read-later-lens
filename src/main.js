@@ -10,7 +10,7 @@ import { renderAll } from './views/main-view.js';
 import { initImporter, registerImporterListeners } from './io/importer.js';
 import { registerExporterListeners } from './io/exporter.js';
 import { mountHeader } from './components/header.js';
-import { mountSidebar } from './components/sidebar.js';
+import { mountSidebar } from './components/sidebar/panel.js';
 import { mountWorkspace } from './components/workspace.js';
 import { mountModals } from './components/modals.js';
 import { initHeader, registerHeaderListeners } from './views/header.js';

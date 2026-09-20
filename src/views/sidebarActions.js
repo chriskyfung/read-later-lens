@@ -3,7 +3,7 @@
  * and the IndexedDB storage usage indicator.
  *
  * Extracted from the monolith's inline script in index.html.
- * Register listeners AFTER mountSidebar() (src/components/sidebar.js).
+ * Register listeners AFTER mountSidebar() (src/components/sidebar/panel.js).
  */
 
 import * as state from '../core/state.js';

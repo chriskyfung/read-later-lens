@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { mountSidebar } from '../src/components/sidebar.js';
+import { mountSidebar } from '../src/components/sidebar/panel.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 // mountSidebar appends sidebar markup into #appBody via insertAdjacentHTML
