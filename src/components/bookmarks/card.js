@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @fileoverview Bookmark card component — presentational markup only.
  *
  * Extracted from src/views/bookmarks.js renderBookmarkCards() (originally the
