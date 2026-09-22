@@ -68,12 +68,12 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
           </div>
 
           <div>
-            <div class="flex items-start items-center justify-between gap-2 mt-2">
+            <div class="flex items-start justify-between gap-2 mt-2">
               <div>
                 <span class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${b.detected_language}</span>
-                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-[140px]">${domain}</span>
+                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-35">${domain}</span>
               </div>
-              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-[150px]" title="${b.source_file_name}">📁 ${b.source_file_name}</span>
+              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${b.source_file_name}">📁 ${b.source_file_name}</span>
             </div>
 
             <!-- Tags list -->

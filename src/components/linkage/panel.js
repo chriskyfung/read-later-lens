@@ -35,13 +35,13 @@ export function panelLinkageHtml() {
             </div>
           </div>
           <div id="d3GraphCanvas"
-            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden min-h-[450px]">
+            class="flex-1 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden min-h-112.5">
             <!-- D3 SVG injected here -->
           </div>
 
           <!-- D3 Tooltip -->
           <div id="graphTooltip"
-            class="fixed opacity-0 pointer-events-none z-50 bg-slate-800 border border-indigo-500/50 p-3 rounded-lg shadow-2xl transition-opacity duration-200 max-w-xs transform -translate-x-1/2 -translate-y-full mt-[-10px]">
+            class="fixed opacity-0 pointer-events-none z-50 bg-slate-800 border border-indigo-500/50 p-3 rounded-lg shadow-2xl transition-opacity duration-200 max-w-xs transform -translate-x-1/2 -translate-y-full -mt-2.5">
             <div id="ttTitle" class="text-sm font-bold text-white mb-1 leading-snug line-clamp-2"></div>
             <div class="text-[10px] text-indigo-300 font-mono mb-1 truncate" id="ttDomain"></div>
             <div class="flex flex-wrap gap-1" id="ttTags"></div>
