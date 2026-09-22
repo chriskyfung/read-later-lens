@@ -132,166 +132,167 @@ describe('renderTrashView', () => {
     expect(el('trashList').children).toHaveLength(0);
     expect(el('trashEmptyState').classList.contains('hidden')).toBe(false);
     expect(el('trashSummary').innerText).toBe('共 0 筆');
-    describe('restoreBookmark', () => {
-      it('clears the stamp, persists, re-renders and toasts', () => {
-        setBookmarks([trashed('1', 'Older')]);
-        selectedIds.add('1');
+  });
 
-        expect(restoreBookmark('1')).toBe(true);
+  describe('restoreBookmark', () => {
+    it('clears the stamp, persists, re-renders and toasts', () => {
+      setBookmarks([trashed('1', 'Older')]);
+      selectedIds.add('1');
 
-        expect(bookmarks[0].deleted_at).toBeNull();
-        expect(selectedIds.has('1')).toBe(false);
-        expect(persistFn).toHaveBeenCalledTimes(1);
-        expect(renderFn).toHaveBeenCalledTimes(1);
-        expect(el('toastMsg').innerText).toBe('已還原書籤「Older」');
-      });
+      expect(restoreBookmark('1')).toBe(true);
 
-      it('ignores live or unknown ids', () => {
-        setBookmarks([live('1', 'Active')]);
-
-        expect(restoreBookmark('1')).toBe(false);
-        expect(restoreBookmark('missing')).toBe(false);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
+      expect(bookmarks[0].deleted_at).toBeNull();
+      expect(selectedIds.has('1')).toBe(false);
+      expect(persistFn).toHaveBeenCalledTimes(1);
+      expect(renderFn).toHaveBeenCalledTimes(1);
+      expect(el('toastMsg').innerText).toBe('已還原書籤「Older」');
     });
 
-    describe('purgeBookmark', () => {
-      it('removes the record permanently and toasts', () => {
-        setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
-        selectedIds.add('1');
+    it('ignores live or unknown ids', () => {
+      setBookmarks([live('1', 'Active')]);
 
-        expect(purgeBookmark('1')).toBe(true);
+      expect(restoreBookmark('1')).toBe(false);
+      expect(restoreBookmark('missing')).toBe(false);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
+  });
 
-        expect(bookmarks.map((b) => b.id)).toEqual(['2']);
-        expect(selectedIds.has('1')).toBe(false);
-        expect(persistFn).toHaveBeenCalledTimes(1);
-        expect(el('toastMsg').innerText).toBe('已永久刪除該筆書籤');
-      });
+  describe('purgeBookmark', () => {
+    it('removes the record permanently and toasts', () => {
+      setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
+      selectedIds.add('1');
 
-      it('ignores unknown ids', () => {
-        expect(purgeBookmark('missing')).toBe(false);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
+      expect(purgeBookmark('1')).toBe(true);
+
+      expect(bookmarks.map((b) => b.id)).toEqual(['2']);
+      expect(selectedIds.has('1')).toBe(false);
+      expect(persistFn).toHaveBeenCalledTimes(1);
+      expect(el('toastMsg').innerText).toBe('已永久刪除該筆書籤');
     });
 
-    describe('confirmPurgeBookmark', () => {
-      it('purges after the confirm is accepted', () => {
-        setBookmarks([trashed('1', 'Older')]);
+    it('ignores unknown ids', () => {
+      expect(purgeBookmark('missing')).toBe(false);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
+  });
 
-        expect(confirmPurgeBookmark('1')).toBe(true);
+  describe('confirmPurgeBookmark', () => {
+    it('purges after the confirm is accepted', () => {
+      setBookmarks([trashed('1', 'Older')]);
 
-        expect(bookmarks).toHaveLength(0);
-      });
+      expect(confirmPurgeBookmark('1')).toBe(true);
 
-      it('keeps the record when the confirm is declined', () => {
-        globalThis.confirm = vi.fn(() => false);
-        setBookmarks([trashed('1', 'Older')]);
-
-        expect(confirmPurgeBookmark('1')).toBe(false);
-
-        expect(bookmarks).toHaveLength(1);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
+      expect(bookmarks).toHaveLength(0);
     });
 
-    describe('emptyTrash', () => {
-      it('purges every trashed record and keeps the live ones', () => {
-        setBookmarks([trashed('1', 'Older'), trashed('2', 'Newer', NEWER), live('3', 'Active')]);
-        selectedIds.add('1');
-        selectedIds.add('3');
+    it('keeps the record when the confirm is declined', () => {
+      globalThis.confirm = vi.fn(() => false);
+      setBookmarks([trashed('1', 'Older')]);
 
-        expect(emptyTrash()).toBe(true);
+      expect(confirmPurgeBookmark('1')).toBe(false);
 
-        expect(bookmarks.map((b) => b.id)).toEqual(['3']);
-        expect(selectedIds.has('1')).toBe(false);
-        expect(selectedIds.has('3')).toBe(true);
-        expect(persistFn).toHaveBeenCalledTimes(1);
-        expect(el('toastMsg').innerText).toBe('已清空回收桶（2 筆）');
-      });
+      expect(bookmarks).toHaveLength(1);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
+  });
 
-      it('does nothing when the trash is already empty', () => {
-        setBookmarks([live('1', 'Active')]);
+  describe('emptyTrash', () => {
+    it('purges every trashed record and keeps the live ones', () => {
+      setBookmarks([trashed('1', 'Older'), trashed('2', 'Newer', NEWER), live('3', 'Active')]);
+      selectedIds.add('1');
+      selectedIds.add('3');
 
-        expect(emptyTrash()).toBe(false);
+      expect(emptyTrash()).toBe(true);
 
-        expect(bookmarks).toHaveLength(1);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
+      expect(bookmarks.map((b) => b.id)).toEqual(['3']);
+      expect(selectedIds.has('1')).toBe(false);
+      expect(selectedIds.has('3')).toBe(true);
+      expect(persistFn).toHaveBeenCalledTimes(1);
+      expect(el('toastMsg').innerText).toBe('已清空回收桶（2 筆）');
     });
 
-    describe('confirmEmptyTrash', () => {
-      it('empties the trash after the confirm is accepted', () => {
-        setBookmarks([trashed('1', 'Older')]);
+    it('does nothing when the trash is already empty', () => {
+      setBookmarks([live('1', 'Active')]);
 
-        expect(confirmEmptyTrash()).toBe(true);
+      expect(emptyTrash()).toBe(false);
 
-        expect(bookmarks).toHaveLength(0);
-      });
+      expect(bookmarks).toHaveLength(1);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
+  });
 
-      it('keeps the trash when the confirm is declined', () => {
-        globalThis.confirm = vi.fn(() => false);
-        setBookmarks([trashed('1', 'Older')]);
+  describe('confirmEmptyTrash', () => {
+    it('empties the trash after the confirm is accepted', () => {
+      setBookmarks([trashed('1', 'Older')]);
 
-        expect(confirmEmptyTrash()).toBe(false);
+      expect(confirmEmptyTrash()).toBe(true);
 
-        expect(bookmarks).toHaveLength(1);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
-
-      it('never prompts for an empty trash', () => {
-        const confirmSpy = vi.fn(() => true);
-        globalThis.confirm = confirmSpy;
-
-        expect(confirmEmptyTrash()).toBe(false);
-        expect(confirmSpy).not.toHaveBeenCalled();
-      });
+      expect(bookmarks).toHaveLength(0);
     });
 
-    describe('registerTrashListeners', () => {
-      it('restores a row through the delegated click', () => {
-        registerTrashListeners();
-        setBookmarks([trashed('1', 'Older')]);
-        const button = { dataset: { restoreBookmark: '1' } };
+    it('keeps the trash when the confirm is declined', () => {
+      globalThis.confirm = vi.fn(() => false);
+      setBookmarks([trashed('1', 'Older')]);
 
-        el('trashList').dispatch('click', {
-          target: { closest: (s) => (s === '[data-restore-bookmark]' ? button : null) },
-        });
+      expect(confirmEmptyTrash()).toBe(false);
 
-        expect(bookmarks[0].deleted_at).toBeNull();
-        expect(persistFn).toHaveBeenCalledTimes(1);
+      expect(bookmarks).toHaveLength(1);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
+
+    it('never prompts for an empty trash', () => {
+      const confirmSpy = vi.fn(() => true);
+      globalThis.confirm = confirmSpy;
+
+      expect(confirmEmptyTrash()).toBe(false);
+      expect(confirmSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('registerTrashListeners', () => {
+    it('restores a row through the delegated click', () => {
+      registerTrashListeners();
+      setBookmarks([trashed('1', 'Older')]);
+      const button = { dataset: { restoreBookmark: '1' } };
+
+      el('trashList').dispatch('click', {
+        target: { closest: (s) => (s === '[data-restore-bookmark]' ? button : null) },
       });
 
-      it('purges a row through the delegated click (after confirm)', () => {
-        registerTrashListeners();
-        setBookmarks([trashed('1', 'Older')]);
-        const button = { dataset: { purgeBookmark: '1' } };
+      expect(bookmarks[0].deleted_at).toBeNull();
+      expect(persistFn).toHaveBeenCalledTimes(1);
+    });
 
-        el('trashList').dispatch('click', {
-          target: { closest: (s) => (s === '[data-purge-bookmark]' ? button : null) },
-        });
+    it('purges a row through the delegated click (after confirm)', () => {
+      registerTrashListeners();
+      setBookmarks([trashed('1', 'Older')]);
+      const button = { dataset: { purgeBookmark: '1' } };
 
-        expect(bookmarks).toHaveLength(0);
-        expect(persistFn).toHaveBeenCalledTimes(1);
+      el('trashList').dispatch('click', {
+        target: { closest: (s) => (s === '[data-purge-bookmark]' ? button : null) },
       });
 
-      it('ignores clicks that hit neither action button', () => {
-        registerTrashListeners();
-        setBookmarks([trashed('1', 'Older')]);
+      expect(bookmarks).toHaveLength(0);
+      expect(persistFn).toHaveBeenCalledTimes(1);
+    });
 
-        el('trashList').dispatch('click', { target: { closest: () => null } });
+    it('ignores clicks that hit neither action button', () => {
+      registerTrashListeners();
+      setBookmarks([trashed('1', 'Older')]);
 
-        expect(bookmarks).toHaveLength(1);
-        expect(persistFn).not.toHaveBeenCalled();
-      });
+      el('trashList').dispatch('click', { target: { closest: () => null } });
 
-      it('empties the trash from the panel button', () => {
-        registerTrashListeners();
-        setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
+      expect(bookmarks).toHaveLength(1);
+      expect(persistFn).not.toHaveBeenCalled();
+    });
 
-        el('emptyTrashBtn').dispatch('click');
+    it('empties the trash from the panel button', () => {
+      registerTrashListeners();
+      setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
 
-        expect(bookmarks.map((b) => b.id)).toEqual(['2']);
-      });
+      el('emptyTrashBtn').dispatch('click');
+
+      expect(bookmarks.map((b) => b.id)).toEqual(['2']);
     });
   });
 
