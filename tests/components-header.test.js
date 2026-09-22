@@ -33,7 +33,7 @@ describe('mountHeader — markup parity', () => {
   });
 
   it('keeps the brand block and zh-TW title', () => {
-    expect(html()).toContain('Instapaper 書籤管理器');
+    expect(html()).toContain('稍後閱讀透鏡 Read Later Lens');
     expect(html()).toContain('跨格式書籤聚合、智慧搜尋與動態文字分析系統');
     expect(html()).toContain('d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"'); // brand svg
   });

@@ -1,7 +1,7 @@
 {
-  "name": "instapaper-bookmark-manager",
-  "version": "0.1.0",
-  "description": "Client-side bookmark aggregator, search tool, and text-analytics dashboard for Instapaper exports.",
+  "name": "read-later-lens",
+  "version": "0.2.0",
+  "description": "Client-side bookmark aggregator, search tool, and text-analytics lens for read-later exports — Instapaper today, more sources tomorrow.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -14,6 +14,7 @@
     "format": "prettier --write ."
   },
   "keywords": [
+    "read-later",
     "bookmark",
     "instapaper",
     "client-side",
@@ -23,12 +24,12 @@
   "license": "GNU AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/chriskyfung/read-later-lens.git"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/chriskyfung/read-later-lens/issues"
   },
-  "homepage": "",
+  "homepage": "https://github.com/chriskyfung/read-later-lens",
   "author": "chriskyfung",
   "dependencies": {
     "d3": "^7.9.0",

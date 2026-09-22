@@ -17,6 +17,7 @@ export default [
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
+        indexedDB: 'readonly',
         console: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
