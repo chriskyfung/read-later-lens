@@ -4,6 +4,7 @@ import {
   sidebarFolderItemClass,
   sidebarFolderBadgeColorClass,
   sidebarFolderItemHtml,
+  sidebarTrashBtnClass,
 } from '../src/components/sidebar/folderRow.js';
 
 /**
@@ -30,6 +31,17 @@ describe('sidebar folder helpers', () => {
     expect(sidebarFolderItemClass(false)).toBe(
       'dynamic-file-btn folder-btn w-full group flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium border transition cursor-pointer text-slate-300 border-transparent hover:bg-slate-700/50',
     );
+  });
+
+  it('exports the trash-row classes without the dynamic-file-btn marker', () => {
+    expect(sidebarTrashBtnClass(true)).toBe(
+      'folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between border transition bg-indigo-600/20 text-indigo-300 border-indigo-500/30',
+    );
+    expect(sidebarTrashBtnClass(false)).toBe(
+      'folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between border transition text-slate-300 border-transparent hover:bg-slate-700/50',
+    );
+    // The static row must survive renderSidebarFolders()'s dynamic-row cleanup.
+    expect(sidebarTrashBtnClass(true)).not.toContain('dynamic-file-btn');
   });
 
   it('maps file types to their badge colours', () => {

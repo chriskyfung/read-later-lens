@@ -14,7 +14,10 @@ import { parseSearchQuery } from './searchParser.js';
  * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function applyFilters(list) {
-  let filtered = [...list]; // shallow copy - mirrors monolith's [...state.bookmarks]
+  // Trashed bookmarks are invisible to every active view; the trash view reads
+  // getTrashedBookmarks() instead. The filter also returns a fresh array,
+  // mirroring the monolith's [...state.bookmarks] copy.
+  let filtered = list.filter((b) => !b.deleted_at);
 
   // Folder / source-file filter
   if (activeFolder !== 'ALL') {
@@ -103,4 +106,27 @@ export function getFilteredBookmarks() {
  */
 export function getFilteredBookmarksTop(n) {
   return applyFilters(bookmarks).slice(0, n);
+}
+
+/**
+ * Non-trashed bookmarks, unfiltered and unsorted.
+ *
+ * The export paths need "everything except the trash" rather than the user's
+ * current view, so they must not go through applyFilters().
+ *
+ * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ */
+export function getActiveBookmarks() {
+  return bookmarks.filter((b) => !b.deleted_at);
+}
+
+/**
+ * Trashed bookmarks, newest-deleted first (the trash view's projection).
+ *
+ * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ */
+export function getTrashedBookmarks() {
+  return bookmarks
+    .filter((b) => Boolean(b.deleted_at))
+    .sort((a, b) => String(b.deleted_at).localeCompare(String(a.deleted_at)));
 }

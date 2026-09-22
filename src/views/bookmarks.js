@@ -35,13 +35,15 @@ export function getBookmarkDomain(url) {
 
 /**
  * Resolve the human-readable folder / source-file name (monolith parity):
- * 'ALL' → 全部檔案, known folder → file.name, unknown folder → 未知.
+ * 'ALL' → 全部檔案, 'TRASH' → 回收桶, known folder → file.name, unknown → 未知.
  *
  * @returns {string}
  */
 export function resolveFolderName() {
   let folderName = '全部檔案';
-  if (activeFolder !== 'ALL') {
+  if (activeFolder === 'TRASH') {
+    folderName = '回收桶';
+  } else if (activeFolder !== 'ALL') {
     const f = sourceFiles.get(activeFolder);
     folderName = f ? f.name : '未知';
   }
@@ -112,6 +114,9 @@ export function createBookmarkCard(bookmark) {
 
 /**
  * Render the bookmark cards grid (and its header side-effects).
+ *
+ * Always leaves the trash panel hidden: the grid is the non-trash view, and
+ * src/views/trash.js shows the panel when activeFolder === 'TRASH'.
  */
 export function renderBookmarkCards() {
   const grid = document.getElementById('bookmarkCardsGrid');
@@ -119,6 +124,9 @@ export function renderBookmarkCards() {
   const filtered = getFilteredBookmarks();
 
   updateBookmarksHeader(filtered);
+
+  document.getElementById('trashPanel')?.classList.add('hidden');
+  grid.classList.remove('hidden');
 
   if (filtered.length === 0) {
     grid.innerHTML = '';

@@ -155,7 +155,7 @@ describe('registerModalListeners', () => {
     expect(() => registerModalListeners()).not.toThrow();
   });
 
-  it('deletes the open bookmark from the reader after confirm', () => {
+  it('deletes the open bookmark from the reader (soft delete to the trash)', () => {
     registerModalListeners();
     openReaderModal('1');
     expect(getReaderBookmarkId()).toBe('1');
@@ -163,22 +163,21 @@ describe('registerModalListeners', () => {
 
     el('readerDeleteBtn').dispatch('click');
 
-    expect(bookmarks).toHaveLength(1);
-    expect(bookmarks[0].id).toBe('2');
+    // The record survives with a `deleted_at` stamp so the trash can restore it.
+    expect(bookmarks).toHaveLength(2);
+    expect(bookmarks.find((b) => b.id === '1').deleted_at).toBeTruthy();
+    expect(bookmarks.find((b) => b.id === '2').deleted_at).toBeUndefined();
     expect(getReaderBookmarkId()).toBeNull();
     expect(el('readerModal').classList.contains('hidden')).toBe(true);
   });
 
-  it('cancels the reader delete and keeps the modal open', () => {
-    globalThis.confirm = vi.fn(() => false);
+  it('leaves the other bookmarks untouched when the reader delete trashes one', () => {
     registerModalListeners();
     openReaderModal('1');
     el('readerDeleteBtn').dispatch('click');
 
-    expect(bookmarks).toHaveLength(2);
-    expect(bookmarks[0].id).toBe('1');
-    expect(getReaderBookmarkId()).toBe('1');
-    expect(el('readerModal').classList.contains('hidden')).toBe(false);
+    expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+    expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
   });
 
   it('stacks the similarity drawer on top of the reader for the same bookmark', () => {

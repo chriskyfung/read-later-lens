@@ -27,7 +27,9 @@ function makeEl() {
     style: {},
     dataset: {},
     _l: {},
-    addEventListener(type, fn) { (this._l[type] = this._l[type] || []).push(fn); },
+    addEventListener(type, fn) {
+      (this._l[type] = this._l[type] || []).push(fn);
+    },
     removeEventListener(type, fn) {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
@@ -36,12 +38,20 @@ function makeEl() {
     },
     classList: {
       _s: new Set(),
-      add(...cs) { cs.forEach((c) => this._s.add(c)); },
-      remove(...cs) { cs.forEach((c) => this._s.delete(c)); },
-      contains(c) { return this._s.has(c); },
+      add(...cs) {
+        cs.forEach((c) => this._s.add(c));
+      },
+      remove(...cs) {
+        cs.forEach((c) => this._s.delete(c));
+      },
+      contains(c) {
+        return this._s.has(c);
+      },
     },
     children: [],
-    appendChild(c) { this.children.push(c); },
+    appendChild(c) {
+      this.children.push(c);
+    },
     onclick: null,
   };
 }
@@ -63,7 +73,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
-  vi.stubGlobal('confirm', vi.fn(() => true));
+  vi.stubGlobal(
+    'confirm',
+    vi.fn(() => true),
+  );
   setBookmarks([]);
   setSourceFiles(new Map());
   setActiveFolder('ALL');
@@ -105,7 +118,7 @@ describe('confirmDeleteFolder', () => {
     expect(sourceFiles.has('F1')).toBe(false);
     expect(persistFn).toHaveBeenCalledTimes(1);
     expect(renderFn).toHaveBeenCalledTimes(1);
-    expect(el('toastMsg').innerText).toBe('已成功刪除檔案及其書籤');
+    expect(el('toastMsg').innerText).toBe('已刪除檔案及其所有書籤（含回收桶）');
   });
 
   it('cancel path keeps the file', () => {
@@ -150,7 +163,21 @@ describe('deleteFolder', () => {
     expect(activeFolder).toBe('ALL');
     expect(persistFn).toHaveBeenCalledTimes(1);
     expect(renderFn).toHaveBeenCalledTimes(1);
-    expect(el('toastMsg').innerText).toBe('已成功刪除檔案及其書籤');
+    expect(el('toastMsg').innerText).toBe('已刪除檔案及其所有書籤（含回收桶）');
+  });
+
+  it("purges the file's trashed bookmarks too (no orphan can survive)", async () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    setBookmarks([
+      { id: '1', source_file_id: 'F1' },
+      { id: '2', source_file_id: 'F1', deleted_at: '2026-01-01T00:00:00.000Z' },
+      { id: '3', source_file_id: 'OTHER', deleted_at: '2026-01-01T00:00:00.000Z' },
+    ]);
+
+    deleteFolder('F1', false);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks.map((b) => b.id)).toEqual(['3']);
   });
 
   it('triggerRender=false persists only (importer overwrite path)', async () => {
@@ -185,6 +212,17 @@ describe('registerSidebarListeners', () => {
     el('allFolderBtn').dispatch('click');
 
     expect(activeFolder).toBe('ALL');
+    expect(renderFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('trashFolderBtn selects the TRASH pseudo-folder and re-renders', () => {
+    const renderFn = vi.fn();
+    initSidebarActions({ persist: vi.fn(async () => {}), render: renderFn });
+    registerSidebarListeners();
+
+    el('trashFolderBtn').dispatch('click');
+
+    expect(activeFolder).toBe('TRASH');
     expect(renderFn).toHaveBeenCalledTimes(1);
   });
 
@@ -230,7 +268,8 @@ describe('updateStorageUsageUI', () => {
     await updateStorageUsageUI();
 
     expect(el('storageUsageText').innerText).toBe('512 KB / 50 MB');
-    expect(el('storageProgressBar').style.width).toBe(`${Math.min(100, (512 / (50 * 1024)) * 100)}%`);
+    expect(el('storageProgressBar').style.width).toBe(
+      `${Math.min(100, (512 / (50 * 1024)) * 100)}%`,
+    );
   });
 });
-

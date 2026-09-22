@@ -19,6 +19,28 @@ describe('sidebar section helpers', () => {
     expect(html).toContain('id="allCountBadge"');
   });
 
+  it('adds the static trash row with its badge inside #folderList', () => {
+    const html = sidebarFoldersSectionHtml();
+    expect(html).toContain('id="trashFolderBtn"');
+    expect(html).toContain('data-folder="TRASH"');
+    expect(html).toContain('id="trashCountBadge"');
+    expect(html).toContain('回收桶 (Trash)');
+    expect(html.indexOf('id="trashFolderBtn"')).toBeGreaterThan(html.indexOf('id="allFolderBtn"'));
+    expect(html.indexOf('id="trashFolderBtn"')).toBeLessThan(
+      html.indexOf('<!-- Dynamic File items inserted here -->'),
+    );
+  });
+
+  it('separates system folders from imported file rows', () => {
+    const html = sidebarFoldersSectionHtml();
+    const sepIndex = html.indexOf('id="folderListSeparator"');
+    expect(sepIndex).toBeGreaterThan(-1);
+    expect(html).toContain('role="separator"');
+    // Sits after the system rows and before the dynamic imported-file rows.
+    expect(sepIndex).toBeGreaterThan(html.indexOf('id="trashFolderBtn"'));
+    expect(sepIndex).toBeLessThan(html.indexOf('<!-- Dynamic File items inserted here -->'));
+  });
+
   it('keeps the language pills section anchors', () => {
     const html = sidebarLanguageFiltersSectionHtml();
     expect(html).toContain('id="languageFilters"');

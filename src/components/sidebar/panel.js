@@ -5,7 +5,8 @@
  * "Left Sidebar"). Behavior mapping:
  *  - folder rows (dynamic)  → src/views/sidebar.js (renderer)
  *  - folder select/delete   → src/views/sidebarActions.js (delegated listeners)
- *  - allFolderBtn / languageFilters → src/views/sidebarActions.js
+ *  - allFolderBtn / trashFolderBtn / languageFilters → src/views/sidebarActions.js
+ *  - trash rows (dynamic)   → src/views/trash.js
  *  - storage usage          → src/views/sidebarActions.js (updateStorageUsageUI)
  *  - tag cloud (dynamic)    → src/views/sidebar.js
  *

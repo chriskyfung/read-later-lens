@@ -14,6 +14,7 @@ import {
   setSelectedIds,
   selectedIds,
   setSourceFiles,
+  trashBookmarks,
 } from '../src/core/state.js';
 import { getFilteredBookmarks } from '../src/core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks.js';
@@ -39,6 +40,25 @@ vi.mock('../src/core/state.js', () => {
     setSortBy: vi.fn(),
     setSelectedIds: vi.fn((s) => {
       state.selectedIds = s;
+    }),
+    // Soft-delete helpers, mirroring the real state module so the view tests
+    // can assert both the call and the resulting `deleted_at` stamp.
+    trashBookmarks: vi.fn((ids) => {
+      const targets = new Set(ids);
+      const deletedAt = new Date().toISOString();
+      state.bookmarks = state.bookmarks.map((b) =>
+        targets.has(b.id) && !b.deleted_at ? { ...b, deleted_at: deletedAt } : b,
+      );
+    }),
+    restoreBookmarks: vi.fn((ids) => {
+      const targets = new Set(ids);
+      state.bookmarks = state.bookmarks.map((b) =>
+        targets.has(b.id) && b.deleted_at ? { ...b, deleted_at: null } : b,
+      );
+    }),
+    purgeBookmarks: vi.fn((ids) => {
+      const targets = new Set(ids);
+      state.bookmarks = state.bookmarks.filter((b) => !targets.has(b.id));
     }),
     get selectedIds() {
       return state.selectedIds;
@@ -122,6 +142,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
+  vi.clearAllMocks();
   setBookmarks([]);
   setSourceFiles(new Map());
   setSortBy('relevance');
@@ -130,12 +151,6 @@ beforeEach(() => {
     persist: vi.fn(async () => {}),
     render: vi.fn(),
   });
-  // Destructive deletes are now gated by confirm(); default to "OK" so the
-  // existing tests keep deleting, and individual cancel tests override it.
-  vi.stubGlobal(
-    'confirm',
-    vi.fn(() => true),
-  );
 });
 
 describe('switchTab', () => {
@@ -159,7 +174,7 @@ describe('switchTab', () => {
 });
 
 describe('deleteBookmark', () => {
-  it('removes bookmark from state, clears selection, persists and renders', async () => {
+  it('trashes the bookmark, clears selection, persists and renders', async () => {
     const mockPersist = vi.fn();
     const mockRender = vi.fn();
     initWorkspaceActions({ persist: mockPersist, render: mockRender });
@@ -169,18 +184,33 @@ describe('deleteBookmark', () => {
     setBookmarks([b1, b2]);
     selectedIds.add('1');
 
-    deleteBookmark('1');
+    expect(deleteBookmark('1')).toBe(true);
 
-    expect(setBookmarks).toHaveBeenCalledWith([b2]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.has('1')).toBe(false);
     expect(mockPersist).toHaveBeenCalled();
     expect(mockRender).toHaveBeenCalled();
     expect(updateBatchActionBar).toHaveBeenCalled();
+    // The record itself is kept alive for the trash view.
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks).toHaveLength(2);
+    expect(bookmarks.find((b) => b.id === '1').deleted_at).toBeTruthy();
+    expect(bookmarks.find((b) => b.id === '2').deleted_at).toBeUndefined();
+  });
+
+  it('is a no-op for unknown or already-trashed ids', async () => {
+    const mockPersist = vi.fn();
+    initWorkspaceActions({ persist: mockPersist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+
+    expect(deleteBookmark('1')).toBe(false);
+    expect(deleteBookmark('missing')).toBe(false);
+    expect(mockPersist).not.toHaveBeenCalled();
   });
 });
 
 describe('confirmDeleteBookmark', () => {
-  it('deletes after confirm and clears selection', () => {
+  it('trashes the bookmark without prompting (the action is reversible)', () => {
     setBookmarks([
       { id: '1', title: 'T1' },
       { id: '2', title: 'T2' },
@@ -189,66 +219,55 @@ describe('confirmDeleteBookmark', () => {
 
     expect(confirmDeleteBookmark('1')).toBe(true);
 
-    expect(setBookmarks).toHaveBeenCalledWith([{ id: '2', title: 'T2' }]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.has('1')).toBe(false);
     expect(updateBatchActionBar).toHaveBeenCalled();
   });
 
-  it('does nothing when confirm is cancelled', () => {
-    globalThis.confirm = vi.fn(() => false);
-    setBookmarks([
-      { id: '1', title: 'T1' },
-      { id: '2', title: 'T2' },
-    ]);
-    selectedIds.add('1');
-    const callsBefore = setBookmarks.mock.calls.length;
-
-    expect(confirmDeleteBookmark('1')).toBe(false);
-
-    expect(setBookmarks.mock.calls.length).toBe(callsBefore);
-    expect(selectedIds.has('1')).toBe(true);
-  });
-
-  it('tolerates an unknown id without throwing', () => {
-    globalThis.confirm = vi.fn(() => false);
+  it('returns false for an unknown id without throwing', () => {
     expect(() => confirmDeleteBookmark('missing')).not.toThrow();
+    expect(confirmDeleteBookmark('missing')).toBe(false);
   });
 });
 
 describe('deleteSelectedBookmarks', () => {
-  it('removes selected bookmarks, clears selection and persists', () => {
+  it('trashes every selected bookmark, clears selection and persists', () => {
     setBookmarks([{ id: '1' }, { id: '2' }, { id: '3' }]);
     selectedIds.add('1');
     selectedIds.add('3');
 
-    deleteSelectedBookmarks();
+    expect(deleteSelectedBookmarks()).toBe(true);
 
-    expect(setBookmarks).toHaveBeenCalledWith([{ id: '2' }]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1', '3']);
     expect(selectedIds.size).toBe(0);
+  });
+
+  it('does nothing when the selection is empty', () => {
+    setBookmarks([{ id: '1' }]);
+
+    expect(deleteSelectedBookmarks()).toBe(false);
+
+    expect(trashBookmarks).not.toHaveBeenCalled();
   });
 });
 
 describe('confirmDeleteSelectedBookmarks', () => {
-  it('runs the batch delete after confirm', () => {
+  it('trashes the selected bookmarks without prompting', () => {
     setBookmarks([{ id: '1' }, { id: '2' }]);
     selectedIds.add('1');
 
     expect(confirmDeleteSelectedBookmarks()).toBe(true);
 
-    expect(setBookmarks).toHaveBeenCalledWith([{ id: '2' }]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.size).toBe(0);
   });
 
-  it('does nothing when confirm is cancelled', () => {
-    globalThis.confirm = vi.fn(() => false);
+  it('does nothing when the selection is empty', () => {
     setBookmarks([{ id: '1' }, { id: '2' }]);
-    selectedIds.add('1');
-    const callsBefore = setBookmarks.mock.calls.length;
 
     expect(confirmDeleteSelectedBookmarks()).toBe(false);
 
-    expect(setBookmarks.mock.calls.length).toBe(callsBefore);
-    expect(selectedIds.has('1')).toBe(true);
+    expect(trashBookmarks).not.toHaveBeenCalled();
   });
 });
 
@@ -301,7 +320,7 @@ describe('registerWorkspaceListeners', () => {
 
     el('batchDeleteBtn').dispatch('click');
 
-    expect(setBookmarks).toHaveBeenCalledWith([b2]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.size).toBe(0);
     expect(mockPersist).toHaveBeenCalled();
     expect(mockRender).toHaveBeenCalled();
@@ -327,7 +346,8 @@ describe('registerWorkspaceListeners', () => {
     expect(resetGraphZoom).toHaveBeenCalled();
   });
 
-  it('deletes a bookmark via the delegated grid click after confirm', () => {
+  it('trashes a bookmark via the delegated grid click', () => {
+    registerWorkspaceListeners();
     setBookmarks([
       { id: '1', title: 'T1' },
       { id: '2', title: 'T2' },
@@ -336,18 +356,19 @@ describe('registerWorkspaceListeners', () => {
     el('bookmarkCardsGrid').dispatch('click', {
       target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
     });
-    expect(setBookmarks).toHaveBeenCalledWith([{ id: '2', title: 'T2' }]);
+    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
+    expect(updateBatchActionBar).toHaveBeenCalled();
   });
 
-  it('cancels the grid delete when confirm is declined', () => {
-    globalThis.confirm = vi.fn(() => false);
-    setBookmarks([{ id: '1', title: 'T1' }]);
+  it('ignores a grid delete for an already-trashed bookmark', () => {
+    registerWorkspaceListeners();
+    setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
     const button = { dataset: { deleteBookmark: '1' } };
-    const callsBefore = setBookmarks.mock.calls.length;
+    const callsBefore = trashBookmarks.mock.calls.length;
     el('bookmarkCardsGrid').dispatch('click', {
       target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
     });
-    expect(setBookmarks.mock.calls.length).toBe(callsBefore);
+    expect(trashBookmarks.mock.calls.length).toBe(callsBefore);
     expect(selectedIds.size).toBe(0);
   });
 });

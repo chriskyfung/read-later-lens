@@ -11,6 +11,8 @@ import {
   applyFilters,
   getFilteredBookmarks,
   getFilteredBookmarksTop,
+  getActiveBookmarks,
+  getTrashedBookmarks,
 } from '../src/core/filters.js';
 
 const mk = (id, over = {}) => ({
@@ -211,5 +213,46 @@ describe('link: URL operator', () => {
     setBookmarks([mk(1, { title: 'what is link:' }), mk(2, { title: 'nothing relevant' })]);
     setSearchQuery('link:');
     expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+});
+
+describe('trash awareness', () => {
+  const trashed = (id, deletedAt, over = {}) => mk(id, { deleted_at: deletedAt, ...over });
+
+  it('keeps trashed bookmarks out of every active view', () => {
+    setBookmarks([mk(1), trashed(2, '2026-01-01T00:00:00.000Z'), mk(3)]);
+
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+    expect(applyFilters([mk(1), trashed(2, '2026-01-01T00:00:00.000Z')]).map((b) => b.id)).toEqual([
+      '1',
+    ]);
+    expect(getFilteredBookmarksTop(5).map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('returns the live population unfiltered for the export paths', () => {
+    setActiveFolder('f2');
+    setActiveLang('zh');
+    setBookmarks([mk(1), trashed(2, '2026-01-01T00:00:00.000Z'), mk(3, { source_file_id: 'f2' })]);
+
+    // getActiveBookmarks ignores the active filters (unlike getFilteredBookmarks).
+    expect(getActiveBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('lists trashed bookmarks newest-deleted first', () => {
+    setBookmarks([
+      trashed(1, '2026-01-01T00:00:00.000Z'),
+      mk(2),
+      trashed(3, '2026-03-01T00:00:00.000Z'),
+      trashed(4, '2026-02-01T00:00:00.000Z'),
+    ]);
+
+    expect(getTrashedBookmarks().map((b) => b.id)).toEqual(['3', '4', '1']);
+  });
+
+  it('returns empty collections when nothing is trashed', () => {
+    setBookmarks([mk(1)]);
+
+    expect(getTrashedBookmarks()).toEqual([]);
+    expect(getActiveBookmarks().map((b) => b.id)).toEqual(['1']);
   });
 });

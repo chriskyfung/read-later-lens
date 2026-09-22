@@ -19,10 +19,6 @@ describe('entry-point feature wiring', () => {
 
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
     await start();
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    );
     const state = await import('../src/core/state.js');
     const { renderAll } = await import('../src/views/main-view.js');
     const { saveState } = await import('../src/core/store.js');
@@ -38,18 +34,18 @@ describe('entry-point feature wiring', () => {
     els.bookmarkCardsGrid.dispatch('click', {
       target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
     });
-    expect(state.bookmarks).toEqual([]);
+    // Soft delete: the record stays in state (with a stamp) for the trash view,
+    // but leaves the grid and the selection.
+    expect(state.bookmarks).toHaveLength(1);
+    expect(state.bookmarks[0].deleted_at).toBeTruthy();
+    expect(state.bookmarks.filter((b) => !b.deleted_at)).toHaveLength(0);
     expect(state.selectedIds.size).toBe(0);
     expect(saveState).toHaveBeenCalledTimes(1);
     expect(els.bookmarkCardsGrid.listeners.click).toHaveLength(1);
   });
 
-  it('keeps the bookmark when the delete confirm is declined', async () => {
+  it('keeps a trashed bookmark recoverable and ignores a repeated delete click', async () => {
     await start();
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => false),
-    );
     const state = await import('../src/core/state.js');
     const { renderAll } = await import('../src/views/main-view.js');
     const { saveState } = await import('../src/core/store.js');
@@ -63,15 +59,20 @@ describe('entry-point feature wiring', () => {
     });
     expect(state.bookmarks).toHaveLength(1);
     expect(state.bookmarks[0].id).toBe(id);
-    expect(saveState).not.toHaveBeenCalled();
+    expect(state.bookmarks[0].deleted_at).toBeTruthy();
+    expect(saveState).toHaveBeenCalledTimes(1);
+
+    // Clicking the (now stale) card button again must not touch the record: it
+    // is already in the trash, so there is nothing left to soft delete.
+    els.bookmarkCardsGrid.dispatch('click', {
+      target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
+    });
+    expect(saveState).toHaveBeenCalledTimes(1);
+    expect(state.bookmarks).toHaveLength(1);
   });
 
-  it('deletes the open bookmark from the reader modal after confirm (e2e)', async () => {
+  it('trashes the open bookmark from the reader modal (e2e)', async () => {
     await start();
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    );
     const state = await import('../src/core/state.js');
     const { saveState } = await import('../src/core/store.js');
     const { openReaderModal } = await import('../src/views/readerModal.js');
@@ -81,7 +82,8 @@ describe('entry-point feature wiring', () => {
     expect(els.readerModal.classList.contains('hidden')).toBe(false);
     els.readerDeleteBtn.dispatch('click');
 
-    expect(state.bookmarks).toEqual([]);
+    expect(state.bookmarks).toHaveLength(1);
+    expect(state.bookmarks[0].deleted_at).toBeTruthy();
     expect(els.readerModal.classList.contains('hidden')).toBe(true);
     expect(saveState).toHaveBeenCalled();
   });
@@ -371,6 +373,8 @@ describe('module-owned startup', () => {
       ['bookmarkCardsGrid', 'click'],
       ['folderList', 'click'],
       ['tagFilterCloud', 'click'],
+      ['trashList', 'click'],
+      ['emptyTrashBtn', 'click'],
     ])
       expect(els[id].listeners[type]).toHaveLength(1);
     expect(await start()).toBe(entry);

@@ -9,6 +9,7 @@
  */
 
 import { bookmarks } from '../core/state.js';
+import { getActiveBookmarks } from '../core/filters.js';
 import { mostSimilar } from '../analytics/similarity.js';
 import { escapeHtml, pushLayer, popLayer } from '../utils/dom.js';
 import { openReaderModal } from './readerModal.js';
@@ -33,7 +34,10 @@ export function renderSimilarityModal(bookmarkId) {
   const resultsList = document.getElementById('simResultsList');
   resultsList.innerHTML = '';
 
-  const results = mostSimilar(bookmarks, target, 5);
+  // Rank against live bookmarks only: recommending a trashed article (or
+  // recommending *for* one) would contradict the trash's "removed from view"
+  // contract.
+  const results = mostSimilar(getActiveBookmarks(), target, 5);
 
   if (results.length === 0) {
     resultsList.innerHTML = `<p class="text-sm text-slate-500 italic">No similar articles found.</p>`;
