@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Bookmark card component — presentational markup only.
  *
  * Extracted from src/views/bookmarks.js renderBookmarkCards() (originally the
@@ -8,7 +8,7 @@
  * `createBookmarkCard`).
  */
 
-import { escapeHtml } from '../../utils/dom.js';
+import { escapeHtml, safeUrl } from '../../utils/dom.js';
 
 /**
  * Card wrapper class list, driven by selection state (monolith parity).
@@ -70,10 +70,10 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
           <div>
             <div class="flex items-start justify-between gap-2 mt-2">
               <div>
-                <span class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${b.detected_language}</span>
-                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-35">${domain}</span>
+                <span class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${escapeHtml(b.detected_language)}</span>
+                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800/50 truncate max-w-35">${escapeHtml(domain)}</span>
               </div>
-              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${b.source_file_name}">📁 ${b.source_file_name}</span>
+              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${escapeHtml(b.source_file_name)}">📁 ${escapeHtml(b.source_file_name)}</span>
             </div>
 
             <!-- Tags list -->
@@ -93,10 +93,10 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
               </div>
 
               <div class="flex items-center space-x-1">
-                <a href="${b.url}" target="_blank" title="前往原始網站" class="text-slate-400 hover:text-slate-200 p-1">
+                <a href="${escapeHtml(safeUrl(b.url))}" target="_blank" title="前往原始網站" class="text-slate-400 hover:text-slate-200 p-1">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                 </a>
-                <a href="${b.instapaper_url}" target="_blank" title="於 Instapaper 開啟" class="text-slate-400 hover:text-amber-400 p-1">
+                <a href="${escapeHtml(safeUrl(b.instapaper_url))}" target="_blank" title="於 Instapaper 開啟" class="text-slate-400 hover:text-amber-400 p-1">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
                 </a>
                 <button data-delete-bookmark title="刪除此書籤" class="text-slate-400 hover:text-rose-400 p-1">

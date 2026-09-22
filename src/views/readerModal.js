@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Reader modal — shows article preview + link to the Instapaper reader.
  *
  * Matches the original monolith exactly: Tailwind `hidden` class toggling,
@@ -7,6 +7,7 @@
  */
 
 import { bookmarks } from '../core/state.js';
+import { safeUrl } from '../utils/dom.js';
 
 /**
  * Open the reader modal for a given bookmark.
@@ -25,11 +26,12 @@ export function openReaderModal(bookmarkId) {
     bookmark.detected_language || 'EN'
   ).toUpperCase();
   const originalUrl = document.getElementById('readerOriginalUrl');
-  originalUrl.href = bookmark.url;
+  originalUrl.href = safeUrl(bookmark.url) || '#';
   originalUrl.innerText = bookmark.url;
   document.getElementById('readerPreviewContent').innerText =
     bookmark.content || bookmark.article_preview || '無內文預覽';
-  document.getElementById('readerInstapaperBtn').href = bookmark.instapaper_url;
+  document.getElementById('readerInstapaperBtn').href =
+    safeUrl(bookmark.instapaper_url) || '#';
 
   modal.classList.remove('hidden');
 }

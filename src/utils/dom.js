@@ -19,6 +19,29 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Resolve a string into a safe absolute http(s) URL for use in `href`
+ * attributes / properties.
+ *
+ * This is NOT HTML-escaping (use `escapeHtml` for that): it prevents the
+ * `javascript:` / `data:` URL scheme attacks that survive attribute escaping
+ * when a URL is assigned to an `href`. Returns the normalized `href` for valid
+ * http(s) URLs, or `''` for anything else so the caller can fall back to a
+ * safe placeholder (e.g. `'#'`).
+ *
+ * @param {string|null|undefined} url
+ * @returns {string}  Safe http(s) URL string, or '' if unsafe/unparseable.
+ */
+export function safeUrl(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(String(url));
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : '';
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Show a toast notification for 2.5s.
  *
  * @param {string} message
