@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mountHeader } from '../src/components/header.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -40,8 +40,17 @@ describe('mountHeader — markup parity', () => {
 
   it('keeps the search input with its placeholder and icon', () => {
     expect(html()).toContain('id="searchInput"');
-    expect(html()).toContain('搜尋標題、網址、預覽內容或標籤...');
+    expect(html()).toContain(
+      '搜尋標題、網址、預覽內容或標籤...（多關鍵字以空格分隔；&quot;...&quot; 精確比對；link:網址 篩選 URL）',
+    );
     expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"'); // search svg
+  });
+
+  it('adds the quick-reset button with room reserved in the input', () => {
+    expect(html()).toContain('id="clearSearchBtn"');
+    expect(html()).toContain('清除搜尋條件');
+    expect(html()).toContain('d="M6 18L18 6M6 6l12 12"'); // reset svg
+    expect(html()).toContain('pr-10'); // input padding leaves room for the button
   });
 
   it('keeps the import label with the hidden file input', () => {
@@ -57,7 +66,7 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('儲存變更或匯出檔案');
     expect(html()).toContain('<span>匯出</span>');
     expect(html()).toContain(
-      'd="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"'
+      'd="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"',
     );
   });
 
@@ -66,7 +75,7 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('id="clearCacheIcon"');
     expect(html()).toContain('清除本地快取');
     expect(html()).toContain(
-      'd="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"'
+      'd="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"',
     );
   });
 

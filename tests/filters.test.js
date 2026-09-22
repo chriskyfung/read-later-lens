@@ -89,6 +89,62 @@ describe('applyFilters', () => {
     expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
   });
 
+  it('matches multi-term queries regardless of term order (AND semantics)', () => {
+    setBookmarks([
+      mk(1, { title: 'term1 middle term2' }),
+      mk(2, { title: 'term2 middle term1' }),
+      mk(3, { title: 'term1 only' }),
+      mk(4, { title: 'term2 only' }),
+    ]);
+    setSearchQuery('term1 term2');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
+    setSearchQuery('term2 term1');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
+  });
+
+  it('matches an exact phrase only when it appears contiguously', () => {
+    setBookmarks([mk(1, { title: 'term1 term2 end' }), mk(2, { title: 'term1 middle term2' })]);
+    setSearchQuery('"term1 term2"');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('combines bare terms and quoted phrases with AND', () => {
+    setBookmarks([
+      mk(1, { title: 'foo bar baz qux' }),
+      mk(2, { title: 'foo bar baz missing' }), // no 'qux'
+      mk(3, { title: 'foo bar baz' }), // phrase ok, no 'qux'
+    ]);
+    setSearchQuery('qux "bar baz"');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('multi-term search is case-insensitive', () => {
+    setBookmarks([mk(1, { title: 'ALPHA Beta' })]);
+    setSearchQuery('alpha beta');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('multi-term search matches across fields (title + tags)', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', tags: ['news'] }),
+      mk(2, { title: 'alpha' }),
+      mk(3, { title: 'other', tags: ['news'] }),
+    ]);
+    setSearchQuery('alpha news');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('relevance sorting favors bookmarks matching more fields', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', tags: ['beta'] }), // title + tag
+      mk(2, { title: 'alpha beta' }), // both terms in title → higher score
+    ]);
+    setSearchQuery('alpha beta');
+    setSortBy('relevance');
+    const ids = getFilteredBookmarks().map((b) => b.id);
+    expect(ids).toEqual(['2', '1']);
+  });
+
   it('sorts by title using zh-TW collation', () => {
     setBookmarks([mk(1, { title: 'banana' }), mk(2, { title: 'apple' })]);
     setSortBy('title_asc');
@@ -100,5 +156,60 @@ describe('getFilteredBookmarksTop', () => {
   it('caps the result set', () => {
     setBookmarks([mk(1), mk(2), mk(3), mk(4)]);
     expect(getFilteredBookmarksTop(2)).toHaveLength(2);
+  });
+});
+
+describe('link: URL operator', () => {
+  it('limits results to bookmarks whose URL contains the value', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', url: 'https://google.com/maps' }),
+      mk(2, { title: 'google.com mentioned', url: 'https://other.org/x' }),
+      mk(3, { url: 'https://google.com/search' }),
+    ]);
+    setSearchQuery('link:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('ANDs link: with keywords in any order', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', url: 'https://google.com/maps' }),
+      mk(2, { title: 'beta', url: 'https://google.com/maps' }),
+      mk(3, { title: 'alpha', url: 'https://other.org' }),
+    ]);
+    setSearchQuery('link:google.com alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+    setSearchQuery('alpha link:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('does NOT match link: values in title, preview, or tags', () => {
+    setBookmarks([
+      mk(1, { title: 'google.com guide', url: 'https://other.org' }),
+      mk(2, { tags: ['google.com'], url: 'https://other.org' }),
+      mk(3, { article_preview: 'read google.com now', url: 'https://other.org' }),
+    ]);
+    setSearchQuery('link:google.com');
+    expect(getFilteredBookmarks()).toEqual([]);
+  });
+
+  it('ANDs multiple link: terms together', () => {
+    setBookmarks([
+      mk(1, { url: 'https://maps.google.com/route' }),
+      mk(2, { url: 'https://google.com' }),
+    ]);
+    setSearchQuery('link:google.com link:maps');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('is case-insensitive for both the operator and the value', () => {
+    setBookmarks([mk(1, { url: 'https://docs.GOOGLE.com' }), mk(2, { url: 'https://other.org' })]);
+    setSearchQuery('LINK:google.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('treats a bare link: with no value as a literal keyword', () => {
+    setBookmarks([mk(1, { title: 'what is link:' }), mk(2, { title: 'nothing relevant' })]);
+    setSearchQuery('link:');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
   });
 });

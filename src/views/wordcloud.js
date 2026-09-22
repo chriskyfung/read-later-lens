@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Word-cloud view.
  *
  * Matches the original monolith exactly: monolith span classes, visible
@@ -7,7 +7,7 @@
  * switching uses the extracted mechanics in ./tabs.js; `renderAll` lives
  * in src/views/main-view.js (set by src/main.js).
  *
- * The dynamic markup (empty‑state span and item spans) has been moved to
+ * The dynamic markup (empty-state span and item spans) has been moved to
  * src/components/wordcloud/item.js to keep components pure; this file now
  * handles only DOM creation, the click flow, and delegates markup via
  * helpers from ./item.js.
@@ -16,6 +16,7 @@
 import { getFilteredBookmarks } from '../core/filters.js';
 import { wordCloudFrequencies, wordCloudItems } from '../analytics/wordcloud.js';
 import { setSearchQuery } from '../core/state.js';
+import { setSearchInputValue } from './header.js';
 import { activateTab } from './tabs.js';
 import { wordCloudEmptyStateHtml } from '../components/wordcloud/item.js';
 import { wordCloudItemClass, wordCloudItemLabel } from '../components/wordcloud/item.js';
@@ -45,7 +46,7 @@ export function renderWordCloud() {
     item.innerText = wordCloudItemLabel({ word, count });
     item.onclick = () => {
       setSearchQuery(word);
-      document.getElementById('searchInput').value = word;
+      setSearchInputValue(word);
       activateTab('bookmarks');
       deps.render();
     };

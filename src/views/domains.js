@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Domain analytics view.
  *
  * Matches the original monolith exactly: bordered card markup with the
@@ -16,6 +16,7 @@
 import { getFilteredBookmarks } from '../core/filters.js';
 import { topDomains } from '../analytics/domains.js';
 import { setSearchQuery } from '../core/state.js';
+import { setSearchInputValue } from './header.js';
 import { activateTab } from './tabs.js';
 import {
   domainChartEmptyStateHtml,
@@ -49,8 +50,11 @@ export function renderDomainChart() {
     const bar = document.createElement('div');
     bar.className = domainBarClass();
     bar.onclick = () => {
-      setSearchQuery(domain);
-      document.getElementById('searchInput').value = domain;
+      // The domain chart is URL-derived, so the click flow filters by URL:
+      // the 'link:' operator scopes the query to the bookmark URL field.
+      const query = `link:${domain}`;
+      setSearchQuery(query);
+      setSearchInputValue(query);
       activateTab('bookmarks');
       deps.render();
     };

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Filtering & sorting logic — pure functions, no DOM.
  *
  * Every view calls `getFilteredBookmarks()` as the single entry point so
@@ -7,6 +7,7 @@
  */
 
 import { bookmarks, activeFolder, activeLang, activeTag, searchQuery, sortBy } from './state.js';
+import { parseSearchQuery } from './searchParser.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
@@ -34,21 +35,36 @@ export function applyFilters(list) {
     filtered = filtered.filter((b) => b.tags && b.tags.includes(activeTag));
   }
 
-  // Keyword search (with relevance scoring)
-  const q = searchQuery.trim();
-  if (q !== '') {
-    const lower = q.toLowerCase();
+  // Keyword search (with relevance scoring).
+  // Multi-term support: bare terms are AND-ed keywords; quoted phrases are
+  // exact matches. Order-independent ('term1 term2' ≡ 'term2 term1').
+  const parsed = parseSearchQuery(searchQuery);
+  if (parsed.length > 0) {
     filtered = filtered
       .map((b) => {
-        let score = 0;
         const titleLower = (b.title || '').toLowerCase();
         const previewLower = (b.article_preview || '').toLowerCase();
         const urlLower = (b.url || '').toLowerCase();
-        if (titleLower.includes(lower)) score += 10;
-        if (previewLower.includes(lower)) score += 5;
-        if (urlLower.includes(lower)) score += 3;
-        if (b.tags && b.tags.some((t) => t.toLowerCase().includes(lower))) score += 8;
-        return { bookmark: b, score };
+        const tagsLower = (b.tags || []).map((t) => t.toLowerCase());
+        let totalScore = 0;
+
+        for (const term of parsed) {
+          // Every term must match in at least one field (AND semantics);
+          // quoted phrases match as contiguous substrings within each field.
+          let score = 0;
+          if (term.urlOnly) {
+            // 'link:' field operator — only the URL is examined.
+            if (urlLower.includes(term.terms)) score += 3;
+          } else {
+            if (titleLower.includes(term.terms)) score += 10;
+            if (previewLower.includes(term.terms)) score += 5;
+            if (urlLower.includes(term.terms)) score += 3;
+            if (tagsLower.some((t) => t.includes(term.terms))) score += 8;
+          }
+          if (score === 0) return { bookmark: b, score: 0 };
+          totalScore += score;
+        }
+        return { bookmark: b, score: totalScore };
       })
       .filter((item) => item.score > 0);
 
