@@ -30,7 +30,13 @@ describe('mountModals — overlay markup parity', () => {
   it('mounts exactly one overlay block set, in monolith order', () => {
     expect(captured).toHaveLength(1);
     const html = allHtml();
-    const order = ['readerModal', 'similarityModal', 'saveModal', 'duplicateModal', 'toastNotification'];
+    const order = [
+      'readerModal',
+      'similarityModal',
+      'saveModal',
+      'duplicateModal',
+      'toastNotification',
+    ];
     const positions = order.map((id) => html.indexOf(`id="${id}"`));
     expect(positions.every((p) => p >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
@@ -45,9 +51,13 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="readerPreviewContent"');
     expect(html).toContain('id="readerInstapaperBtn"');
     expect(html).toContain('id="closeReaderBtn"');
-    expect(html).toContain('id="closeReaderFooterBtn"');
     expect(html).toContain('文章內文預覽');
     expect(html).toContain('開啟 Instapaper 閱讀器');
+    // Phase 2 reader action buttons (🗑️ 刪除 / ⚡ 相似)
+    expect(html).toContain('id="readerDeleteBtn"');
+    expect(html).toContain('id="readerSimilarityBtn"');
+    expect(html).toContain('title="刪除此書籤"');
+    expect(html).toContain('title="查看相似文章"');
     expect(html).toContain('hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
     expect(html).toContain('d="M6 18L18 6M6 6l12 12"'); // close icon path
   });
@@ -96,6 +106,23 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="toastMsg"');
     expect(html).toContain('通知訊息');
     expect(html).toContain('translate-y-20 opacity-0');
+  });
+
+  it('marks each dialog with role, aria-modal, tabindex and a labelled heading', () => {
+    const html = allHtml();
+    for (const [id, label] of [
+      ['readerModal', 'readerTitle'],
+      ['similarityModal', 'similarityTitle'],
+      ['saveModal', 'saveTitle'],
+    ]) {
+      expect(html).toContain(`id="${id}"`);
+      expect(html).toContain(
+        `role="dialog" aria-modal="true" aria-labelledby="${label}" tabindex="-1"`,
+      );
+    }
+    // Labelled headings live on the existing <h3> titles.
+    expect(html).toContain('id="similarityTitle"');
+    expect(html).toContain('id="saveTitle"');
   });
 
   it('starts every overlay hidden (Tailwind hidden class on the fixed containers)', () => {

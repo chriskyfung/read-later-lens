@@ -1,5 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { escapeHtml, showToast } from '../src/utils/dom.js';
+import {
+  escapeHtml,
+  showToast,
+  closeLayer,
+  closeTopLayer,
+  focusableWithin,
+  popLayer,
+  pushLayer,
+  registerModalLayer,
+  resetLayers,
+  stackDepth,
+  topLayer,
+  topLayerId,
+  trapFocus,
+} from '../src/utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 
 function setupDom() {
@@ -157,5 +171,331 @@ describe('saveFileWithFallback', () => {
     await saveFileWithFallback('data', 'out.txt', 'text/plain');
     expect(anchors).toHaveLength(1);
     expect(anchors[0].download).toBe('out.txt');
+  });
+});
+
+// ---- Modal focus helpers -------------------------------------------------
+
+const makeModal = (focusable = []) => {
+  const classes = new Set(['hidden']);
+  return {
+    focused: 0,
+    focus() {
+      this.focused += 1;
+    },
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+    },
+    querySelectorAll: () => focusable,
+  };
+};
+
+const makeFocusable = () => ({
+  focused: 0,
+  focus() {
+    this.focused += 1;
+  },
+});
+
+// ---- Modal layer stack ---------------------------------------------------
+
+/**
+ * Overlay stub: starts with the Tailwind `hidden` class applied (like the real
+ * mount) and records focus / attributes so the stack can be asserted on.
+ */
+const makeLayer = ({ id = 'testModal', focusable = [] } = {}) => {
+  const classes = new Set(['hidden']);
+  return {
+    id,
+    focused: 0,
+    inert: false,
+    parentElement: null,
+    style: {},
+    _attrs: {},
+    focus() {
+      this.focused += 1;
+    },
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
+    classList: {
+      contains: (c) => classes.has(c),
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      toggle(c, force) {
+        const on = force === undefined ? !classes.has(c) : Boolean(force);
+        if (on) classes.add(c);
+        else classes.delete(c);
+        return on;
+      },
+    },
+    querySelectorAll: () => focusable,
+  };
+};
+
+/** Install a document stub backed by an element registry. */
+const stubDocument = (elements) => {
+  const registry = { ...elements };
+  vi.stubGlobal('document', {
+    activeElement: null,
+    getElementById: (id) => registry[id] || null,
+    createElement: () => makeLayer(),
+  });
+  return registry;
+};
+
+describe('modal layer stack', () => {
+  beforeEach(() => {
+    // Install a minimal document first: resetLayers() closes leftover layers
+    // from a previous test and popLayer touches document.getElementById.
+    vi.stubGlobal('document', {
+      activeElement: null,
+      getElementById: () => null,
+      createElement: () => makeLayer(),
+    });
+    resetLayers();
+  });
+
+  it('pushes a layer, shows it and moves focus into it', () => {
+    const modal = makeLayer({ id: 'aModal' });
+    stubDocument({ aModal: modal });
+
+    pushLayer('aModal');
+
+    expect(modal.classList.contains('hidden')).toBe(false);
+    expect(modal.focused).toBe(1);
+    expect(stackDepth()).toBe(1);
+    expect(topLayerId()).toBe('aModal');
+    expect(topLayer()).toBe(modal);
+  });
+
+  it('gives each layer a higher z-index and inerts the one beneath', () => {
+    const a = makeLayer({ id: 'aModal' });
+    const b = makeLayer({ id: 'bModal' });
+    stubDocument({ aModal: a, bModal: b });
+
+    pushLayer('aModal');
+    pushLayer('bModal');
+
+    expect(stackDepth()).toBe(2);
+    expect(Number(b.style.zIndex)).toBeGreaterThan(Number(a.style.zIndex));
+    expect(a.inert).toBe(true);
+    expect(a.getAttribute('aria-hidden')).toBe('true');
+    expect(b.inert).toBe(false);
+    expect(b.getAttribute('aria-hidden')).toBe('false');
+  });
+
+  it('keeps the same overlay open at two depths (layer instances)', () => {
+    const a = makeLayer({ id: 'aModal' });
+    const mid = makeLayer({ id: 'midModal' });
+    stubDocument({ aModal: a, midModal: mid });
+
+    pushLayer('aModal');
+    pushLayer('midModal');
+    pushLayer('aModal'); // the same element again, higher up the stack
+
+    expect(stackDepth()).toBe(3);
+    expect(topLayerId()).toBe('aModal');
+    expect(Number(a.style.zIndex)).toBeGreaterThan(Number(mid.style.zIndex));
+    expect(mid.inert).toBe(true);
+
+    popLayer('aModal'); // closes the top instance only
+    expect(stackDepth()).toBe(2);
+    expect(topLayerId()).toBe('midModal');
+    expect(a.classList.contains('hidden')).toBe(false); // still mounted beneath
+  });
+
+  it('no-ops safely for unknown overlays', () => {
+    stubDocument({});
+    expect(() => pushLayer('missing')).not.toThrow();
+    expect(() => popLayer('missing')).not.toThrow();
+    expect(stackDepth()).toBe(0);
+  });
+
+  it('hides a popped overlay that was never tracked', () => {
+    const modal = makeLayer({ id: 'aModal' });
+    modal.classList.remove('hidden');
+    stubDocument({ aModal: modal });
+
+    popLayer('aModal');
+
+    expect(modal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('closes a layer through its registered closer', () => {
+    const modal = makeLayer({ id: 'cModal' });
+    stubDocument({ cModal: modal });
+    const close = vi.fn(() => popLayer('cModal'));
+    registerModalLayer('cModal', { close, backButton: 'cBackBtn' });
+
+    pushLayer('cModal');
+    closeTopLayer();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(modal.classList.contains('hidden')).toBe(true);
+    expect(stackDepth()).toBe(0);
+  });
+
+  it('closes a layer directly when it has no registered closer', () => {
+    const modal = makeLayer({ id: 'xModal' });
+    stubDocument({ xModal: modal });
+
+    pushLayer('xModal');
+    closeLayer('xModal');
+
+    expect(modal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('restores the revealed layer content and focus after a pop', () => {
+    const opener = makeFocusable();
+    const r = makeLayer({ id: 'rModal' });
+    const s = makeLayer({ id: 'sModal' });
+    stubDocument({ rModal: r, sModal: s });
+    vi.stubGlobal('document', {
+      activeElement: opener,
+      getElementById: (id) => ({ rModal: r, sModal: s })[id] || null,
+      createElement: () => makeLayer(),
+    });
+    const restore = vi.fn();
+
+    pushLayer('rModal', { payload: 'A', restore });
+    pushLayer('sModal', { payload: null, restore: null });
+    popLayer('sModal');
+
+    expect(restore).toHaveBeenCalledWith('A');
+    expect(r.classList.contains('hidden')).toBe(false);
+    expect(s.classList.contains('hidden')).toBe(true);
+    expect(r.focused).toBeGreaterThan(1); // focus back on the revealed layer
+  });
+
+  it('hands focus back to the opener when the bottom layer closes', () => {
+    const opener = makeFocusable();
+    stubDocument({ aModal: makeLayer({ id: 'aModal' }) });
+    document.activeElement = opener; // after stubDocument, which resets it
+    const modal = document.getElementById('aModal');
+
+    pushLayer('aModal');
+    popLayer('aModal');
+
+    expect(opener.focused).toBe(1);
+    expect(modal.inert).toBe(false); // background released
+  });
+
+  it('marks the background inert while any layer is open', () => {
+    const header = makeLayer({ id: 'appHeader' });
+    const body = makeLayer({ id: 'appBody' });
+    const modal = makeLayer({ id: 'aModal' });
+    stubDocument({ appHeader: header, appBody: body, aModal: modal });
+
+    pushLayer('aModal');
+    expect(header.inert).toBe(true);
+    expect(body.inert).toBe(true);
+
+    popLayer('aModal');
+    expect(header.inert).toBe(false);
+    expect(body.inert).toBe(false);
+  });
+
+  it('evicts and retires the oldest layer when the runaway guard is hit', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = makeLayer({ id: 'fModal' });
+    const g = makeLayer({ id: 'gModal' });
+    stubDocument({ fModal: f, gModal: g });
+    const retire = vi.fn();
+
+    pushLayer('fModal', { onRetire: retire });
+    for (let i = 0; i < 10; i += 1) pushLayer('gModal');
+
+    expect(stackDepth()).toBe(10);
+    expect(retire).toHaveBeenCalledOnce();
+    expect(f.classList.contains('hidden')).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('skips hidden elements when collecting focusable children', () => {
+    const visible = makeLayer({ id: 'visible' });
+    visible.classList.remove('hidden');
+    const hidden = makeLayer({ id: 'hidden' });
+    const container = makeLayer({ id: 'container' });
+    container.querySelectorAll = () => [visible, hidden];
+
+    expect(focusableWithin(container)).toEqual([visible]);
+  });
+});
+
+describe('trapFocus', () => {
+  const arrange = (count) => {
+    const items = Array.from({ length: count }, makeFocusable);
+    const modal = makeModal(items);
+    vi.stubGlobal('document', { activeElement: items[0] });
+    return { items, modal };
+  };
+
+  it('wraps Tab from the last element back to the first', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = items[2];
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[0].focused).toBe(1);
+  });
+
+  it('leaves Tab alone while focus sits between the ends', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = items[1];
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(items[0].focused).toBe(0);
+    expect(items[2].focused).toBe(0);
+  });
+
+  it('wraps Shift+Tab from the first element back to the last', () => {
+    const { items, modal } = arrange(3);
+    const event = { shiftKey: true, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[2].focused).toBe(1);
+  });
+
+  it('sends Shift+Tab to the last element when the container itself is focused', () => {
+    const { items, modal } = arrange(3);
+    document.activeElement = modal;
+    const event = { shiftKey: true, preventDefault: vi.fn() };
+
+    trapFocus(modal, event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(items[2].focused).toBe(1);
+  });
+
+  it('blocks Tab when the modal has no focusable elements', () => {
+    vi.stubGlobal('document', { activeElement: null });
+    const event = { shiftKey: false, preventDefault: vi.fn() };
+
+    trapFocus(makeModal([]), event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
+  it('is null-safe for a missing modal', () => {
+    vi.stubGlobal('document', { activeElement: null });
+    expect(() => trapFocus(null, { shiftKey: false, preventDefault: vi.fn() })).not.toThrow();
+    expect(focusableWithin(null)).toEqual([]);
   });
 });

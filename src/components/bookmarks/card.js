@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @fileoverview Bookmark card component — presentational markup only.
  *
  * Extracted from src/views/bookmarks.js renderBookmarkCards() (originally the
@@ -21,7 +21,7 @@ export function bookmarkCardClass(isSelected) {
     isSelected
       ? 'border-indigo-500 ring-1 ring-indigo-500'
       : 'border-slate-700/80 hover:border-slate-600'
-  } rounded-xl p-4 flex flex-col justify-between transition-all duration-200 shadow-md group relative`;
+  } rounded-xl p-4 flex flex-col justify-between transition-all duration-200 shadow-md group relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`;
 }
 
 /**
@@ -44,7 +44,7 @@ function tagsHtml(tags) {
  *
  * Preserved exactly from the monolith: label-wrapped title + checkbox, the
  * `無預覽內容` preview fallback, the language/domain/source-file badges, every
- * `#`-tag, the 閱讀/相似 buttons, the original + Instapaper links, and the
+ * `#`-tag, the 相似 button, the original + Instapaper links, and the
  * delete button. No DOM reads — this is a pure string builder.
  *
  * @param {object} opts
@@ -84,10 +84,7 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
               <!-- Card Actions Footer -->
             <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
               <div class="flex items-center space-x-1.5">
-                <button class="open-reader-btn hover:text-indigo-300 flex items-center space-x-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded transition">
-                  <span>📖 閱讀</span>
-                </button>
-                <button class="open-similarity-btn hover:text-indigo-300 flex items-center space-x-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded transition">
+                    <button class="open-similarity-btn hover:text-indigo-300 flex items-center space-x-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded transition">
                   <span>⚡ 相似</span>
                 </button>
               </div>

@@ -6,22 +6,30 @@
 import * as state from '../core/state.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { initSql } from './sqlLoader.js';
+import { pushLayer, popLayer } from '../utils/dom.js';
 
 /**
- * Opens the save/export modal and populates the list of source files.
+ * Populate the source-file list of the save/export modal without touching
+ * the layer stack.
+ *
+ * Doubles as the layer's `restore`, so a save modal revealed by closing a
+ * modal stacked above it re-populates itself.
+ *
+ * @returns {boolean} Whether the modal content was rendered.
  */
-export function openSaveModal() {
+export function renderSaveModal() {
   const container = document.getElementById('saveSourceFilesList');
-  if (!container) return;
+  if (!container) return false;
 
   container.innerHTML = '';
 
   if (state.sourceFiles.size === 0) {
     container.innerHTML = '<span class="text-xs text-slate-500">尚無載入的來源檔案</span>';
   } else {
-    state.sourceFiles.forEach(file => {
+    state.sourceFiles.forEach((file) => {
       const item = document.createElement('div');
-      item.className = 'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
+      item.className =
+        'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
       item.innerHTML = `
         <div>
           <div class="font-medium text-slate-200 truncate flex-1">${file.name}</div>
@@ -34,7 +42,23 @@ export function openSaveModal() {
     });
   }
 
-  document.getElementById('saveModal').classList.remove('hidden');
+  return true;
+}
+
+/**
+ * Opens the save/export modal and populates the list of source files,
+ * stacking it on top of any modal that is already open.
+ */
+export function openSaveModal() {
+  if (!renderSaveModal()) return;
+  pushLayer('saveModal', { restore: renderSaveModal });
+}
+
+/**
+ * Hide the save/export modal, revealing the layer beneath it if there is one.
+ */
+export function closeSaveModal() {
+  popLayer('saveModal');
 }
 
 /**
@@ -45,7 +69,7 @@ export async function saveSingleFile(fileId) {
   const file = state.sourceFiles.get(fileId);
   if (!file) return;
 
-  const fileBookmarks = state.bookmarks.filter(b => b.source_file_id === fileId);
+  const fileBookmarks = state.bookmarks.filter((b) => b.source_file_id === fileId);
 
   if (file.type === 'csv') {
     const csv = Papa.unparse(fileBookmarks);
@@ -57,8 +81,13 @@ export async function saveSingleFile(fileId) {
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
     db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);');
-    fileBookmarks.forEach(b => {
-      db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [b.id, b.title, b.url, b.article_preview]);
+    fileBookmarks.forEach((b) => {
+      db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [
+        b.id,
+        b.title,
+        b.url,
+        b.article_preview,
+      ]);
     });
     const binaryArray = db.export();
     const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
@@ -92,9 +121,9 @@ export function registerExporterListeners() {
     if (btn) saveSingleFile(btn.dataset.saveFile);
   });
   document.getElementById('saveBackBtn')?.addEventListener('click', openSaveModal);
-  document.getElementById('closeSaveBtn').addEventListener('click', () => {
-    document.getElementById('saveModal').classList.add('hidden');
-  });
-  document.getElementById('exportAllUnifiedJsonBtn').addEventListener('click', exportAllUnifiedJson);
+  document.getElementById('closeSaveBtn')?.addEventListener('click', closeSaveModal);
+  document
+    .getElementById('exportAllUnifiedJsonBtn')
+    .addEventListener('click', exportAllUnifiedJson);
   document.getElementById('exportAllUnifiedCsvBtn').addEventListener('click', exportAllUnifiedCsv);
 }

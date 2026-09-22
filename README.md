@@ -66,7 +66,7 @@ Duplicate IDs are merged on import.
 
 ### Bookmark cards (書籤列表)
 
-A responsive card grid with select-all, batch delete, and per-card actions including **similarity analysis** (⚡ 相似) and opening the reader. Cards honor the current search, folder, language, and tag filters.
+A responsive card grid with select-all, batch delete, and per-card actions including **similarity analysis** (⚡ 相似) and opening the reader. Destructive deletes — per-card and batch — are confirmed with a dialog before mutating state. Cards honor the current search, folder, language, and tag filters.
 
 ### Word cloud (☁️ 文字雲)
 
@@ -87,7 +87,8 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 ### Reader & similarity
 
-- **Reader modal** opens on card click: shows the preview, the original URL, and a button to open the bookmark in the Instapaper reader.
+- **Reader modal** opens on card click: shows the preview, the original URL, and a button to open the bookmark in the Instapaper reader. Its footer also exposes inline actions — 🗑️ 刪除 (confirm-gated, reuses the grid delete prompt) and ⚡ 相似 (opens the similarity drawer for the same bookmark).
+- **Dialog accessibility & keyboard** — every dialog is `role="dialog"` / `aria-modal`, moves focus inside when opened and restores it to the trigger when closed; press **Esc** to close the topmost open dialog and **Tab** stays contained within it.
 - **Similarity modal** tokenizes the target article and your library into TF-IDF vectors, then ranks the most similar articles by **cosine similarity** (shown as a percentage).
 
 ## Storage & Privacy

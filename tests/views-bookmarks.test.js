@@ -30,6 +30,19 @@ function makeEl() {
     querySelector() {
       return makeEl();
     },
+    style: {},
+    inert: false,
+    parentElement: null,
+    _attrs: {},
+    setAttribute(name, value) {
+      this._attrs[name] = String(value);
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    removeAttribute(name) {
+      delete this._attrs[name];
+    },
     classList: {
       _s: new Set(['hidden']),
       add(c) {
@@ -40,6 +53,12 @@ function makeEl() {
       },
       contains(c) {
         return this._s.has(c);
+      },
+      toggle(c, force) {
+        const on = force === undefined ? !this._s.has(c) : Boolean(force);
+        if (on) this._s.add(c);
+        else this._s.delete(c);
+        return on;
       },
     },
     listeners: {},
@@ -269,12 +288,14 @@ describe('createBookmarkCard', () => {
     ]);
     const card = createBookmarkCard(bookmarks[0]);
     expect(card.className).toContain('bg-slate-800');
+    expect(card.tabIndex).toBe(0); // keyboard-activatable card
     expect(card.innerHTML).toContain('Apple &lt;News&gt;');
     expect(card.innerHTML).toContain('📁 My Export.csv');
     expect(card.innerHTML).toContain('#tech');
     expect(card.innerHTML).toContain('apple.com');
     expect(card.innerHTML).toContain('data-delete-bookmark');
-    expect(card.innerHTML).toContain('📖 閱讀');
+    expect(card.innerHTML).not.toContain('open-reader-btn');
+    expect(card.innerHTML).not.toContain('📖 閱讀');
     expect(card.innerHTML).toContain('⚡ 相似');
     expect(card.innerHTML).toContain('href="https://www.instapaper.com/read/1"');
   });
@@ -291,5 +312,68 @@ describe('createBookmarkCard', () => {
     setBookmarks([{ id: '2', title: 'Banana bread', url: 'not a url', tags: [] }]);
     const card = createBookmarkCard(bookmarks[0]);
     expect(card.innerHTML).toContain('web');
+  });
+});
+
+describe('card click opens the reader', () => {
+  const bookmark = {
+    id: '1',
+    title: 'Apple <News>',
+    url: 'https://www.apple.com/x',
+    instapaper_url: 'https://www.instapaper.com/read/1',
+    article_preview: 'pie text',
+    detected_language: 'en',
+    source_file_name: 'My Export.csv',
+    tags: ['tech', 'fruit'],
+  };
+
+  it('opens the reader modal when the card body is clicked', () => {
+    setBookmarks([bookmark]);
+    const card = createBookmarkCard(bookmarks[0]);
+    document.getElementById('readerModal'); // prime/cache the DOM stub
+    els.readerModal.classList.add('hidden'); // force a closed starting state
+
+    // e.target is the card padding (no interactive ancestor) -> opens reader
+    card.listeners.click({ target: { closest: () => null } });
+
+    expect(els.readerModal.classList.contains('hidden')).toBe(false);
+    expect(els.readerTitle.innerText).toBe(bookmark.title);
+  });
+
+  it('does not open the reader when an inner control is clicked', () => {
+    setBookmarks([bookmark]);
+    const card = createBookmarkCard(bookmarks[0]);
+    document.getElementById('readerModal');
+    els.readerModal.classList.add('hidden');
+
+    // e.target is inside a button -> the guard must bail (no reader open)
+    card.listeners.click({
+      target: { closest: (sel) => (sel.includes('button') ? {} : null) },
+    });
+    expect(els.readerModal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('opens the reader on Enter/Space when the card itself is focused', () => {
+    setBookmarks([bookmark]);
+    const card = createBookmarkCard(bookmarks[0]);
+    document.getElementById('readerModal');
+    els.readerModal.classList.add('hidden');
+
+    card.listeners.keydown({ target: card, key: 'Enter', preventDefault: () => {} });
+    expect(els.readerModal.classList.contains('hidden')).toBe(false);
+
+    els.readerModal.classList.add('hidden');
+    card.listeners.keydown({ target: card, key: ' ', preventDefault: () => {} });
+    expect(els.readerModal.classList.contains('hidden')).toBe(false);
+  });
+
+  it('ignores keydown whose target is not the card itself', () => {
+    setBookmarks([bookmark]);
+    const card = createBookmarkCard(bookmarks[0]);
+    document.getElementById('readerModal');
+    els.readerModal.classList.add('hidden');
+
+    card.listeners.keydown({ target: {}, key: 'Enter', preventDefault: () => {} });
+    expect(els.readerModal.classList.contains('hidden')).toBe(true);
   });
 });
