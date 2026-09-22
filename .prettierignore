@@ -1,0 +1,24 @@
+# Prettier configuration file to specify files and directories that should be ignored by Prettier.
+
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+
+# Ignore package manager lock files and workspace configuration:
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# Ignore artifacts:
+dist/
+build/
+coverage/
+
+# Ignore all HTML files:
+**/*.html
+
+# Ignore all minified JS files:
+*.min.js
+
+# Ignore all JavaScript files in the public/scripts directory:
+public/scripts/*.js
