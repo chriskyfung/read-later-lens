@@ -72,6 +72,55 @@ function waitForDuplicateResolution() {
 }
 
 /**
+ * Wrap PapaParse's callback API into a promise so the CSV path is awaitable
+ * like the JSON and SQLite paths. This guarantees the success/failure toast
+ * is emitted *after* parsing completes, and that parse errors surface through
+ * the same catch as every other format.
+ *
+ * Papa is a global provided by the script tag in index.html.
+ * @param {string} text
+ * @returns {Promise<{data: object[], errors: object[]}>}
+ */
+function parseCsvWithPapa(text) {
+  return new Promise((resolve, reject) => {
+    globalThis.Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results),
+      error: (err) => reject(err),
+    });
+  });
+}
+
+/**
+ * Build the toast message for a completed import.
+ *
+ * Priority: partial CSV failure > empty result > trash-displacement note >
+ * plain success. An unsupported-extension import never reaches here (it
+ * throws and lands in the failure toast instead).
+ *
+ * @param {string} finalName
+ * @param {number} displaced  Trashed records the fresh import replaced.
+ * @param {number} count      Imported bookmark count.
+ * @param {number} skipped    CSV rows Papa could not parse.
+ * @returns {string}
+ */
+function buildImportedMessage(finalName, displaced, count, skipped) {
+  if (skipped > 0) {
+    return `已載入檔案: ${finalName}（${count} 筆書籤，${skipped} 列解析失敗已略過）`;
+  }
+  if (count === 0) {
+    return `已載入檔案: ${finalName}，但未偵測到任何書籤`;
+  }
+  return displaced > 0
+    ? `已成功載入檔案: ${finalName}（${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代）`
+    : `已成功載入檔案: ${finalName}`;
+}
+
+/** Marker property on the unsupported-extension error, read by the catch. */
+const UNSUPPORTED_TYPE_FLAG = 'unsupportedFileType';
+
+/**
  * Process a single uploaded file, parsing it and updating state.
  * @param {File} file
  * @param {string} finalName
@@ -92,23 +141,35 @@ async function processSingleFile(file, finalName) {
     fileHandle: file,
   };
 
+  // Register the source record BEFORE parsing so any persistAndRender()
+  // triggered while merging always observes complete state (folder list,
+  // counts, persisted sources snapshot). A failed parse removes it again
+  // (Option A): a failed import must leave no ghost folder behind.
+  state.sourceFiles.set(fileId, fileRecord);
+
   try {
+    let count = 0;
+    let skipped = 0;
+
     if (ext === 'csv') {
       const text = await file.text();
       fileRecord.originalData = text;
-      // Papa is a global provided by the script tag in index.html
-      Papa.parse(text, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          acceptRecords(importJsonOrCsv(results.data, fileRecord.id, fileRecord.name));
-        },
-      });
+      const results = await parseCsvWithPapa(text);
+      const rows = results.data || [];
+      const parseErrors = results.errors || [];
+      if (rows.length === 0 && parseErrors.length > 0) {
+        // Nothing usable came out — treat the whole file as failed.
+        throw new Error('CSV 解析失敗');
+      }
+      count = rows.length;
+      skipped = parseErrors.length;
+      acceptRecords(importJsonOrCsv(rows, fileRecord.id, fileRecord.name));
     } else if (ext === 'json') {
       const text = await file.text();
       fileRecord.originalData = text;
       const parsed = JSON.parse(text);
       const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
+      count = arrayData.length;
       acceptRecords(importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
     } else if (ext === 'db' || ext === 'sqlite') {
       const arrayBuffer = await file.arrayBuffer();
@@ -116,23 +177,28 @@ async function processSingleFile(file, finalName) {
       fileRecord.originalData = uInt8Array;
       const sqlEngine = await initSql();
       const records = await importSqlite(uInt8Array, fileRecord.id, fileRecord.name, sqlEngine);
+      count = records.length;
       acceptRecords(records);
+    } else {
+      const err = new Error(`不支援的檔案格式「.${ext}」`);
+      err[UNSUPPORTED_TYPE_FLAG] = true;
+      throw err;
     }
 
-    state.sourceFiles.set(fileId, fileRecord);
     // Re-importing an id that sits in the trash replaces (resurrects) that
     // record, so say so explicitly instead of letting the trash count drop.
     const displaced = lastTrashDisplaced;
     lastTrashDisplaced = 0;
-    showToast(
-      displaced > 0
-        ? `已成功載入檔案: ${finalName}（${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代）`
-        : `已成功載入檔案: ${finalName}`,
-    );
+    showToast(buildImportedMessage(finalName, displaced, count, skipped));
   } catch (err) {
+    state.sourceFiles.delete(fileId);
     lastTrashDisplaced = 0;
     console.error(`解析檔案 ${finalName} 失敗:`, err);
-    showToast(`解析檔案 ${finalName} 失敗，請確認格式`);
+    showToast(
+      err[UNSUPPORTED_TYPE_FLAG]
+        ? `不支援的檔案格式「.${ext}」，請上傳 CSV、JSON 或 SQLite 檔案`
+        : `解析檔案 ${finalName} 失敗，請確認格式`,
+    );
   }
 }
 

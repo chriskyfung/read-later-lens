@@ -91,6 +91,11 @@ beforeEach(() => {
   vi.mocked(importJsonOrCsv).mockClear();
   vi.mocked(importSqlite).mockClear();
   globalThis.Papa.parse.mockClear();
+  // Default: resolve the import immediately with an empty result. Individual
+  // tests override with mockImplementationOnce for specific data/errors.
+  globalThis.Papa.parse.mockImplementation((_text, config) =>
+    config.complete({ data: [], errors: [] }),
+  );
 });
 
 // helper: run uploads; if the duplicate modal opens, resolve it with `action`
@@ -112,6 +117,9 @@ async function uploadResolving(files, action) {
 // ---- format dispatch ------------------------------------------------------
 describe('handleFileUploads — format dispatch', () => {
   it('parses CSV via Papa with monolith options and registers the source file', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
+    });
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
 
     expect(globalThis.Papa.parse).toHaveBeenCalledTimes(1);
@@ -127,12 +135,14 @@ describe('handleFileUploads — format dispatch', () => {
     expect(rec.type).toBe('csv');
     expect(rec.originalData).toBe('id,title\n1,hello');
 
-    // Simulate Papa's async completion to drive merge + persist.
-    config.complete({ data: [{ id: '1', title: 'hello' }] });
+    // The awaited Papa completion drove the merge + persist synchronously.
     expect(importJsonOrCsv).toHaveBeenCalledWith([{ id: '1', title: 'hello' }], id, 'a.csv');
   });
 
   it('shows the success toast with the zh-TW message', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
+    });
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
   });
@@ -190,10 +200,14 @@ describe('handleFileUploads — format dispatch', () => {
     initImporter({ persistAndRender: persist });
     setBookmarks([{ id: 'dup', title: 'old', source_file_id: 'old-file' }]);
 
+    // Drive Papa's completion synchronously, the way a real string parse does.
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: 'dup', title: 'new' }], errors: [] });
+    });
+
     const pending = handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
     await new Promise((r) => setTimeout(r, 0));
     const [id] = [...sourceFiles.keys()];
-    globalThis.Papa.parse.mock.calls[0][1].complete({ data: [{ id: 'dup', title: 'new' }] });
     await pending;
 
     expect(persist).toHaveBeenCalled();
@@ -237,6 +251,93 @@ describe('handleFileUploads — format dispatch', () => {
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
     const { bookmarks } = await import('../src/core/state.js');
     expect(bookmarks).toHaveLength(2);
+  });
+});
+
+// ---- failure semantics and toast coverage ---------------------------------
+describe('handleFileUploads — failure semantics (Option A)', () => {
+  it('rejects unsupported extensions with an error toast and registers nothing', async () => {
+    await handleFileUploads([fakeFile('notes.txt', 'just some text')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe(
+      '不支援的檔案格式「.txt」，請上傳 CSV、JSON 或 SQLite 檔案',
+    );
+  });
+
+  it('fails the whole CSV when Papa yields no usable rows but errors', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [], errors: [{ code: 'UndetectableDelimiter' }] });
+    });
+    await handleFileUploads([fakeFile('broken.csv', 'not,a,parseable,file')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe('解析檔案 broken.csv 失敗，請確認格式');
+  });
+
+  it('reports partially parseable CSVs with a skipped-row summary and keeps the source', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [{ id: '1', title: 'ok' }],
+        errors: [{ row: 1, message: 'Too few fields' }],
+      });
+    });
+    await handleFileUploads([fakeFile('partial.csv', 'id,title\n1,ok')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe(
+      '已載入檔案: partial.csv（1 筆書籤，1 列解析失敗已略過）',
+    );
+  });
+
+  it('warns (and keeps the source) when a valid file contains zero bookmarks', async () => {
+    // Default Papa mock completes with { data: [], errors: [] }.
+    await handleFileUploads([fakeFile('empty.csv', 'id,title\n')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('已載入檔案: empty.csv，但未偵測到任何書籤');
+  });
+
+  it("surfaces Papa's error callback through the shared failure toast", async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.error(new Error('papa exploded'));
+    });
+    await handleFileUploads([fakeFile('boom.csv', 'id,title\n1,hello')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe('解析檔案 boom.csv 失敗，請確認格式');
+  });
+});
+
+// ---- ordering invariant ------------------------------------------------------
+describe('processSingleFile — ordering invariant', () => {
+  it('has the source record registered before persistAndRender fires (synchronous persist)', async () => {
+    const seen = [];
+    initImporter({
+      persistAndRender: () => {
+        seen.push(sourceFiles.size);
+      },
+    });
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'x' }], errors: [] });
+    });
+
+    await handleFileUploads([fakeFile('sync.csv', 'id,title\n1,x')]);
+
+    // A synchronous persist stub — the pathological case the monolith tripped
+    // over — must still observe the fully registered sourceFiles map.
+    expect(seen).toEqual([1]);
+  });
+
+  it('removes the source record again when the import fails mid-flight', async () => {
+    initImporter({
+      persistAndRender: () => {
+        // Even if persist ran before the failure, the catch must clean up.
+      },
+    });
+    await handleFileUploads([fakeFile('bad.json', '{not json')]);
+
+    expect(sourceFiles.size).toBe(0);
   });
 });
 
