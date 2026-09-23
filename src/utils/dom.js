@@ -267,6 +267,35 @@ export function trapFocus(modal, event) {
 }
 
 /**
+ * Bind a DOM listener by element id, tolerating missing markup.
+ *
+ * Boot wiring calls this for every static control. A missing node must never
+ * throw — an exception here would abort the whole registration phase (skipping
+ * cache restore and the first render) — and must never disable the sibling
+ * bindings, so every call is independent and total. The warning keeps a
+ * renamed/relocated element id visible instead of silently disabling a feature.
+ *
+ * Existing markup is unaffected: the returned boolean lets callers assert the
+ * binding happened (see the wiring-contract test).
+ *
+ * @param {string} id      Element id (as mounted by the component modules).
+ * @param {string} type    Event type, e.g. 'click'.
+ * @param {EventListener} handler
+ * @returns {boolean} Whether the listener was bound.
+ */
+export function on(id, type, handler) {
+  const el = document.getElementById(id);
+  if (!el) {
+    // Mirrors the existing console.warn practice (store.js migration,
+    // download.js fallback, modal stack guard).
+    console.warn(`[wiring] #${id} not found — "${type}" listener skipped`);
+    return false;
+  }
+  el.addEventListener(type, handler);
+  return true;
+}
+
+/**
  * Escape a string for safe insertion into `innerHTML` contexts.
  * Prefer `textContent` / `innerText` where possible.
  *

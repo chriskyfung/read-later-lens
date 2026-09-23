@@ -281,6 +281,33 @@ describe('registerExporterListeners', () => {
     expect(downloadBlob.mock.calls[0][1]).toBe('all_bookmarks_export.json');
     expect(downloadBlob.mock.calls[1][1]).toBe('all_bookmarks_export.csv');
   });
+
+  it('keeps wiring the remaining controls when one export button is missing', () => {
+    const original = globalThis.document.getElementById;
+    globalThis.document.getElementById = (id) =>
+      id === 'exportAllUnifiedJsonBtn' ? null : original(id);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Regression guard (Issue 1.6): an unguarded getElementById().addEventListener
+    // threw here, aborting the rest of the wiring AND the remainder of boot.
+    expect(() => registerExporterListeners()).not.toThrow();
+
+    // The sibling bindings stay live …
+    el('exportAllUnifiedCsvBtn').dispatch('click');
+    expect(downloadBlob).toHaveBeenCalledTimes(1);
+    expect(downloadBlob.mock.calls[0][1]).toBe('all_bookmarks_export.csv');
+
+    el('saveBackBtn').dispatch('click');
+    expect(el('saveModal').classList.contains('hidden')).toBe(false);
+    el('closeSaveBtn').dispatch('click');
+    expect(el('saveModal').classList.contains('hidden')).toBe(true);
+
+    // … and the gap is reported rather than silently swallowed.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('#exportAllUnifiedJsonBtn'));
+
+    globalThis.document.getElementById = original;
+    warn.mockRestore();
+  });
 });
 
 describe('closeSaveModal', () => {

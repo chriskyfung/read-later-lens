@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   escapeHtml,
   showToast,
+  on,
   closeLayer,
   closeTopLayer,
   focusableWithin,
@@ -60,6 +61,57 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('on', () => {
+  const makeButton = () => {
+    const listeners = {};
+    return {
+      addEventListener: (type, fn) => {
+        (listeners[type] = listeners[type] || []).push(fn);
+      },
+      dispatch: (type) => (listeners[type] || []).forEach((fn) => fn()),
+    };
+  };
+
+  it('binds the handler and reports success when the element exists', () => {
+    const button = makeButton();
+    vi.stubGlobal('document', { getElementById: (id) => (id === 'goBtn' ? button : null) });
+    const handler = vi.fn();
+
+    expect(on('goBtn', 'click', handler)).toBe(true);
+
+    button.dispatch('click');
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('no-ops with a warning (never throws) when the element is missing', () => {
+    vi.stubGlobal('document', { getElementById: () => null });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    warn.mockClear();
+    const handler = vi.fn();
+    let result;
+
+    expect(() => {
+      result = on('missingBtn', 'click', handler);
+    }).not.toThrow();
+
+    expect(result).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('#missingBtn'));
+    warn.mockRestore();
+  });
+
+  it('does not warn when the element exists', () => {
+    vi.stubGlobal('document', { getElementById: () => makeButton() });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    warn.mockClear();
+
+    on('presentBtn', 'click', vi.fn());
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
 });
 
 describe('escapeHtml', () => {
