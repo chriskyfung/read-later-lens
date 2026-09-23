@@ -30,13 +30,14 @@ The app is a Vite-powered single-page app with bundled npm dependencies. There i
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (current LTS or newer)
-- [pnpm](https://pnpm.io/)
+- [Node.js](https://nodejs.org/) >= 24.0.0
+- [pnpm](https://pnpm.io/) >= 12.0.0
 
 ### Quick start
 
 ```bash
 # 1. Install dependencies (one-time)
+#    This also runs the `prepare` script, which sets up Git hooks via Husky.
 pnpm install
 
 # 2. Start the dev server
@@ -46,6 +47,21 @@ pnpm dev
 Then open the URL the dev server prints (usually `http://localhost:5173`).
 
 > Works best in modern Chrome/Edge/Firefox. The app is not designed for fully offline operation — its dependencies load from npm at dev/build time, and first load in the browser still needs an internet connection to load the CDN libraries listed below.
+
+### Development scripts
+
+| Command            | Description                                                   |
+| ------------------ | ------------------------------------------------------------- |
+| `pnpm dev`         | Start the Vite dev server (with hot module replacement)       |
+| `pnpm build`       | Build the production bundle to `dist/`                        |
+| `pnpm preview`     | Serve the production build locally for verification           |
+| `pnpm lint`        | Run ESLint on `src/` and `tests/` (check only, zero warnings) |
+| `pnpm lint:fix`    | Run ESLint with auto-fix on `src/` and `tests/`               |
+| `pnpm format`      | Check formatting with Prettier (does not modify files)        |
+| `pnpm format:fix`  | Auto-format the repository with Prettier                      |
+| `pnpm test`        | Run the Vitest suite once                                     |
+| `pnpm test:watch`  | Run Vitest in watch mode                                      |
+| `pnpm lint-staged` | Run lint-staged manually (normally invoked by the Git hook)   |
 
 ### Building and previewing
 
@@ -58,6 +74,14 @@ pnpm preview
 ```
 
 `pnpm build` emits the deployable single-page app under `dist/`. `pnpm preview` serves that output locally so you can verify the built artifact before shipping it.
+
+### Git hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/lint-staged/lint-staged) to enforce code quality automatically:
+
+- **Pre-commit** — runs `lint-staged`, which applies ESLint (`--fix`) and Prettier to staged `*.{js,mjs,cjs}` files, and Prettier to staged `*.{json,css,md}` files.
+- Hooks are installed automatically when you run `pnpm install` (via the `prepare` script).
+- To bypass hooks for an urgent commit, use `git commit --no-verify` (use sparingly).
 
 ---
 
@@ -119,14 +143,20 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 ## Technology Stack
 
-All libraries are loaded from public CDNs at runtime — there are no bundled or vendored dependencies.
+Runtime libraries (PapaParse, SQL.js, D3.js) are loaded from public CDNs via `<script>` tags in `index.html`. Build tooling, styling, and the IndexedDB wrapper are provided through bundled npm dependencies declared in `package.json`.
 
-| Library                                         | Version      | Purpose                                           |
-| ----------------------------------------------- | ------------ | ------------------------------------------------- |
-| [Tailwind CSS](https://tailwindcss.com/)        | CDN (latest) | Utility-first styling and the dark slate UI       |
-| [PapaParse](https://github.com/mholt/PapaParse) | 5.4.1        | CSV parsing                                       |
-| [SQL.js](https://sql.js.org/)                   | 1.8.0        | WebAssembly SQLite — `.db` import/parse/re-export |
-| [D3.js](https://d3js.org/)                      | 7.8.5        | Force-directed concept linkage graph              |
+| Library                                                          | Version | Loading       | Purpose                                           |
+| ---------------------------------------------------------------- | ------- | ------------- | ------------------------------------------------- |
+| [Tailwind CSS](https://tailwindcss.com/)                         | 4.3.3   | npm (bundled) | Utility-first styling and the dark slate UI       |
+| [PapaParse](https://github.com/mholt/PapaParse)                  | 5.4.1   | CDN (runtime) | CSV parsing                                       |
+| [SQL.js](https://sql.js.org/)                                    | 1.8.0   | CDN (runtime) | WebAssembly SQLite — `.db` import/parse/re-export |
+| [D3.js](https://d3js.org/)                                       | 7.8.5   | CDN (runtime) | Force-directed concept linkage graph              |
+| [idb](https://github.com/jakearchibald/idb)                      | 8.x     | npm (bundled) | IndexedDB promise wrapper                         |
+| [Vite](https://vite.dev/)                                        | 8.x     | npm (dev)     | Dev server and production bundler                 |
+| [Vitest](https://vitest.dev/)                                    | 4.x     | npm (dev)     | Unit testing framework                            |
+| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/) | latest  | npm (dev)     | Linting and formatting                            |
+
+See `package.json` for the full dependency list.
 
 ## Project Structure
 
@@ -141,11 +171,15 @@ The whole app — interface, data processing, NLP/analytics, and visualizations 
 
 ## Contributing
 
-Contributions are welcome. Please follow the conventions already established in this repository:
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide (development setup, scripts, code style, testing, and Git hooks).
+
+Quick summary of the conventions already established in this repository:
 
 - **Conventional Commits** — commit messages follow the `⟨type⟩(⟨scope⟩): ⟨summary⟩` convention (e.g. `fix(ui): …`, `refactor(viz): …`, `feat(search): …`).
 - **Feature-branch workflow** — work on a topic branch and keep the working tree clean.
 - **Line endings** — `.gitattributes` enforces LF; keep it that way.
+- **Code style** — JavaScript follows the Prettier config (`.prettierrc`) and passes ESLint with zero warnings (`pnpm lint:fix`, `pnpm format:fix`).
+- **Git hooks** — a pre-commit hook runs lint-staged automatically on every commit (installed via `pnpm install`).
 - **UI language** — end-user-facing copy is currently **Traditional Chinese (zh-TW)**; preserve that unless intentionally changing the localization approach.
 - **Architecture discipline** — keep `src/main.js` as the thin bootstrap composing extracted modules, and preserve the component-markup vs. view-behavior separation (markup helpers in `src/components/`, listener wiring in `src/views/`).
 

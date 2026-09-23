@@ -5,13 +5,24 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "prepare": "husky",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/ tests/ --no-error-on-unmatched-pattern",
+    "lint:fix": "eslint --fix src/ tests/ --no-error-on-unmatched-pattern",
+    "format": "prettier --check --ignore-unknown .",
+    "format:fix": "prettier --write --ignore-unknown .",
+    "lint-staged": "lint-staged",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "format": "prettier --write ."
+    "test:watch": "vitest"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": "prettier --write"
   },
   "keywords": [
     "read-later",
@@ -31,6 +42,10 @@
   },
   "homepage": "https://github.com/chriskyfung/read-later-lens",
   "author": "chriskyfung",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=12.0.0"
+  },
   "dependencies": {
     "d3": "^7.9.0",
     "idb": "^8.0.3",
@@ -43,7 +58,9 @@
     "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.0.0",
     "fake-indexeddb": "^6.2.5",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.9.8",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0",
