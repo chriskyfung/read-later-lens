@@ -24,11 +24,45 @@ import { initWorkspaceActions, registerWorkspaceListeners } from './views/worksp
 import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';
 
-// Helper for I/O modules to trigger persistence and UI updates
+/**
+ * Helper for I/O modules to trigger persistence and UI updates.
+ *
+ * Never rejects and never short-circuits: each step is guarded on its own so a
+ * broken step (quota error, render exception) cannot swallow the others or
+ * escape as an unhandled rejection from a fire-and-forget caller. Callers that
+ * care about the outcome read the returned status; callers that ignore the
+ * promise keep working exactly as before.
+ *
+ * @returns {Promise<{persisted: boolean, rendered: boolean}>} `persisted` is
+ *   false when the IndexedDB write failed (this session is not cached);
+ *   `rendered` is false when the view refresh threw.
+ */
 async function persistAndRender() {
-  await saveState();
-  await updateStorageUsageUI();
-  renderAll();
+  let persisted = false;
+  try {
+    // saveState() now reports failure instead of swallowing it; a throwing
+    // stub (or a future implementation) must be just as survivable.
+    persisted = (await saveState()) !== false;
+  } catch (err) {
+    console.warn('IndexedDB save failed:', err);
+  }
+
+  // The storage meter is cosmetic — never let it mask the real status.
+  try {
+    await updateStorageUsageUI();
+  } catch (err) {
+    console.warn('Storage usage update failed:', err);
+  }
+
+  let rendered = false;
+  try {
+    renderAll();
+    rendered = true;
+  } catch (err) {
+    console.warn('Render failed:', err);
+  }
+
+  return { persisted, rendered };
 }
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
