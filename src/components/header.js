@@ -6,7 +6,8 @@
  *  - searchInput     → src/views/header.js (registerHeaderListeners)
  *  - clearSearchBtn  → src/views/header.js (registerHeaderListeners)
  *  - clearCacheBtn   → src/views/header.js (registerHeaderListeners)
- *  - fileInput       → src/io/importer.js
+ *  - importBtn       → src/io/importer.js (opens the source picker modal)
+ *  - fileInput       → src/io/importer.js (opened from the source picker)
  *  - saveBackBtn     → src/io/exporter.js
  *
  * mountHeader() inserts the header as the FIRST child of <body>
@@ -54,14 +55,14 @@ export function headerHtml() {
 
     <!-- Action Buttons -->
     <div class="flex items-center space-x-2">
-      <label title="匯入 CSV, JSON, 或 SQLite (.db) 檔案"
+      <button type="button" id="importBtn" title="選擇匯入來源並載入 CSV, JSON, 或 SQLite (.db) 檔案"
         class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-md transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
         <span>匯入</span>
-        <input type="file" id="fileInput" multiple accept=".csv,.json,.db" class="hidden">
-      </label>
+      </button>
+      <input type="file" id="fileInput" multiple accept=".csv,.json,.db,.sqlite" class="hidden">
 
       <button id="saveBackBtn" title="儲存變更或匯出檔案"
         class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 shadow-md transition">

@@ -10,6 +10,7 @@
  *  - readerModal      → src/views/readerModal.js
  *  - similarityModal  → src/views/similarityModal.js
  *  - saveModal        → src/io/exporter.js
+ *  - importModal      → src/io/importer.js
  *  - duplicateModal   → src/io/importer.js
  *  - toast            → src/utils/dom.js
  *
@@ -20,6 +21,7 @@
 import { readerModalHtml } from './readerModal.js';
 import { similarityModalHtml } from './similarityModal.js';
 import { saveModalHtml } from './saveModal.js';
+import { importModalHtml } from './importModal.js';
 import { duplicateModalHtml } from './duplicateModal.js';
 import { toastHtml } from './toast.js';
 
@@ -32,7 +34,8 @@ export function mountModals() {
     readerModalHtml() +
       similarityModalHtml() +
       saveModalHtml() +
+      importModalHtml() +
       duplicateModalHtml() +
-      toastHtml()
+      toastHtml(),
   );
 }

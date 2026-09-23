@@ -13,6 +13,8 @@
  * @property {string} id
  * @property {string} name             Human-readable file name.
  * @property {string} type             'csv' | 'json' | 'sqlite' | 'db'.
+ * @property {string} [profile]        Import profile id chosen in the source
+ *   picker (see src/providers/profiles.js), e.g. 'instapaper-scraper'.
  * @property {string|Uint8Array|null} [originalData] Serialized original payload (null for SQL).
  * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
  */

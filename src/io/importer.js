@@ -5,7 +5,9 @@
 
 import * as state from '../core/state.js';
 import { importJsonOrCsv, importSqlite } from '../providers/index.js';
-import { showToast } from '../utils/dom.js';
+import { defaultProfileId, selectableProfiles } from '../providers/profiles.js';
+import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/importModal.js';
+import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { initSql } from './sqlLoader.js';
 
 /**
@@ -31,6 +33,89 @@ let lastTrashDisplaced = 0;
  */
 export function initImporter(injectedDeps) {
   deps = { ...deps, ...injectedDeps };
+}
+
+// ------------------------------------------------------------------
+// Import source picker modal
+//
+// The header 匯入 button opens this modal instead of the raw file dialog.
+// Selection is explicit (no auto-detect): the chosen profile is remembered
+// for the session and stamped onto every source file imported afterwards.
+// ------------------------------------------------------------------
+
+/** Currently selected source profile id (session-only; defaults to InstapaperScraper). */
+let selectedProfileId = defaultProfileId();
+
+/**
+ * @param {string} profileId
+ * @returns {HTMLElement|null} The profile's radio card element.
+ */
+function cardEl(profileId) {
+  return document.getElementById(`importProfile-${profileId}`);
+}
+
+/**
+ * Select a source profile: remember it and sync the radio cards' aria state
+ * and selected/unselected border classes. Exported so tests (and the modal
+ * opener) can reset the session default deterministically.
+ *
+ * @param {string} profileId
+ */
+export function applyProfileSelection(profileId) {
+  selectedProfileId = profileId;
+  for (const { id } of selectableProfiles()) {
+    const card = cardEl(id);
+    if (!card || !card.classList) continue;
+    card.setAttribute?.('aria-checked', String(id === profileId));
+    const checked = id === profileId;
+    for (const name of checked ? UNSELECTED_CARD_CLASSES : SELECTED_CARD_CLASSES) {
+      card.classList.remove(name);
+    }
+    for (const name of checked ? SELECTED_CARD_CLASSES : UNSELECTED_CARD_CLASSES) {
+      card.classList.add(name);
+    }
+  }
+}
+
+/**
+ * Open the source picker modal as a stack layer (Esc, focus trap and inert
+ * background come from the shared layer stack). Re-entrant clicks are no-ops.
+ */
+export function openImportModal() {
+  if (topLayerId() === 'importModal') return;
+  applyProfileSelection(selectedProfileId);
+  pushLayer('importModal');
+}
+
+/** Close the source picker, revealing whatever modal (if any) is beneath it. */
+export function closeImportModal() {
+  popLayer('importModal');
+}
+
+/**
+ * Arrow/Home/End navigation within the radiogroup (Enter/Space already fire
+ * click natively on the card buttons). Wraps around both ends.
+ *
+ * @param {KeyboardEvent} event
+ */
+function handleProfileKeydown(event) {
+  const list = selectableProfiles();
+  const idx = list.findIndex((profile) => profile.id === selectedProfileId);
+  let next = null;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    next = list[(idx + 1) % list.length];
+  } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+    next = list[(idx - 1 + list.length) % list.length];
+  } else if (event.key === 'Home') {
+    next = list[0];
+  } else if (event.key === 'End') {
+    next = list[list.length - 1];
+  }
+  if (!next) return;
+  event.preventDefault?.();
+  applyProfileSelection(next.id);
+  const card = cardEl(next.id);
+  if (card && typeof card.focus === 'function') card.focus();
 }
 
 /**
@@ -124,8 +209,9 @@ const UNSUPPORTED_TYPE_FLAG = 'unsupportedFileType';
  * Process a single uploaded file, parsing it and updating state.
  * @param {File} file
  * @param {string} finalName
+ * @param {string} profile Import profile id chosen in the source picker.
  */
-async function processSingleFile(file, finalName) {
+async function processSingleFile(file, finalName, profile) {
   const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   const ext = finalName.split('.').pop().toLowerCase();
 
@@ -137,6 +223,7 @@ async function processSingleFile(file, finalName) {
     id: fileId,
     name: finalName,
     type: ext,
+    profile,
     originalData: null,
     fileHandle: file,
   };
@@ -223,8 +310,12 @@ function acceptRecords(newBookmarks) {
 /**
  * Entry point for handling multiple file uploads.
  * @param {File[]} files
+ * @param {object} [options]
+ * @param {string} [options.profile] Source profile chosen in the picker
+ *   (defaults to the session selection — InstapaperScraper unless changed).
  */
-export async function handleFileUploads(files) {
+export async function handleFileUploads(files, options = {}) {
+  const { profile = selectedProfileId } = options;
   await initSql();
 
   for (let file of files) {
@@ -245,27 +336,52 @@ export async function handleFileUploads(files) {
       const action = await waitForDuplicateResolution();
       if (action === 'overwrite') {
         deps.deleteFolder(duplicateId, false);
-        await processSingleFile(file, fileName);
+        await processSingleFile(file, fileName, profile);
       } else if (action === 'keep') {
         const newName = fileName.replace(/(\.[\w\d_-]+)$/i, `_${Date.now()}$1`);
-        await processSingleFile(file, newName);
+        await processSingleFile(file, newName, profile);
       }
     } else {
-      await processSingleFile(file, fileName);
+      await processSingleFile(file, fileName, profile);
     }
   }
 }
 
 /**
- * Register DOM listeners for file input.
+ * Register DOM listeners for the header import button, the source picker
+ * modal, and the hidden file input.
  */
 export function registerImporterListeners() {
   const fileInput = document.getElementById('fileInput');
   if (!fileInput) return;
 
+  // Header 匯入 button opens the source picker instead of the raw file dialog.
+  document.getElementById('importBtn')?.addEventListener('click', openImportModal);
+  document.getElementById('closeImportBtn')?.addEventListener('click', closeImportModal);
+  document.getElementById('importCancelBtn')?.addEventListener('click', closeImportModal);
+  document.getElementById('importPickFileBtn')?.addEventListener('click', () => fileInput.click());
+
+  // Source cards: click selection + arrow-key navigation within the radiogroup.
+  for (const profile of selectableProfiles()) {
+    cardEl(profile.id)?.addEventListener('click', () => applyProfileSelection(profile.id));
+  }
+  document.getElementById('importSourceGroup')?.addEventListener('keydown', handleProfileKeydown);
+
+  // Backdrop click closes (clicks inside the panel bubble with another target).
+  const overlay = document.getElementById('importModal');
+  overlay?.addEventListener('click', (event) => {
+    if (event.target === overlay) closeImportModal();
+  });
+
   fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFileUploads(Array.from(e.target.files));
-    }
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    // A change event never fires when the same path is re-selected, so clear
+    // the value once the FileList is captured.
+    e.target.value = '';
+    if (files.length === 0) return;
+    // Close the picker BEFORE parsing so the duplicate-name prompt never
+    // stacks beneath it (the duplicate modal stays outside the layer stack).
+    closeImportModal();
+    handleFileUploads(files, { profile: selectedProfileId });
   });
 }

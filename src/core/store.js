@@ -123,6 +123,7 @@ export async function saveState() {
       id: v.id,
       name: v.name,
       type: v.type,
+      profile: v.profile,
       originalData: v.type === 'sqlite' || v.type === 'db' ? null : v.originalData,
     }));
     await db.put(STORE_NAME, { key: 'bookmarks', data: bookmarks });

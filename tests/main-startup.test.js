@@ -15,6 +15,39 @@ describe('entry-point feature wiring', () => {
     });
     await vi.waitFor(() => expect(els.filteredCount.innerText).toBe(1));
     expect(saveState).toHaveBeenCalledTimes(1);
+    // The modal was never opened here, so closing defensively must not throw.
+    expect(els.importModal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('imports through the source picker modal opened from the header (e2e)', async () => {
+    await start();
+    const { stackDepth } = await import('../src/utils/dom.js');
+
+    els.importBtn.dispatch('click');
+    expect(stackDepth()).toBe(1);
+    expect(els.importModal.getAttribute('aria-hidden')).toBe('false');
+
+    // Choose the unified profile, then confirm the file selection.
+    els['importProfile-rll-unified'].dispatch('click');
+    els.fileInput.dispatch('change', {
+      target: {
+        files: [
+          {
+            name: 'unified.json',
+            text: async () => JSON.stringify([bookmark('u1', 'Grape', 'https://grape.com')]),
+          },
+        ],
+      },
+    });
+
+    await vi.waitFor(() => expect(els.filteredCount.innerText).toBe(1));
+    // Parsing starts only after the picker modal closed — no stacking.
+    expect(stackDepth()).toBe(0);
+    expect(els.importModal.classList.contains('hidden')).toBe(true);
+
+    const state = await import('../src/core/state.js');
+    const [source] = [...state.sourceFiles.values()];
+    expect(source.profile).toBe('rll-unified');
   });
 
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
@@ -368,6 +401,7 @@ describe('module-owned startup', () => {
     expect(window.IBM).toBeUndefined();
     for (const [id, type] of [
       ['fileInput', 'change'],
+      ['importBtn', 'click'],
       ['searchInput', 'input'],
       ['saveBackBtn', 'click'],
       ['bookmarkCardsGrid', 'click'],
