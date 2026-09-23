@@ -9,7 +9,7 @@
  * the layer registration lives in src/views/modalListeners.js.
  */
 
-import { IMPORT_PROFILES, selectableProfiles } from '../providers/profiles.js';
+import { IMPORT_PROFILES, selectableProfiles } from '../../providers/profiles.js';
 
 /** Radio-card classes for the selected state (toggled at runtime by src/io/importer.js). */
 export const SELECTED_CARD_CLASSES = ['border-indigo-500', 'bg-indigo-600/20'];
@@ -28,7 +28,7 @@ const CARD_BASE_CLASSES =
 /**
  * A selectable source-profile radio button.
  *
- * @param {import('../providers/profiles.js').ImportProfile} profile
+ * @param {import('../../providers/profiles.js').ImportProfile} profile
  * @returns {string}
  */
 function selectableCardHtml(profile) {
@@ -48,7 +48,7 @@ function selectableCardHtml(profile) {
  * group only ever contains radios; native `disabled` keeps it out of the
  * focus trap).
  *
- * @param {import('../providers/profiles.js').ImportProfile} profile
+ * @param {import('../../providers/profiles.js').ImportProfile} profile
  * @returns {string}
  */
 function disabledCardHtml(profile) {

@@ -20,9 +20,9 @@
 
 import { readerModalHtml } from './readerModal.js';
 import { similarityModalHtml } from './similarityModal.js';
-import { saveModalHtml } from './saveModal.js';
-import { importModalHtml } from './importModal.js';
-import { duplicateModalHtml } from './duplicateModal.js';
+import { saveModalHtml } from './io/saveModal.js';
+import { importModalHtml } from './io/importModal.js';
+import { duplicateModalHtml } from './io/duplicateModal.js';
 import { toastHtml } from './toast.js';
 
 /**

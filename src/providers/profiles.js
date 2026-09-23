@@ -1,6 +1,6 @@
 /**
  * @fileoverview Import source profiles — declarative descriptors for the
- * source-type picker modal (src/components/importModal.js).
+ * source-type picker modal (src/components/io/importModal.js).
  *
  * The app deliberately has NO auto-detection: the user picks an explicit
  * source type (InstapaperScraper preselected), and the header sanity check

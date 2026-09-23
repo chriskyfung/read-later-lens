@@ -6,7 +6,7 @@
 import * as state from '../core/state.js';
 import { resolveImportAdapter } from '../providers/index.js';
 import { checkImport, defaultProfileId, selectableProfiles } from '../providers/profiles.js';
-import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/importModal.js';
+import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io/importModal.js';
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { initSql } from './sqlLoader.js';
 

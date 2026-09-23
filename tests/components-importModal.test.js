@@ -3,7 +3,7 @@ import {
   importModalHtml,
   SELECTED_CARD_CLASSES,
   UNSELECTED_CARD_CLASSES,
-} from '../src/components/importModal.js';
+} from '../src/components/io/importModal.js';
 
 const html = () => importModalHtml();
 
