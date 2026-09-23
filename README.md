@@ -123,6 +123,7 @@ Other import rules:
 
 - **Duplicate IDs are merged on import** (incoming record wins).
 - The success toast reports exactly what happened: imported count, rows skipped for parse failures / missing URLs, trash resurrections, and any sanity-check warning.
+- **An import is all-or-nothing**: the source record, the merged bookmarks and the browser-cache write are committed together, and a failed write (private mode, storage full) rolls the whole import back with `已還原匯入 <file>：無法寫入本機快取，資料不會保留`. The session therefore never displays bookmarks that a reload would not reproduce.
 - **Unified JSON exports are versioned**: `all_bookmarks_export.json` wraps rows in `{ "format": "read-later-lens", "version": 1, "bookmarks": [...] }`. The envelope is recognized exactly on re-import; plain arrays and older exports keep working.
 
 ## Feature Tour

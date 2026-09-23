@@ -376,6 +376,97 @@ describe('processSingleFile — ordering invariant', () => {
   });
 });
 
+// ---- transaction boundary ---------------------------------------------------
+describe('processSingleFile — transaction boundary', () => {
+  const csvFile = () => fakeFile('a.csv', 'id,title\n1,x');
+  const completeWith = (data) =>
+    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({ data, errors: [] }),
+    );
+
+  it('commits the merge once persist reports the state is saved', async () => {
+    initImporter({ persistAndRender: vi.fn(async () => ({ persisted: true, rendered: true })) });
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks.map((b) => b.title)).toEqual(['x']);
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
+  });
+
+  it('rolls both halves of the unit back when the write failed', async () => {
+    initImporter({ persistAndRender: vi.fn(async () => ({ persisted: false, rendered: true })) });
+    setBookmarks([{ id: 'keep', title: 'kept', source_file_id: 'F0' }]);
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    // Neither half survives: no imported records and no ghost folder.
+    expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe('已還原匯入 a.csv：無法寫入本機快取，資料不會保留');
+  });
+
+  it('undoes a merge that a failing write left behind (orphan regression)', async () => {
+    initImporter({
+      persistAndRender: () => {
+        throw new Error('cache exploded');
+      },
+    });
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    // Without the rollback the merge stayed in memory while the catch deleted
+    // the source record — a bookmark pointing at a source_file_id that no
+    // longer exists, invisible in the folder list.
+    expect(bookmarks).toEqual([]);
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe('解析檔案 a.csv 失敗，請確認格式');
+  });
+
+  it('treats a fire-and-forget persist stub as committed (legacy contract)', async () => {
+    initImporter({ persistAndRender: () => {} });
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    expect(bookmarks.map((b) => b.title)).toEqual(['x']);
+    expect(sourceFiles.size).toBe(1);
+  });
+
+  it('reports each file its own trash displacement', async () => {
+    const gates = [];
+    initImporter({
+      persistAndRender: () =>
+        new Promise((resolve) => gates.push(() => resolve({ persisted: true, rendered: true }))),
+    });
+    setBookmarks([{ id: 'dup', title: 'deleted copy', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+    completeWith([{ id: 'dup', title: 'fresh' }]);
+    completeWith([{ id: 'other', title: 'new' }]);
+
+    // Two imports in flight: only the first displaces a trashed record, and it
+    // is the one that finishes last. With the old shared module counter the
+    // second file's reset left the first file's toast reporting 0.
+    const first = handleFileUploads([csvFile()]);
+    const second = handleFileUploads([fakeFile('b.csv', 'id,title\n1,y')]);
+    await vi.waitFor(() => expect(gates).toHaveLength(2));
+
+    gates[1]();
+    await second;
+    expect(el('toastMsg').innerText).toBe('已成功載入檔案: b.csv');
+
+    gates[0]();
+    await first;
+    expect(el('toastMsg').innerText).toContain('已被新匯入資料取代');
+  });
+});
+
 // ---- duplicate name resolution --------------------------------------------
 describe('handleFileUploads — duplicate name resolution', () => {
   const seedDuplicate = () => {

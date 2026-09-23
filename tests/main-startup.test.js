@@ -19,6 +19,36 @@ describe('entry-point feature wiring', () => {
     expect(els.importModal.classList.contains('hidden')).toBe(true);
   });
 
+  it('rolls the import back when the cache write fails (e2e)', async () => {
+    const store = await import('../src/core/store.js');
+    const { showToast } = await import('../src/utils/dom.js');
+    // A write can fail outright (rejected promise): the import must be undone
+    // rather than announced as a success that a reload would not reproduce.
+    store.saveState.mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    await start();
+    els.fileInput.dispatch('change', {
+      target: {
+        files: [
+          {
+            name: 'nocache.json',
+            text: async () =>
+              JSON.stringify([bookmark('n1', 'Nectarine', 'https://nectarine.com')]),
+          },
+        ],
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('無法寫入本機快取')),
+    );
+    // The transaction boundary: nothing from the failed import survives, so the
+    // session can never disagree with what the next reload will show.
+    const state = await import('../src/core/state.js');
+    expect(state.bookmarks).toHaveLength(0);
+    expect(state.sourceFiles.size).toBe(0);
+  });
+
   it('imports through the source picker modal opened from the header (e2e)', async () => {
     await start();
     const { stackDepth } = await import('../src/utils/dom.js');
