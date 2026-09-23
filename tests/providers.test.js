@@ -131,8 +131,34 @@ describe('importJsonOrCsv', () => {
   });
 
   it('detects CJK titles', () => {
-    const [rec] = importJsonOrCsv([{ id: 1, title: '你好世界測試內容' }], 'f', 'f.json');
+    const [rec] = importJsonOrCsv(
+      [{ id: 1, title: '你好世界測試內容', url: 'https://zh.example.com' }],
+      'f',
+      'f.json',
+    );
     expect(rec.detected_language).toBe('zh');
+  });
+
+  it('drops rows without a usable URL instead of storing # placeholders', () => {
+    const records = importJsonOrCsv(
+      [
+        { id: '1', title: 'Kept', url: 'https://keep.example.com' },
+        { id: '2', title: 'No url at all' },
+        { id: '3', title: 'Empty url', url: '' },
+      ],
+      'f',
+      'f.csv',
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].id).toBe('1');
+  });
+
+  it('generates the same stable id when the same id-less file is re-imported', () => {
+    const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
+    const [first] = importJsonOrCsv(rows, 'f1', 'a.csv');
+    const [second] = importJsonOrCsv(rows, 'f2', 'b.csv');
+    expect(first.id).toMatch(/^gen_/);
+    expect(first.id).toBe(second.id); // merges on re-import instead of duplicating
   });
 });
 

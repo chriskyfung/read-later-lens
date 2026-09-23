@@ -180,22 +180,28 @@ function parseCsvWithPapa(text) {
 /**
  * Build the toast message for a completed import.
  *
- * Priority: partial CSV failure > empty result > trash-displacement note >
- * plain success. An unsupported-extension import never reaches here (it
- * throws and lands in the failure toast instead). A non-blocking
- * `checkNote` (header/profile mismatch warning) is appended last.
+ * Priority: partial failure (parse errors or URL-less rows dropped) > empty
+ * result > trash-displacement note > plain success. An unsupported-extension
+ * import never reaches here (it throws and lands in the failure toast
+ * instead). A non-blocking `note` (header/profile mismatch warning) is
+ * appended last.
  *
  * @param {string} finalName
  * @param {number} displaced  Trashed records the fresh import replaced.
- * @param {number} count      Imported bookmark count.
+ * @param {number} count      Imported bookmark count (adapter output).
  * @param {number} skipped    CSV rows Papa could not parse.
+ * @param {number} [dropped]  Rows the adapter dropped (no usable URL).
  * @param {string} [note]     Optional sanity-check warning to append.
  * @returns {string}
  */
-function buildImportedMessage(finalName, displaced, count, skipped, note = '') {
+function buildImportedMessage(finalName, displaced, count, skipped, dropped = 0, note = '') {
+  const parts = [];
+  if (skipped > 0) parts.push(`${skipped} 列解析失敗`);
+  if (dropped > 0) parts.push(`${dropped} 筆缺少網址`);
+
   let message;
-  if (skipped > 0) {
-    message = `已載入檔案: ${finalName}（${count} 筆書籤，${skipped} 列解析失敗已略過）`;
+  if (parts.length > 0) {
+    message = `已載入檔案: ${finalName}（${count} 筆書籤，${parts.join('、')}已略過）`;
   } else if (count === 0) {
     message = `已載入檔案: ${finalName}，但未偵測到任何書籤`;
   } else if (displaced > 0) {
@@ -279,6 +285,7 @@ async function processSingleFile(file, finalName, profile) {
   try {
     let count = 0;
     let skipped = 0;
+    let dropped = 0;
 
     if (ext === 'csv') {
       const text = await file.text();
@@ -291,17 +298,23 @@ async function processSingleFile(file, finalName, profile) {
         throw new Error('CSV 解析失敗');
       }
       checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
-      count = rows.length;
+      const records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+      // Counts come from the adapter OUTPUT so rows it dropped (no usable
+      // URL) are reported instead of being counted as imported.
+      count = records.length;
       skipped = parseErrors.length;
-      acceptRecords(adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name));
+      dropped = rows.length - records.length;
+      acceptRecords(records);
     } else if (ext === 'json') {
       const text = await file.text();
       fileRecord.originalData = text;
       const parsed = JSON.parse(text);
       const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
       checkNote = sanityCheckOrThrow(profile, 'json', parsed, arrayData);
-      count = arrayData.length;
-      acceptRecords(adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
+      const records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+      count = records.length;
+      dropped = arrayData.length - records.length;
+      acceptRecords(records);
     } else if (ext === 'db' || ext === 'sqlite') {
       const arrayBuffer = await file.arrayBuffer();
       const uInt8Array = new Uint8Array(arrayBuffer);
@@ -325,7 +338,7 @@ async function processSingleFile(file, finalName, profile) {
     // record, so say so explicitly instead of letting the trash count drop.
     const displaced = lastTrashDisplaced;
     lastTrashDisplaced = 0;
-    showToast(buildImportedMessage(finalName, displaced, count, skipped, checkNote));
+    showToast(buildImportedMessage(finalName, displaced, count, skipped, dropped, checkNote));
   } catch (err) {
     state.sourceFiles.delete(fileId);
     lastTrashDisplaced = 0;

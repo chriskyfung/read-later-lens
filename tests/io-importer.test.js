@@ -602,6 +602,70 @@ describe('handleFileUploads — header sanity check', () => {
   });
 });
 
+// ---- validation (URL-less rows dropped by the adapter) ----------------------
+describe('handleFileUploads — row validation reporting', () => {
+  it('reports URL-less rows the adapter dropped and keeps the source', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          { id: '1', title: 'ok', url: 'https://a.example.com' },
+          { id: '2', title: 'no url' },
+          { id: '3', title: 'also no url' },
+        ],
+        errors: [],
+      });
+    });
+    // The real adapter drops URL-less rows; simulate its output here.
+    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) =>
+      rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
+    );
+
+    await handleFileUploads([fakeFile('mixed.csv', 'id,title,url\n…')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('已載入檔案: mixed.csv（1 筆書籤，2 筆缺少網址已略過）');
+  });
+
+  it('combines parse failures and dropped rows in one summary', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          { id: '1', title: 'ok', url: 'https://a.example.com' },
+          { id: '2', title: 'no url' },
+        ],
+        errors: [{ row: 5, message: 'Too few fields' }],
+      });
+    });
+    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) =>
+      rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
+    );
+
+    await handleFileUploads([fakeFile('both.csv', 'id,title,url\n…')]);
+
+    expect(el('toastMsg').innerText).toBe(
+      '已載入檔案: both.csv（1 筆書籤，1 列解析失敗、1 筆缺少網址已略過）',
+    );
+  });
+
+  it('reports an all-invalid file with zero imported bookmarks', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          { id: '1', title: 'a' },
+          { id: '2', title: 'b' },
+        ],
+        errors: [],
+      });
+    });
+    vi.mocked(importJsonOrCsv).mockImplementationOnce(() => []);
+
+    await handleFileUploads([fakeFile('nourl.csv', 'id,title\n…')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('已載入檔案: nourl.csv（0 筆書籤，2 筆缺少網址已略過）');
+  });
+});
+
 // ---- listener registration -------------------------------------------------
 describe('registerImporterListeners', () => {
   it('wires #fileInput change events to handleFileUploads', async () => {

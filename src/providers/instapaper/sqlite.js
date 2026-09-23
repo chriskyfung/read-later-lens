@@ -8,7 +8,7 @@
  */
 
 import { normalizeFields, normalizeTags } from '../../model/normalize.js';
-import { makeReaderUrl } from '../../model/BookmarkRecord.js';
+import { makeReaderUrl, UNKNOWN_URL } from '../../model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics/detectLanguage.js';
 
 /**
@@ -49,25 +49,31 @@ export async function processSqliteAsBookmarks(
     }
   }
 
-  return rows.map((rec, index) => {
-    const { id, title, url, preview, content } = normalizeFields(rec, index);
-    const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
-    const readerUrl =
-      preserveMeta && rec.instapaper_url != null
-        ? String(rec.instapaper_url)
-        : makeReaderUrl(rowProvider, id);
-    return {
-      id,
-      title,
-      url,
-      article_preview: preview,
-      content,
-      source_file_id: sourceFileId,
-      source_file_name: sourceFileName,
-      detected_language: detectLanguage(title + ' ' + preview),
-      tags: normalizeTags(rec.tags),
-      instapaper_url: readerUrl,
-      provider: rowProvider,
-    };
-  });
+  return (
+    rows
+      .map((rec, index) => {
+        const { id, title, url, preview, content } = normalizeFields(rec, index);
+        const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
+        const readerUrl =
+          preserveMeta && rec.instapaper_url != null
+            ? String(rec.instapaper_url)
+            : makeReaderUrl(rowProvider, id);
+        return {
+          id,
+          title,
+          url,
+          article_preview: preview,
+          content,
+          source_file_id: sourceFileId,
+          source_file_name: sourceFileName,
+          detected_language: detectLanguage(title + ' ' + preview),
+          tags: normalizeTags(rec.tags),
+          instapaper_url: readerUrl,
+          provider: rowProvider,
+        };
+      })
+      // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
+      // never inject '#' placeholder bookmarks.
+      .filter((record) => record.url !== UNKNOWN_URL)
+  );
 }
