@@ -111,7 +111,17 @@ export async function closeDb() {
   }
 }
 
-/** @returns {Promise<void>} */
+/**
+ * Persist the current working set (bookmarks + source metadata) to IndexedDB.
+ *
+ * Never rejects — mirroring the monolith, a failed cache write must never break
+ * the UI flow — but it does REPORT the outcome so callers (`persistAndRender`
+ * → the importer) can tell the user when this session is not cached instead of
+ * failing silently.
+ *
+ * @returns {Promise<boolean>} `true` when both rows were written, `false` when
+ *   the write failed (also logged as a warning).
+ */
 export async function saveState() {
   try {
     const db = await getDb();
@@ -128,9 +138,12 @@ export async function saveState() {
     }));
     await db.put(STORE_NAME, { key: 'bookmarks', data: bookmarks });
     await db.put(STORE_NAME, { key: 'sources', data: sourcesArray });
+    return true;
   } catch (err) {
     // Mirror the monolith: a failed cache write must never break the UI flow.
+    // The caller (persistAndRender) turns this into a visible warning.
     console.warn('IndexedDB save failed:', err);
+    return false;
   }
 }
 

@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { openDB, deleteDB } from 'idb';
 import { saveState, loadState, getStorageUsage, closeDb } from '../src/core/store.js';
 import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '../src/core/state.js';
@@ -91,6 +91,31 @@ describe('store (IndexedDB)', () => {
     expect(sourceFiles.get('f1').originalData).toBeNull();
     expect(sourceFiles.get('f2').originalData).toBeNull();
     expect(sourceFiles.get('f3').originalData).toBe('{}');
+  });
+
+  it('reports true once the working set is written', async () => {
+    setBookmarks([bookmark(1)]);
+
+    expect(await saveState()).toBe(true);
+  });
+
+  it('reports false (and never rejects) when the write fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const realIndexedDB = globalThis.indexedDB;
+    try {
+      // Dropping the global makes getDb() throw inside saveState(): the failure
+      // must surface as `false` (the importer turns it into a toast) instead of
+      // escaping as an unhandled rejection.
+      await closeDb();
+      globalThis.indexedDB = undefined;
+      setBookmarks([bookmark(1)]);
+
+      await expect(saveState()).resolves.toBe(false);
+      expect(warn).toHaveBeenCalledWith('IndexedDB save failed:', expect.anything());
+    } finally {
+      globalThis.indexedDB = realIndexedDB;
+      warn.mockRestore();
+    }
   });
 
   it('exposes a storage usage estimate', async () => {
