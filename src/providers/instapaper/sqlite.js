@@ -15,8 +15,11 @@ import { detectLanguage } from '../../analytics/detectLanguage.js';
  * @param {Uint8Array} wasmBuffer      Raw bytes of a `.db` file.
  * @param {string} sourceFileId
  * @param {string} sourceFileName
- * @param {string} provider
+ * @param {string} provider            Fallback provider slug.
  * @param {import('sql.js').initSqlJs.SqlJsStatic} SQL
+ * @param {object} [options]
+ * @param {boolean} [options.preserveMeta] Round-trip `provider` /
+ *   `instapaper_url` columns from the source rows when present.
  * @returns {Promise<import('../../model/BookmarkRecord.js').BookmarkRecord[]>}
  */
 export async function processSqliteAsBookmarks(
@@ -25,7 +28,9 @@ export async function processSqliteAsBookmarks(
   sourceFileName,
   provider,
   SQL,
+  options = {},
 ) {
+  const { preserveMeta = false } = options;
   const db = new SQL.Database(wasmBuffer);
 
   const tablesRes = db.exec(`SELECT name FROM sqlite_master WHERE type='table';`);
@@ -46,6 +51,11 @@ export async function processSqliteAsBookmarks(
 
   return rows.map((rec, index) => {
     const { id, title, url, preview, content } = normalizeFields(rec, index);
+    const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
+    const readerUrl =
+      preserveMeta && rec.instapaper_url != null
+        ? String(rec.instapaper_url)
+        : makeReaderUrl(rowProvider, id);
     return {
       id,
       title,
@@ -56,8 +66,8 @@ export async function processSqliteAsBookmarks(
       source_file_name: sourceFileName,
       detected_language: detectLanguage(title + ' ' + preview),
       tags: normalizeTags(rec.tags),
-      instapaper_url: makeReaderUrl(provider, id),
-      provider,
+      instapaper_url: readerUrl,
+      provider: rowProvider,
     };
   });
 }

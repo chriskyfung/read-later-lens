@@ -10,25 +10,31 @@ import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
 
-vi.mock('../src/providers/index.js', () => ({
-  importJsonOrCsv: vi.fn((rows, sourceFileId, sourceFileName) =>
+vi.mock('../src/providers/index.js', () => {
+  const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) =>
     rows.map((r, i) => ({
       id: r.id ?? 'n' + i,
       source_file_id: sourceFileId,
       source_file_name: sourceFileName,
       title: r.title ?? '',
     })),
-  ),
-  importSqlite: vi.fn(async (bytes, sourceFileId, sourceFileName) => [
+  );
+  const importSqlite = vi.fn(async (bytes, sourceFileId, sourceFileName) => [
     {
       id: 'sq1',
       source_file_id: sourceFileId,
       source_file_name: sourceFileName,
       bytes: bytes.length,
     },
-  ]),
-  providerForExtension: vi.fn(() => 'instapaper'),
-}));
+  ]);
+  return {
+    importJsonOrCsv,
+    importSqlite,
+    // The importer routes through the adapter pair; keep both mock fns
+    // shared so existing call assertions keep working.
+    resolveImportAdapter: vi.fn(() => ({ importJsonOrCsv, importSqlite })),
+  };
+});
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -514,6 +520,85 @@ describe('import source modal', () => {
 
     const [rec] = [...sourceFiles.values()];
     expect(rec.profile).toBe('instapaper-scraper');
+  });
+});
+
+// ---- header sanity check -----------------------------------------------------
+describe('handleFileUploads — header sanity check', () => {
+  it('blocks the official Instapaper CSV with guidance and registers nothing', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          {
+            URL: 'https://a.example.com',
+            Title: 'Article A',
+            Selection: '',
+            Folder: 'Tech',
+            Timestamp: '1738916228',
+            Tags: '[]',
+          },
+        ],
+        errors: [],
+        meta: { fields: ['URL', 'Title', 'Selection', 'Folder', 'Timestamp', 'Tags'] },
+      });
+    });
+
+    await handleFileUploads([fakeFile('instapaper-export.csv', 'URL,Title,...')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(importJsonOrCsv).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toContain('Instapaper 官方 CSV');
+    expect(el('toastMsg').innerText).toContain('InstapaperScraper');
+  });
+
+  it('appends a non-blocking warning when columns disagree with the chosen profile', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [{ id: '1', title: 'x', url: 'https://a.example.com', source_file_id: 'F9' }],
+        errors: [],
+      });
+    });
+
+    // Default profile is instapaper-scraper; unified columns => warn, import anyway.
+    await handleFileUploads([fakeFile('unified.csv', 'id,title,url,source_file_id')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(importJsonOrCsv).toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toContain('已成功載入檔案: unified.csv');
+    expect(el('toastMsg').innerText).toContain('Read Later Lens 統一匯出');
+    expect(el('toastMsg').innerText).toContain('仍依所選來源匯入');
+  });
+
+  it('stays silent when the columns match the chosen profile', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [{ id: '1', title: 'x', url: 'https://a.example.com' }],
+        errors: [],
+      });
+    });
+
+    await handleFileUploads([fakeFile('scraper.csv', 'id,title,url')]);
+
+    expect(el('toastMsg').innerText).toBe('已成功載入檔案: scraper.csv');
+  });
+
+  it('blocks the official CSV before the trash/persist machinery runs', async () => {
+    const persist = vi.fn();
+    initImporter({ persistAndRender: persist });
+
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          { URL: 'https://a.example.com', Title: 'A', Folder: 'F', Timestamp: '1', Tags: '[]' },
+        ],
+        errors: [],
+      });
+    });
+
+    await handleFileUploads([fakeFile('official.csv', 'URL,Title,...')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(persist).not.toHaveBeenCalled();
   });
 });
 

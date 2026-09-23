@@ -4,8 +4,8 @@
  */
 
 import * as state from '../core/state.js';
-import { importJsonOrCsv, importSqlite } from '../providers/index.js';
-import { defaultProfileId, selectableProfiles } from '../providers/profiles.js';
+import { resolveImportAdapter } from '../providers/index.js';
+import { checkImport, defaultProfileId, selectableProfiles } from '../providers/profiles.js';
 import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/importModal.js';
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { initSql } from './sqlLoader.js';
@@ -182,28 +182,68 @@ function parseCsvWithPapa(text) {
  *
  * Priority: partial CSV failure > empty result > trash-displacement note >
  * plain success. An unsupported-extension import never reaches here (it
- * throws and lands in the failure toast instead).
+ * throws and lands in the failure toast instead). A non-blocking
+ * `checkNote` (header/profile mismatch warning) is appended last.
  *
  * @param {string} finalName
  * @param {number} displaced  Trashed records the fresh import replaced.
  * @param {number} count      Imported bookmark count.
  * @param {number} skipped    CSV rows Papa could not parse.
+ * @param {string} [note]     Optional sanity-check warning to append.
  * @returns {string}
  */
-function buildImportedMessage(finalName, displaced, count, skipped) {
+function buildImportedMessage(finalName, displaced, count, skipped, note = '') {
+  let message;
   if (skipped > 0) {
-    return `已載入檔案: ${finalName}（${count} 筆書籤，${skipped} 列解析失敗已略過）`;
+    message = `已載入檔案: ${finalName}（${count} 筆書籤，${skipped} 列解析失敗已略過）`;
+  } else if (count === 0) {
+    message = `已載入檔案: ${finalName}，但未偵測到任何書籤`;
+  } else if (displaced > 0) {
+    message = `已成功載入檔案: ${finalName}（${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代）`;
+  } else {
+    message = `已成功載入檔案: ${finalName}`;
   }
-  if (count === 0) {
-    return `已載入檔案: ${finalName}，但未偵測到任何書籤`;
-  }
-  return displaced > 0
-    ? `已成功載入檔案: ${finalName}（${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代）`
-    : `已成功載入檔案: ${finalName}`;
+  return note ? `${message}；${note}` : message;
 }
 
 /** Marker property on the unsupported-extension error, read by the catch. */
 const UNSUPPORTED_TYPE_FLAG = 'unsupportedFileType';
+
+/** Marker property on the blocked-source (official Instapaper CSV) error. */
+const UNSUPPORTED_SOURCE_FLAG = 'unsupportedSourceFile';
+
+/**
+ * Run the header sanity check for a parsed file. Throws for a blocked source
+ * (official Instapaper CSV — would otherwise import as garbage rows); returns
+ * a non-blocking warning note for a profile/column mismatch, or '' when ok.
+ *
+ * SQLite files are intentionally not checked: the official export is CSV-only
+ * and both supported table shapes (articles / bookmarks) already parse.
+ *
+ * @param {string} profile   Chosen source profile id.
+ * @param {'csv'|'json'} ext Parsed file kind.
+ * @param {object} parsed    Papa results (csv) or the parsed JSON root.
+ * @param {object[]} rows    Extracted record rows (for key fallback).
+ * @returns {string} Warning note ('' when ok).
+ * @throws {Error} When the source is explicitly unsupported.
+ */
+function sanityCheckOrThrow(profile, ext, parsed, rows) {
+  let sample;
+  if (ext === 'csv') {
+    const csvHeaders = parsed.meta?.fields ?? (rows[0] ? Object.keys(rows[0]) : []);
+    sample = { csvHeaders };
+  } else {
+    sample = { jsonKeys: rows[0] ? Object.keys(rows[0]) : [] };
+  }
+
+  const result = checkImport(profile, sample);
+  if (result.verdict === 'unsupported') {
+    const err = new Error(result.message);
+    err[UNSUPPORTED_SOURCE_FLAG] = true;
+    throw err;
+  }
+  return result.verdict === 'mismatch' ? result.message : '';
+}
 
 /**
  * Process a single uploaded file, parsing it and updating state.
@@ -234,6 +274,8 @@ async function processSingleFile(file, finalName, profile) {
   // (Option A): a failed import must leave no ghost folder behind.
   state.sourceFiles.set(fileId, fileRecord);
 
+  const adapter = resolveImportAdapter(profile);
+  let checkNote = '';
   try {
     let count = 0;
     let skipped = 0;
@@ -248,22 +290,29 @@ async function processSingleFile(file, finalName, profile) {
         // Nothing usable came out — treat the whole file as failed.
         throw new Error('CSV 解析失敗');
       }
+      checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
       count = rows.length;
       skipped = parseErrors.length;
-      acceptRecords(importJsonOrCsv(rows, fileRecord.id, fileRecord.name));
+      acceptRecords(adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name));
     } else if (ext === 'json') {
       const text = await file.text();
       fileRecord.originalData = text;
       const parsed = JSON.parse(text);
       const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
+      checkNote = sanityCheckOrThrow(profile, 'json', parsed, arrayData);
       count = arrayData.length;
-      acceptRecords(importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
+      acceptRecords(adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name));
     } else if (ext === 'db' || ext === 'sqlite') {
       const arrayBuffer = await file.arrayBuffer();
       const uInt8Array = new Uint8Array(arrayBuffer);
       fileRecord.originalData = uInt8Array;
       const sqlEngine = await initSql();
-      const records = await importSqlite(uInt8Array, fileRecord.id, fileRecord.name, sqlEngine);
+      const records = await adapter.importSqlite(
+        uInt8Array,
+        fileRecord.id,
+        fileRecord.name,
+        sqlEngine,
+      );
       count = records.length;
       acceptRecords(records);
     } else {
@@ -276,7 +325,7 @@ async function processSingleFile(file, finalName, profile) {
     // record, so say so explicitly instead of letting the trash count drop.
     const displaced = lastTrashDisplaced;
     lastTrashDisplaced = 0;
-    showToast(buildImportedMessage(finalName, displaced, count, skipped));
+    showToast(buildImportedMessage(finalName, displaced, count, skipped, checkNote));
   } catch (err) {
     state.sourceFiles.delete(fileId);
     lastTrashDisplaced = 0;
@@ -284,7 +333,9 @@ async function processSingleFile(file, finalName, profile) {
     showToast(
       err[UNSUPPORTED_TYPE_FLAG]
         ? `不支援的檔案格式「.${ext}」，請上傳 CSV、JSON 或 SQLite 檔案`
-        : `解析檔案 ${finalName} 失敗，請確認格式`,
+        : err[UNSUPPORTED_SOURCE_FLAG]
+          ? err.message
+          : `解析檔案 ${finalName} 失敗，請確認格式`,
     );
   }
 }

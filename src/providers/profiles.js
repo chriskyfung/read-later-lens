@@ -59,3 +59,111 @@ export function selectableProfiles() {
 export function defaultProfileId() {
   return IMPORT_PROFILES.find((profile) => profile.isDefault)?.id ?? selectableProfiles()[0].id;
 }
+
+/**
+ * @param {string} profileId
+ * @returns {string} zh-TW label for messages (falls back to the raw id).
+ */
+export function profileLabel(profileId) {
+  return IMPORT_PROFILES.find((profile) => profile.id === profileId)?.label ?? profileId;
+}
+
+/** zh-TW guidance shown when the official Instapaper account CSV is imported. */
+export const OFFICIAL_CSV_UNSUPPORTED_MESSAGE =
+  '此為 Instapaper 官方 CSV 匯出（URL/Title/…，僅含連結無預覽），不支援匯入；建議改用 InstapaperScraper 匯出完整資料';
+
+/**
+ * Normalize a header list for fingerprinting: trim, strip a leading BOM and
+ * lowercase, so `URL` and `url` compare equal.
+ *
+ * @param {string[]} headers
+ * @returns {Set<string>}
+ */
+function headerSet(headers) {
+  return new Set(
+    headers.map((header) =>
+      String(header)
+        .replace(/^\uFEFF/, '')
+        .trim()
+        .toLowerCase(),
+    ),
+  );
+}
+
+/**
+ * Official Instapaper account export: `URL,Title,Selection,Folder,Timestamp,Tags`.
+ * Detected only when url + title + timestamp land together with a folder or
+ * selection column — none of which ever appear in the supported formats, so a
+ * near-miss CSV (url/title/timestamp only) is NOT blocked.
+ *
+ * @param {Set<string>} headers
+ * @returns {boolean}
+ */
+function isOfficialInstapaperCsv(headers) {
+  return (
+    headers.has('url') &&
+    headers.has('title') &&
+    headers.has('timestamp') &&
+    (headers.has('folder') || headers.has('selection'))
+  );
+}
+
+/**
+ * Fingerprint a supported file from its column/keys. Returns null when the
+ * sample carries no strong marker — unknown files are accepted as-is (the
+ * alias-tolerant normalizer plus row validation deal with them).
+ *
+ * @param {Set<string>} fields Lowercased field names.
+ * @returns {'instapaper-scraper'|'rll-unified'|null}
+ */
+function fingerprint(fields) {
+  if (fields.has('source_file_id') || fields.has('detected_language')) return 'rll-unified';
+  if (fields.has('id') && fields.has('url')) return 'instapaper-scraper';
+  return null;
+}
+
+/**
+ * Deterministic header sanity check for an already-chosen profile. This is a
+ * guard rail, not auto-detection: the user's explicit choice always wins —
+ * `mismatch` only appends a warning, while `unsupported` blocks (official
+ * Instapaper CSV would otherwise import as rows of garbage).
+ *
+ * @param {string} profileId Chosen source profile id.
+ * @param {object} [sample]
+ * @param {string[]} [sample.csvHeaders] CSV header row (any case).
+ * @param {string[]} [sample.jsonKeys]  Key list of the first JSON record.
+ * @returns {{verdict: 'ok'|'mismatch'|'unsupported', message?: string,
+ *   suggestedProfileId?: string}}
+ */
+export function checkImport(profileId, sample = {}) {
+  const { csvHeaders, jsonKeys } = sample;
+
+  if (csvHeaders && csvHeaders.length > 0) {
+    const fields = headerSet(csvHeaders);
+    if (isOfficialInstapaperCsv(fields)) {
+      return { verdict: 'unsupported', message: OFFICIAL_CSV_UNSUPPORTED_MESSAGE };
+    }
+    const matched = fingerprint(fields);
+    if (matched && matched !== profileId) {
+      return {
+        verdict: 'mismatch',
+        suggestedProfileId: matched,
+        message: `檔案欄位較符合「${profileLabel(matched)}」格式，仍依所選來源匯入`,
+      };
+    }
+    return { verdict: 'ok' };
+  }
+
+  if (jsonKeys && jsonKeys.length > 0) {
+    const matched = fingerprint(headerSet(jsonKeys));
+    if (matched && matched !== profileId) {
+      return {
+        verdict: 'mismatch',
+        suggestedProfileId: matched,
+        message: `檔案欄位較符合「${profileLabel(matched)}」格式，仍依所選來源匯入`,
+      };
+    }
+  }
+
+  return { verdict: 'ok' };
+}
