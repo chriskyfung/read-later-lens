@@ -446,6 +446,26 @@ describe('module-owned startup', () => {
     expect(els.fileInput.listeners.change).toHaveLength(1);
   });
 
+  it('mounts every element the export wiring contract expects', async () => {
+    await start();
+    const { EXPORT_LISTENERS } = await import('../src/io/exporter.js');
+    const mountedIds = new Set(
+      mounts.flatMap((html) => [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1])),
+    );
+
+    // Guard against a vacuous pass if the mount capture ever changes shape.
+    expect(mountedIds.size).toBeGreaterThan(0);
+
+    // src/io/exporter.js is resilient to missing markup (dom.on warns and
+    // skips), so this test is what keeps a renamed/relocated modal id loud:
+    // it fails in CI instead of silently disabling an export button in prod.
+    for (const [id] of EXPORT_LISTENERS) {
+      expect(mountedIds.has(id), `#${id} is wired by src/io/exporter.js but never mounted`).toBe(
+        true,
+      );
+    }
+  });
+
   it('restores bookmarks before the first render and reports restoration', async () => {
     const state = await import('../src/core/state.js');
     const { loadState } = await import('../src/core/store.js');
