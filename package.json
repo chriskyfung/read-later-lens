@@ -12,8 +12,16 @@
     "lint:fix": "eslint --fix src/ tests/ --no-error-on-unmatched-pattern",
     "format": "prettier --check --ignore-unknown .",
     "format:fix": "prettier --write --ignore-unknown .",
+    "lint-staged": "lint-staged",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": "prettier --write"
   },
   "keywords": [
     "read-later",
