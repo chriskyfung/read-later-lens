@@ -9,9 +9,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/ tests/ --no-error-on-unmatched-pattern",
+    "lint:fix": "eslint --fix src/ tests/ --no-error-on-unmatched-pattern",
+    "format": "prettier --check --ignore-unknown .",
+    "format:fix": "prettier --write --ignore-unknown .",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "format": "prettier --write ."
+    "test:watch": "vitest"
   },
   "keywords": [
     "read-later",
@@ -31,6 +33,10 @@
   },
   "homepage": "https://github.com/chriskyfung/read-later-lens",
   "author": "chriskyfung",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=12.0.0"
+  },
   "dependencies": {
     "d3": "^7.9.0",
     "idb": "^8.0.3",
