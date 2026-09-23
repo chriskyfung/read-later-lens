@@ -72,6 +72,24 @@ describe('checkImport — profile/column mismatch (warn only)', () => {
       checkImport('instapaper-scraper', { jsonKeys: ['id', 'url', 'source_file_id'] }).verdict,
     ).toBe('mismatch');
   });
+
+  it('recognises the versioned unified envelope exactly, even when empty', () => {
+    const envelope = { format: 'read-later-lens', version: 1, bookmarks: [] };
+    const mismatch = checkImport('instapaper-scraper', { jsonRoot: envelope, jsonKeys: [] });
+    expect(mismatch.verdict).toBe('mismatch');
+    expect(mismatch.suggestedProfileId).toBe('rll-unified');
+
+    const exact = checkImport('rll-unified', { jsonRoot: envelope, jsonKeys: [] });
+    expect(exact.verdict).toBe('ok');
+
+    // Plain arrays / foreign objects never trip the envelope branch.
+    expect(checkImport('instapaper-scraper', { jsonRoot: [{ id: 1 }], jsonKeys: ['id'] })).toEqual({
+      verdict: 'ok',
+    });
+    expect(
+      checkImport('instapaper-scraper', { jsonRoot: { format: 'other-tool' }, jsonKeys: [] }),
+    ).toEqual({ verdict: 'ok' });
+  });
 });
 
 describe('checkImport — unknown sources (accept)', () => {

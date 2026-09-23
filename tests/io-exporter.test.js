@@ -227,11 +227,15 @@ describe('unified exports', () => {
     ]);
   });
 
-  it('exports all bookmarks as all_bookmarks_export.json', () => {
+  it('exports all bookmarks as a versioned unified JSON envelope', async () => {
     exportAllUnifiedJson();
     const [blob, filename] = downloadBlob.mock.calls[0];
     expect(filename).toBe('all_bookmarks_export.json');
     expect(blob.type).toBe('application/json');
+    const parsed = JSON.parse(await blob.text());
+    expect(parsed.format).toBe('read-later-lens');
+    expect(parsed.version).toBe(1);
+    expect(parsed.bookmarks.map((b) => b.id)).toEqual(['1', '2']);
   });
 
   it('unparses all bookmarks as all_bookmarks_export.csv', () => {
@@ -252,7 +256,7 @@ describe('unified exports', () => {
 
     exportAllUnifiedJson();
     const [blob] = downloadBlob.mock.calls[0];
-    expect(JSON.parse(await blob.text()).map((b) => b.id)).toEqual(['1']);
+    expect(JSON.parse(await blob.text()).bookmarks.map((b) => b.id)).toEqual(['1']);
 
     exportAllUnifiedCsv();
     const [csvRows] = globalThis.Papa.unparse.mock.calls.at(-1);

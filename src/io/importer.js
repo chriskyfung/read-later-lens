@@ -239,7 +239,7 @@ function sanityCheckOrThrow(profile, ext, parsed, rows) {
     const csvHeaders = parsed.meta?.fields ?? (rows[0] ? Object.keys(rows[0]) : []);
     sample = { csvHeaders };
   } else {
-    sample = { jsonKeys: rows[0] ? Object.keys(rows[0]) : [] };
+    sample = { jsonRoot: parsed, jsonKeys: rows[0] ? Object.keys(rows[0]) : [] };
   }
 
   const result = checkImport(profile, sample);

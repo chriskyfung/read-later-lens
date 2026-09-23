@@ -132,38 +132,48 @@ function fingerprint(fields) {
  * @param {object} [sample]
  * @param {string[]} [sample.csvHeaders] CSV header row (any case).
  * @param {string[]} [sample.jsonKeys]  Key list of the first JSON record.
+ * @param {object} [sample.jsonRoot]    Parsed JSON root — a versioned
+ *   `{ format: 'read-later-lens', … }` envelope is an exact match.
  * @returns {{verdict: 'ok'|'mismatch'|'unsupported', message?: string,
  *   suggestedProfileId?: string}}
  */
 export function checkImport(profileId, sample = {}) {
-  const { csvHeaders, jsonKeys } = sample;
+  const { csvHeaders, jsonKeys, jsonRoot } = sample;
 
   if (csvHeaders && csvHeaders.length > 0) {
     const fields = headerSet(csvHeaders);
     if (isOfficialInstapaperCsv(fields)) {
       return { verdict: 'unsupported', message: OFFICIAL_CSV_UNSUPPORTED_MESSAGE };
     }
-    const matched = fingerprint(fields);
-    if (matched && matched !== profileId) {
-      return {
-        verdict: 'mismatch',
-        suggestedProfileId: matched,
-        message: `檔案欄位較符合「${profileLabel(matched)}」格式，仍依所選來源匯入`,
-      };
-    }
-    return { verdict: 'ok' };
+    return mismatchVerdict(profileId, fingerprint(fields));
+  }
+
+  // Exact fingerprint: the app's own versioned envelope carries its format
+  // marker at the root, so recognition never depends on row keys (and works
+  // even for an empty bookmark list).
+  if (jsonRoot && !Array.isArray(jsonRoot) && jsonRoot.format === 'read-later-lens') {
+    return mismatchVerdict(profileId, 'rll-unified');
   }
 
   if (jsonKeys && jsonKeys.length > 0) {
-    const matched = fingerprint(headerSet(jsonKeys));
-    if (matched && matched !== profileId) {
-      return {
-        verdict: 'mismatch',
-        suggestedProfileId: matched,
-        message: `檔案欄位較符合「${profileLabel(matched)}」格式，仍依所選來源匯入`,
-      };
-    }
+    return mismatchVerdict(profileId, fingerprint(headerSet(jsonKeys)));
   }
 
+  return { verdict: 'ok' };
+}
+
+/**
+ * @param {string} profileId Chosen profile.
+ * @param {'instapaper-scraper'|'rll-unified'|null} matched Fingerprint result.
+ * @returns {{verdict: 'ok'|'mismatch', message?: string, suggestedProfileId?: string}}
+ */
+function mismatchVerdict(profileId, matched) {
+  if (matched && matched !== profileId) {
+    return {
+      verdict: 'mismatch',
+      suggestedProfileId: matched,
+      message: `檔案欄位較符合「${profileLabel(matched)}」格式，仍依所選來源匯入`,
+    };
+  }
   return { verdict: 'ok' };
 }

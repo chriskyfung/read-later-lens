@@ -101,10 +101,18 @@ export async function saveSingleFile(fileId) {
 }
 
 /**
- * Exports all current bookmarks to a unified JSON file (trash excluded).
+ * Exports all current bookmarks to a versioned unified JSON file (trash
+ * excluded). The envelope (`format` + `version`) gives re-imports an exact
+ * fingerprint instead of a column guess; the importer already unwraps the
+ * `bookmarks` array, so plain pre-envelope files keep round-tripping.
  */
 export function exportAllUnifiedJson() {
-  const blob = new Blob([JSON.stringify(getActiveBookmarks(), null, 2)], {
+  const envelope = {
+    format: 'read-later-lens',
+    version: 1,
+    bookmarks: getActiveBookmarks(),
+  };
+  const blob = new Blob([JSON.stringify(envelope, null, 2)], {
     type: 'application/json',
   });
   downloadBlob(blob, 'all_bookmarks_export.json');
