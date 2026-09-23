@@ -8,8 +8,8 @@ Everything runs as a single-page app powered by Vite. After a one-time install, 
 
 ## Features
 
-- **Multi-format import** — load Instapaper exports as `CSV`, `JSON`, or native SQLite (`.db`), including multiple files at once, with duplicate-file conflict resolution (overwrite / keep both / cancel).
-- **Unified data model** — records from every format are normalized into a single schema that tolerates common field-name variations.
+- **Source-picker import** — choose an explicit source type (InstapaperScraper or this app's unified export) in an intermediate modal, then load `CSV` / `JSON` / native SQLite (`.db`, `.sqlite`) files — multiple at once, with duplicate-file conflict resolution (overwrite / keep both / cancel). The official Instapaper account CSV (links-only) is detected and blocked with guidance.
+- **Unified data model** — records from every format are normalized into a single schema that tolerates common (and case-varied) field-name variations; rows without a usable URL are skipped and reported.
 - **Full-text search** — instant search across title, URL, preview text, and tags, with relevance-, date-, and title-based sorting.
 - **Filtering** — drill down by imported source file/folder, auto-detected language (`EN` / `ZH` / `JA` / other), and custom tags.
 - **Four analysis views**:
@@ -19,7 +19,7 @@ Everything runs as a single-page app powered by Vite. After a one-time install, 
   - 🕸️ **Concept linkage graph** — an interactive D3 force-directed graph built from shared keywords and domains.
 - **In-app reader** — preview article text without leaving the app, open the original URL, or jump straight to Instapaper's reader.
 - **Similarity recommendations** — pick any article to see related items ranked by TF-IDF vector cosine similarity.
-- **Export** — save your changes back as unified `JSON` / `CSV`, or re-export each source in its original format.
+- **Export** — save your changes back as unified versioned `JSON` / `CSV`, or re-export each source in its original format.
 - **Local persistence** — your working set is cached in IndexedDB and restored automatically on your next visit.
 
 ---
@@ -87,23 +87,43 @@ This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](h
 
 ## Import & Data Model
 
-Click **匯入 (Import)** in the top-right corner to select one or more `*.csv`, `*.json`, or `*.db` files. Each imported file becomes a _source file_ (shown as a folder in the sidebar) that groups its bookmarks.
+Click **匯入 (Import)** in the top-right corner to open the **source picker** — an intermediate modal where you choose the data source _before_ any file dialog appears. Pick a source type (InstapaperScraper is preselected and the choice is remembered for the session), press **選擇檔案…**, then select one or more `*.csv`, `*.json`, or `*.db` / `*.sqlite` files. Each imported file becomes a _source file_ (shown as a folder in the sidebar) that groups its bookmarks and records the profile it was imported under.
 
-Records from any format are normalized into a unified `BookmarkRecord` with an alias-tolerant parser:
+### Source types
 
-| Unified field           | Recognized aliases                                                |
-| ----------------------- | ----------------------------------------------------------------- |
-| `id`                    | `id`, `bookmark_id`, `uid` (auto-generated if missing)            |
-| `title`                 | `title`, `name` (falls back to `Untitled Article`)                |
-| `url`                   | `url`, `link`, `original_url`                                     |
-| `article_preview`       | `article_preview`, `description`, `preview`, `excerpt`, `summary` |
-| `content`               | `content`, else the resolved preview                              |
-| `instapaper_url`        | generated as `https://www.instapaper.com/read/<id>`               |
-| `source_file_id / name` | set from the imported file                                        |
-| `detected_language`     | auto-detected from title + preview                                |
-| `tags`                  | array, or comma-separated string                                  |
+| Profile                          | Label in the UI          | Accepts                                                                                                                            | Behaviour                                                       |
+| -------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `instapaper-scraper` _(default)_ | InstapaperScraper 匯出   | CSV / JSON / SQLite from [InstapaperScraper](https://github.com/chriskyfung/InstapaperScraper) (or equivalent Instapaper API data) | `provider` / `instapaper_url` regenerated as Instapaper values  |
+| `rll-unified`                    | Read Later Lens 統一匯出 | Files previously exported by this app (unified JSON/CSV, source re-exports)                                                        | `provider` and `instapaper_url` round-trip from the source rows |
+| _(roadmap)_                      | Raindrop / Pocket …      | —                                                                                                                                  | Rendered disabled — more sources are planned                    |
 
-Duplicate IDs are merged on import.
+There is **no auto-detection** — the choice is explicit. A deterministic header sanity check then acts as a guard rail only:
+
+- **The official Instapaper account CSV is not supported.** That export (`URL,Title,Selection,Folder,Timestamp,Tags`) carries only links — no ids, previews, or article text — so importing it would create rows of placeholder records. The import is blocked with guidance to use an InstapaperScraper export instead.
+- If the columns clearly belong to the _other_ supported profile, the import still proceeds (your choice wins) with a warning appended to the success toast.
+- Files the check cannot fingerprint pass through to the alias-tolerant parser unchanged. SQLite files are not header-checked: the official export is CSV-only, and both known table shapes (`articles`, `bookmarks`) already parse.
+
+### Unified records
+
+Records from any format are normalized into a unified `BookmarkRecord` with an alias-tolerant, **case-insensitive** parser:
+
+| Unified field           | Recognized aliases                                                                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                    | `id`, `bookmark_id`, `uid`; otherwise a **stable synthetic id** derived from the URL (`gen_` + FNV-1a-64 hash), so re-importing an id-less file merges instead of duplicating rows |
+| `title`                 | `title`, `name` (falls back to `Untitled Article`)                                                                                                                                 |
+| `url`                   | `url`, `link`, `original_url` — **rows without a usable URL are skipped** and reported in the import summary                                                                       |
+| `article_preview`       | `article_preview`, `description`, `preview`, `excerpt`, `summary`                                                                                                                  |
+| `content`               | `content`, else the resolved preview                                                                                                                                               |
+| `instapaper_url`        | generated as `https://www.instapaper.com/read/<id>` (preserved as-is under the unified profile)                                                                                    |
+| `source_file_id / name` | set from the imported file                                                                                                                                                         |
+| `detected_language`     | auto-detected from title + preview                                                                                                                                                 |
+| `tags`                  | array, or comma-separated string                                                                                                                                                   |
+
+Other import rules:
+
+- **Duplicate IDs are merged on import** (incoming record wins).
+- The success toast reports exactly what happened: imported count, rows skipped for parse failures / missing URLs, trash resurrections, and any sanity-check warning.
+- **Unified JSON exports are versioned**: `all_bookmarks_export.json` wraps rows in `{ "format": "read-later-lens", "version": 1, "bookmarks": [...] }`. The envelope is recognized exactly on re-import; plain arrays and older exports keep working.
 
 ## Feature Tour
 
@@ -165,6 +185,7 @@ The whole app — interface, data processing, NLP/analytics, and visualizations 
 ## Known Limitations
 
 - The **concept graph is capped at the top 50** filtered bookmarks to keep the topology readable.
+- **The official Instapaper account CSV is not supported** (links-only schema, no previews or ids) — the picker's sanity check blocks it and suggests an InstapaperScraper export instead. Header fingerprinting covers CSV/JSON only; SQLite files are not header-checked.
 - **SQLite source re-export** depends on an in-memory SQL.js database; raw `.db` buffers are not cached to IndexedDB (see [Storage & Privacy](#storage--privacy)).
 - CDN-loaded libraries require an internet connection on first load; the app is not designed for fully offline operation.
 - The project is a **single-page app with bundled dependencies** — there is a dev/build step (Vite + pnpm), not a self-contained single file.
