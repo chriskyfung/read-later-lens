@@ -150,7 +150,7 @@ Dependabot opens weekly PRs for dependency updates (grouped by type) — review 
 ## Project Structure
 
 ```
-├── index.html              # Single HTML shell (loads CDN runtime libraries)
+├── index.html              # Single HTML shell (loads remaining CDN runtime libraries)
 ├── src/
 │   ├── main.js             # Thin bootstrap that composes extracted modules
 │   ├── components/         # Markup helpers (pure DOM element builders)
