@@ -454,34 +454,38 @@ function rollbackImport(fileId, merge) {
  */
 export async function handleFileUploads(files, options = {}) {
   const { profile = selectedProfileId } = options;
-  await initSql();
 
-  for (let file of files) {
-    const fileName = file.name;
+  try {
+    for (let file of files) {
+      const fileName = file.name;
 
-    // Check for duplicate names
-    let duplicateId = null;
-    for (let [id, val] of state.sourceFiles.entries()) {
-      if (val.name === fileName) {
-        duplicateId = id;
-        break;
+      // Check for duplicate names
+      let duplicateId = null;
+      for (let [id, val] of state.sourceFiles.entries()) {
+        if (val.name === fileName) {
+          duplicateId = id;
+          break;
+        }
       }
-    }
 
-    if (duplicateId) {
-      document.getElementById('duplicateFileText').innerText =
-        `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
-      const action = await waitForDuplicateResolution();
-      if (action === 'overwrite') {
-        deps.deleteFolder(duplicateId, false);
+      if (duplicateId) {
+        document.getElementById('duplicateFileText').innerText =
+          `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+        const action = await waitForDuplicateResolution();
+        if (action === 'overwrite') {
+          deps.deleteFolder(duplicateId, false);
+          await processSingleFile(file, fileName, profile);
+        } else if (action === 'keep') {
+          const newName = fileName.replace(/(\.[\w\d_-]+)$/i, `_${Date.now()}$1`);
+          await processSingleFile(file, newName, profile);
+        }
+      } else {
         await processSingleFile(file, fileName, profile);
-      } else if (action === 'keep') {
-        const newName = fileName.replace(/(\.[\w\d_-]+)$/i, `_${Date.now()}$1`);
-        await processSingleFile(file, newName, profile);
       }
-    } else {
-      await processSingleFile(file, fileName, profile);
     }
+  } catch (err) {
+    console.error('檔案匯入失敗:', err);
+    showToast('檔案匯入失敗，請稍後再試');
   }
 }
 
@@ -511,15 +515,20 @@ export function registerImporterListeners() {
     if (event.target === overlay) closeImportModal();
   });
 
-  fileInput.addEventListener('change', (e) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    // A change event never fires when the same path is re-selected, so clear
-    // the value once the FileList is captured.
-    e.target.value = '';
-    if (files.length === 0) return;
-    // Close the picker BEFORE parsing so the duplicate-name prompt never
-    // stacks beneath it (the duplicate modal stays outside the layer stack).
-    closeImportModal();
-    handleFileUploads(files, { profile: selectedProfileId });
+  fileInput.addEventListener('change', async (e) => {
+    try {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      // A change event never fires when the same path is re-selected, so clear
+      // the value once the FileList is captured.
+      e.target.value = '';
+      if (files.length === 0) return;
+      // Close the picker BEFORE parsing so the duplicate-name prompt never
+      // stacks beneath it (the duplicate modal stays outside the layer stack).
+      closeImportModal();
+      await handleFileUploads(files, { profile: selectedProfileId });
+    } catch (err) {
+      console.error('檔案匯入失敗:', err);
+      showToast('檔案匯入失敗，請稍後再試');
+    }
   });
 }
