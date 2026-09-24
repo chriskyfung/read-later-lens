@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import {
   initImporter,
   handleFileUploads,
+  createUniqueSourceName,
   registerImporterListeners,
   applyProfileSelection,
 } from '../src/io/importer.js';
@@ -509,7 +510,7 @@ describe('handleFileUploads — duplicate name resolution', () => {
     expect(names).toContain('a.csv');
   });
 
-  it('keep: imports under a timestamped name and keeps the original', async () => {
+  it('keep: imports under a unique timestamped name and keeps the original', async () => {
     seedDuplicate();
     const deleteFolder = vi.fn();
     initImporter({ deleteFolder });
@@ -520,6 +521,42 @@ describe('handleFileUploads — duplicate name resolution', () => {
     const names = [...sourceFiles.values()].map((f) => f.name);
     expect(names.filter((n) => n !== 'a.csv')[0]).toMatch(/a_\d{13}\.csv$/);
     expect(names.filter((n) => n === 'a.csv')).toHaveLength(1); // original kept
+  });
+
+  it('createUniqueSourceName: adds a suffix to extension-less names', () => {
+    expect(createUniqueSourceName('README', ['README'])).toMatch(/^README_\d{13}$/);
+  });
+
+  it('createUniqueSourceName: disambiguates same-millisecond collisions', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1735680000000);
+    try {
+      const first = createUniqueSourceName('a.csv', ['a.csv']);
+      const second = createUniqueSourceName('a.csv', ['a.csv', first]);
+
+      expect(first).toBe('a_1735680000000.csv');
+      expect(second).toBe('a_1735680000000_1.csv');
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('keep: skips a generated name that already exists', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1735680000000);
+    try {
+      setSourceFiles(
+        new Map([
+          ['F1', { id: 'F1', name: 'a.csv', type: 'csv', originalData: '' }],
+          ['F2', { id: 'F2', name: 'a_1735680000000.csv', type: 'csv', originalData: '' }],
+        ]),
+      );
+      initImporter({ deleteFolder: vi.fn() });
+
+      await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'keep');
+
+      expect([...sourceFiles.values()].map((f) => f.name)).toContain('a_1735680000000_1.csv');
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('cancel: imports nothing and deletes nothing', async () => {

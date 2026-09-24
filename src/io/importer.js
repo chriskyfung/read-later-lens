@@ -161,6 +161,32 @@ function waitForDuplicateResolution() {
 }
 
 /**
+ * Create a source name that is unique against the current source-file names.
+ * File names are compared exactly, matching the importer's duplicate policy;
+ * timestamp collisions and extension-less names are handled deterministically.
+ *
+ * @param {string} originalName
+ * @param {Iterable<string>} existingNames
+ * @returns {string}
+ */
+export function createUniqueSourceName(originalName, existingNames) {
+  const usedNames = new Set(existingNames);
+  const dot = originalName.lastIndexOf('.');
+  const hasExtension = dot > 0 && dot < originalName.length - 1;
+  const stem = hasExtension ? originalName.slice(0, dot) : originalName;
+  const extension = hasExtension ? originalName.slice(dot) : '';
+  const timestamp = Date.now();
+
+  let candidate = `${stem}_${timestamp}${extension}`;
+  let suffix = 1;
+  while (usedNames.has(candidate)) {
+    candidate = `${stem}_${timestamp}_${suffix}${extension}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+/**
  * Wrap PapaParse's callback API into a promise so the CSV path is awaitable
  * like the JSON and SQLite paths. This guarantees the success/failure toast
  * is emitted *after* parsing completes, and that parse errors surface through
@@ -476,7 +502,8 @@ export async function handleFileUploads(files, options = {}) {
           deps.deleteFolder(duplicateId, false);
           await processSingleFile(file, fileName, profile);
         } else if (action === 'keep') {
-          const newName = fileName.replace(/(\.[\w\d_-]+)$/i, `_${Date.now()}$1`);
+          const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
+          const newName = createUniqueSourceName(fileName, existingNames);
           await processSingleFile(file, newName, profile);
         }
       } else {
