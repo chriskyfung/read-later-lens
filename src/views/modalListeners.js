@@ -12,15 +12,19 @@
  * exporter.js without closing the workspaceActions -> bookmarks -> readerModal
  * cycle.
  *
- * It also registers every stackable overlay with the layer stack
- * (src/utils/dom.js) and owns the single document-level keydown handler: Escape
- * unwinds one layer per press, Tab stays inside the topmost layer.
+ * It also registers every stackable overlay (reader, similarity, save and the
+ * import source picker) with the layer stack (src/utils/dom.js) and owns the
+ * single document-level keydown handler: Escape unwinds one layer per press,
+ * Tab stays inside the topmost layer. The duplicate-file prompt deliberately
+ * stays outside the stack: the import picker closes before parsing starts, so
+ * the two never overlap.
  */
 
 import { closeReaderModal, getReaderBookmarkId } from './readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark } from './workspaceActions.js';
 import { closeSaveModal } from '../io/exporter.js';
+import { closeImportModal } from '../io/importer.js';
 import { closeLayer, registerModalLayer, topLayer, topLayerId, trapFocus } from '../utils/dom.js';
 
 /**
@@ -48,6 +52,7 @@ export function registerModalListeners() {
   registerModalLayer('readerModal', { close: closeReaderModal });
   registerModalLayer('similarityModal', { close: closeSimilarityModal });
   registerModalLayer('saveModal', { close: closeSaveModal });
+  registerModalLayer('importModal', { close: closeImportModal });
 
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
   document.getElementById('closeSimilarityBtn')?.addEventListener('click', closeSimilarityModal);

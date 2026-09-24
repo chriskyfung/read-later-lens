@@ -15,6 +15,74 @@ describe('entry-point feature wiring', () => {
     });
     await vi.waitFor(() => expect(els.filteredCount.innerText).toBe(1));
     expect(saveState).toHaveBeenCalledTimes(1);
+    // The modal was never opened here, so closing defensively must not throw.
+    expect(els.importModal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('rolls the import back when the cache write fails (e2e)', async () => {
+    const store = await import('../src/core/store.js');
+    const { saveState } = store;
+    const { showToast } = await import('../src/utils/dom.js');
+    // A write can fail outright (rejected promise): the import must be undone
+    // rather than announced as a success that a reload would not reproduce.
+    store.saveState.mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    await start();
+    els.fileInput.dispatch('change', {
+      target: {
+        files: [
+          {
+            name: 'nocache.json',
+            text: async () =>
+              JSON.stringify([bookmark('n1', 'Nectarine', 'https://nectarine.com')]),
+          },
+        ],
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith(expect.stringContaining('無法寫入本機快取')),
+    );
+    // The transaction boundary: nothing from the failed import survives, so the
+    // session can never disagree with what the next reload will show. This must
+    // hold for both module state and the rendered view — persistAndRender()
+    // renders the merged state before it discovers the write failure.
+    const state = await import('../src/core/state.js');
+    expect(state.bookmarks).toHaveLength(0);
+    expect(state.sourceFiles.size).toBe(0);
+    expect(els.filteredCount.innerText).toBe(0);
+    expect(saveState).toHaveBeenCalledTimes(1);
+  });
+
+  it('imports through the source picker modal opened from the header (e2e)', async () => {
+    await start();
+    const { stackDepth } = await import('../src/utils/dom.js');
+
+    els.importBtn.dispatch('click');
+    expect(stackDepth()).toBe(1);
+    expect(els.importModal.getAttribute('aria-hidden')).toBe('false');
+
+    // Choose the unified profile, then confirm the file selection.
+    els['importProfile-rll-unified'].dispatch('click');
+    els.fileInput.dispatch('change', {
+      target: {
+        files: [
+          {
+            name: 'unified.json',
+            text: async () => JSON.stringify([bookmark('u1', 'Grape', 'https://grape.com')]),
+          },
+        ],
+      },
+    });
+
+    await vi.waitFor(() => expect(els.filteredCount.innerText).toBe(1));
+    // Parsing starts only after the picker modal closed — no stacking.
+    expect(stackDepth()).toBe(0);
+    expect(els.importModal.classList.contains('hidden')).toBe(true);
+
+    const state = await import('../src/core/state.js');
+    const [source] = [...state.sourceFiles.values()];
+    expect(source.profile).toBe('rll-unified');
   });
 
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
@@ -368,6 +436,7 @@ describe('module-owned startup', () => {
     expect(window.IBM).toBeUndefined();
     for (const [id, type] of [
       ['fileInput', 'change'],
+      ['importBtn', 'click'],
       ['searchInput', 'input'],
       ['saveBackBtn', 'click'],
       ['bookmarkCardsGrid', 'click'],
@@ -380,6 +449,26 @@ describe('module-owned startup', () => {
     expect(await start()).toBe(entry);
     expect(mounts).toHaveLength(4);
     expect(els.fileInput.listeners.change).toHaveLength(1);
+  });
+
+  it('mounts every element the export wiring contract expects', async () => {
+    await start();
+    const { EXPORT_LISTENERS } = await import('../src/io/exporter.js');
+    const mountedIds = new Set(
+      mounts.flatMap((html) => [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1])),
+    );
+
+    // Guard against a vacuous pass if the mount capture ever changes shape.
+    expect(mountedIds.size).toBeGreaterThan(0);
+
+    // src/io/exporter.js is resilient to missing markup (dom.on warns and
+    // skips), so this test is what keeps a renamed/relocated modal id loud:
+    // it fails in CI instead of silently disabling an export button in prod.
+    for (const [id] of EXPORT_LISTENERS) {
+      expect(mountedIds.has(id), `#${id} is wired by src/io/exporter.js but never mounted`).toBe(
+        true,
+      );
+    }
   });
 
   it('restores bookmarks before the first render and reports restoration', async () => {

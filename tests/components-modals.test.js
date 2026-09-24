@@ -34,6 +34,7 @@ describe('mountModals — overlay markup parity', () => {
       'readerModal',
       'similarityModal',
       'saveModal',
+      'importModal',
       'duplicateModal',
       'toastNotification',
     ];
@@ -87,6 +88,18 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('CSV');
   });
 
+  it('keeps the import source picker modal ids, radios and zh-TW labels', () => {
+    const html = allHtml();
+    expect(html).toContain('id="importModal"');
+    expect(html).toContain('id="importTitle"');
+    expect(html).toContain('id="importSourceGroup"');
+    expect(html).toContain('id="importProfile-instapaper-scraper"');
+    expect(html).toContain('id="importPickFileBtn"');
+    expect(html).toContain('id="importCancelBtn"');
+    expect(html).toContain('📥 選擇匯入來源');
+    expect(html).toContain('選擇檔案…');
+  });
+
   it('keeps the duplicate-warning modal ids, buttons and zh-TW labels', () => {
     const html = allHtml();
     expect(html).toContain('id="duplicateModal"');
@@ -114,6 +127,7 @@ describe('mountModals — overlay markup parity', () => {
       ['readerModal', 'readerTitle'],
       ['similarityModal', 'similarityTitle'],
       ['saveModal', 'saveTitle'],
+      ['importModal', 'importTitle'],
     ]) {
       expect(html).toContain(`id="${id}"`);
       expect(html).toContain(
@@ -127,7 +141,13 @@ describe('mountModals — overlay markup parity', () => {
 
   it('starts every overlay hidden (Tailwind hidden class on the fixed containers)', () => {
     const html = allHtml();
-    for (const id of ['readerModal', 'similarityModal', 'saveModal', 'duplicateModal']) {
+    for (const id of [
+      'readerModal',
+      'similarityModal',
+      'saveModal',
+      'importModal',
+      'duplicateModal',
+    ]) {
       const idx = html.indexOf(`id="${id}"`);
       expect(html.slice(idx - 40, idx + 120)).toContain('class="hidden');
     }

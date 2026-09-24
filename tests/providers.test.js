@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs from 'sql.js';
-import { importJsonOrCsv, importSqlite, providerForExtension } from '../src/providers/index.js';
+import { importJsonOrCsv, importSqlite, resolveImportAdapter } from '../src/providers/index.js';
 
 const SQL_DIST = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -41,11 +41,62 @@ const makeSqliteBuffer = () => {
   return buffer;
 };
 
-describe('providerForExtension', () => {
-  it('routes every supported extension to instapaper', () => {
-    for (const ext of ['csv', 'json', 'db', 'sqlite']) {
-      expect(providerForExtension(ext)).toBe('instapaper');
+describe('resolveImportAdapter', () => {
+  it('exposes an adapter pair for known and stale profile ids', () => {
+    for (const id of ['instapaper-scraper', 'rll-unified', 'unknown-stale-id', undefined]) {
+      const adapter = resolveImportAdapter(id);
+      expect(typeof adapter.importJsonOrCsv).toBe('function');
+      expect(typeof adapter.importSqlite).toBe('function');
     }
+  });
+
+  it('instapaper-scraper forces Instapaper metadata even on unified rows', () => {
+    const adapter = resolveImportAdapter('instapaper-scraper');
+    const [rec] = adapter.importJsonOrCsv(
+      [
+        {
+          id: '5',
+          title: 'T',
+          url: 'https://x.example.com',
+          provider: 'raindrop',
+          instapaper_url: 'https://example.com/custom',
+        },
+      ],
+      'f',
+      'f.csv',
+    );
+    expect(rec.provider).toBe('instapaper');
+    expect(rec.instapaper_url).toBe('https://www.instapaper.com/read/5');
+  });
+
+  it('rll-unified round-trips provider and instapaper_url from the source row', () => {
+    const adapter = resolveImportAdapter('rll-unified');
+    const [rec] = adapter.importJsonOrCsv(
+      [
+        {
+          id: '5',
+          title: 'T',
+          url: 'https://x.example.com',
+          provider: 'raindrop',
+          instapaper_url: 'https://example.com/custom',
+        },
+      ],
+      'f',
+      'f.csv',
+    );
+    expect(rec.provider).toBe('raindrop');
+    expect(rec.instapaper_url).toBe('https://example.com/custom');
+  });
+
+  it('rll-unified still generates a reader URL when the row has none', () => {
+    const adapter = resolveImportAdapter('rll-unified');
+    const [rec] = adapter.importJsonOrCsv(
+      [{ id: '7', title: 'T', url: 'https://y.example.com' }],
+      'f',
+      'f.json',
+    );
+    expect(rec.instapaper_url).toBe('https://www.instapaper.com/read/7');
+    expect(rec.provider).toBe('instapaper');
   });
 });
 
@@ -80,8 +131,34 @@ describe('importJsonOrCsv', () => {
   });
 
   it('detects CJK titles', () => {
-    const [rec] = importJsonOrCsv([{ id: 1, title: '你好世界測試內容' }], 'f', 'f.json');
+    const [rec] = importJsonOrCsv(
+      [{ id: 1, title: '你好世界測試內容', url: 'https://zh.example.com' }],
+      'f',
+      'f.json',
+    );
     expect(rec.detected_language).toBe('zh');
+  });
+
+  it('drops rows without a usable URL instead of storing # placeholders', () => {
+    const records = importJsonOrCsv(
+      [
+        { id: '1', title: 'Kept', url: 'https://keep.example.com' },
+        { id: '2', title: 'No url at all' },
+        { id: '3', title: 'Empty url', url: '' },
+      ],
+      'f',
+      'f.csv',
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].id).toBe('1');
+  });
+
+  it('generates the same stable id when the same id-less file is re-imported', () => {
+    const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
+    const [first] = importJsonOrCsv(rows, 'f1', 'a.csv');
+    const [second] = importJsonOrCsv(rows, 'f2', 'b.csv');
+    expect(first.id).toMatch(/^gen_/);
+    expect(first.id).toBe(second.id); // merges on re-import instead of duplicating
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeFields, normalizeTags } from '../src/model/normalize.js';
+import { normalizeFields, normalizeTags, stableIdFromUrl } from '../src/model/normalize.js';
 
 describe('normalizeFields', () => {
   it('prefers canonical id and aliases', () => {
@@ -8,16 +8,39 @@ describe('normalizeFields', () => {
     expect(normalizeFields({ uid: 'u1', title: 'T', url: 'u' }, 0).id).toBe('u1');
   });
 
-  it('falls back to Date.now() + index when no id alias is present', () => {
+  it('generates a stable URL-based id when no id alias is present', () => {
+    const a = normalizeFields({ title: 'T', url: 'https://a.example.com/x' }, 0);
+    const b = normalizeFields({ title: 'Other', url: 'https://a.example.com/x' }, 7);
+    expect(a.id).toMatch(/^gen_[0-9a-f]{16}$/);
+    // Same URL => same id regardless of title, index, or call time, so a
+    // re-import of an id-less file merges instead of duplicating rows.
+    expect(a.id).toBe(b.id);
+
+    const different = normalizeFields({ title: 'T', url: 'https://b.example.com/y' }, 0);
+    expect(different.id).not.toBe(a.id);
+  });
+
+  it('falls back to Date.now() + index only when there is neither id nor url', () => {
     const before = Date.now();
-    const r = normalizeFields({ title: 'T', url: 'u' }, 7);
+    const r = normalizeFields({ title: 'T' }, 7);
     const after = Date.now();
     expect(Number(r.id)).toBeGreaterThanOrEqual(before + 7);
     expect(Number(r.id)).toBeLessThanOrEqual(after + 7);
   });
 
-  it('honours an explicit fallbackId', () => {
+  it('honours an explicit fallbackId over the stable hash', () => {
     expect(normalizeFields({}, 0, 'fb').id).toBe('fb');
+    expect(normalizeFields({ url: 'https://a.example.com' }, 0, 'fb').id).toBe('fb');
+  });
+
+  it('resolves capitalized (case-variant) headers defensively', () => {
+    const r = normalizeFields(
+      { Title: 'Official', URL: 'https://official.example.com', Description: 'Body' },
+      0,
+    );
+    expect(r.title).toBe('Official');
+    expect(r.url).toBe('https://official.example.com');
+    expect(r.preview).toBe('Body');
   });
 
   it('resolves title/url/preview/content aliases', () => {
@@ -49,6 +72,17 @@ describe('normalizeFields', () => {
     expect(normalizeFields({}, 0).url).toBe('#');
     expect(normalizeFields({}, 0).preview).toBe('');
     expect(normalizeFields({}, 0).content).toBe('');
+  });
+});
+
+describe('stableIdFromUrl', () => {
+  it('is deterministic and formatted as gen_ + 16 hex chars', () => {
+    expect(stableIdFromUrl('https://example.com/a')).toBe(stableIdFromUrl('https://example.com/a'));
+    expect(stableIdFromUrl('https://example.com/a')).toMatch(/^gen_[0-9a-f]{16}$/);
+  });
+
+  it('distinguishes different URLs', () => {
+    expect(stableIdFromUrl('https://a.com')).not.toBe(stableIdFromUrl('https://b.com'));
   });
 });
 

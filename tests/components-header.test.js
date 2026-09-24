@@ -53,12 +53,15 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('pr-10'); // input padding leaves room for the button
   });
 
-  it('keeps the import label with the hidden file input', () => {
+  it('keeps the import button with the hidden file input', () => {
+    expect(html()).toContain('id="importBtn"');
     expect(html()).toContain('id="fileInput"');
-    expect(html()).toContain('multiple accept=".csv,.json,.db"');
-    expect(html()).toContain('匯入 CSV, JSON, 或 SQLite (.db) 檔案'); // title tooltip
+    expect(html()).toContain('multiple accept=".csv,.json,.db,.sqlite"');
+    expect(html()).toContain('選擇匯入來源並載入 CSV, JSON, 或 SQLite (.db) 檔案'); // title tooltip
     expect(html()).toContain('<span>匯入</span>');
     expect(html()).toContain('d="M12 4v16m8-8H4"'); // import svg
+    // The picker is opened by the button now — no label-wrapped input.
+    expect(html()).not.toContain('<label');
   });
 
   it('keeps the save/back (export) button', () => {

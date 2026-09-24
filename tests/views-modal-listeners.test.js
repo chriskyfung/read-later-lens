@@ -3,6 +3,7 @@ import { registerModalListeners } from '../src/views/modalListeners.js';
 import { openReaderModal, getReaderBookmarkId } from '../src/views/readerModal.js';
 import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/exporter.js';
+import { openImportModal } from '../src/io/importer.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
 import { setBookmarks, bookmarks } from '../src/core/state.js';
 
@@ -225,6 +226,18 @@ describe('registerModalListeners', () => {
     esc();
 
     expect(el('saveModal').classList.contains('hidden')).toBe(true);
+  });
+
+  it('closes the import source picker when Escape is pressed', () => {
+    registerModalListeners();
+    openImportModal();
+    expect(el('importModal').classList.contains('hidden')).toBe(false);
+    expect(stackDepth()).toBe(1);
+
+    esc();
+
+    expect(el('importModal').classList.contains('hidden')).toBe(true);
+    expect(stackDepth()).toBe(0);
   });
 
   it('does not consume Escape when no modal is open', () => {
