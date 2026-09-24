@@ -17,7 +17,6 @@ import { initSql } from './sqlLoader.js';
  *   re-render views. Resolves to `{persisted, rendered}` (see src/main.js), or to
  *   nothing for a fire-and-forget stub. `persisted: false` marks a failed cache
  *   write, which the importer rolls back.
- * @property {function} deleteFolder - Function to remove a source file and its bookmarks.
  * @property {function} [render] - Re-render the views after state is rolled back.
  *   Persistence is intentionally not retried here: the transaction already failed
  *   to reach storage, and the rollback must only make the in-memory session match
@@ -25,7 +24,6 @@ import { initSql } from './sqlLoader.js';
  */
 let deps = {
   persistAndRender: () => {},
-  deleteFolder: () => {},
   render: () => {},
 };
 
@@ -251,6 +249,9 @@ const UNSUPPORTED_SOURCE_FLAG = 'unsupportedSourceFile';
 /** Marker property on the cache-write failure raised at the transaction boundary. */
 const PERSIST_FAILED_FLAG = 'persistFailed';
 
+/** Marker property when an overwrite file contains zero valid bookmark records. */
+const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
+
 /**
  * Run the header sanity check for a parsed file. Throws for a blocked source
  * (official Instapaper CSV — would otherwise import as garbage rows); returns
@@ -285,18 +286,22 @@ function sanityCheckOrThrow(profile, ext, parsed, rows) {
 }
 
 /**
- * Process a single uploaded file, parsing it and updating state.
- *
- * Transaction shape: register the source record → parse → merge → persist. Any
- * failure before the working set reaches storage is rolled back as a unit (see
- * rollbackImport), so the state an import leaves behind always matches what the
- * next reload will show — no orphaned bookmarks, no ghost folder.
+ * Prepare a single uploaded file by parsing, validating and normalizing it
+ * into a staging result without mutating global application state.
  *
  * @param {File} file
  * @param {string} finalName
  * @param {string} profile Import profile id chosen in the source picker.
+ * @returns {Promise<{
+ *   fileRecord: import('../core/state.js').SourceFileRecord,
+ *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
+ *   count: number,
+ *   skipped: number,
+ *   dropped: number,
+ *   checkNote: string,
+ * }>}
  */
-async function processSingleFile(file, finalName, profile) {
+async function prepareSingleFile(file, finalName, profile) {
   const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   const ext = finalName.split('.').pop().toLowerCase();
 
@@ -309,86 +314,154 @@ async function processSingleFile(file, finalName, profile) {
     fileHandle: file,
   };
 
-  // Register the source record BEFORE parsing so any persistAndRender()
-  // triggered while merging always observes complete state (folder list,
-  // counts, persisted sources snapshot). A failed parse removes it again
-  // (Option A): a failed import must leave no ghost folder behind.
-  state.sourceFiles.set(fileId, fileRecord);
-
   const adapter = resolveImportAdapter(profile);
   let checkNote = '';
   let count = 0;
   let skipped = 0;
   let dropped = 0;
-  /** Merge receipt: what was merged plus the snapshot needed to undo it. */
-  let merge = null;
+  let records = [];
+
+  if (ext === 'csv') {
+    const text = await file.text();
+    fileRecord.originalData = text;
+    const results = await parseCsvWithPapa(text);
+    const rows = results.data || [];
+    const parseErrors = results.errors || [];
+    if (rows.length === 0 && parseErrors.length > 0) {
+      throw new Error('CSV 解析失敗');
+    }
+    checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
+    records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+    count = records.length;
+    skipped = parseErrors.length;
+    dropped = rows.length - records.length;
+  } else if (ext === 'json') {
+    const text = await file.text();
+    fileRecord.originalData = text;
+    const parsed = JSON.parse(text);
+    const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
+    checkNote = sanityCheckOrThrow(profile, 'json', parsed, arrayData);
+    records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+    count = records.length;
+    dropped = arrayData.length - records.length;
+  } else if (ext === 'db' || ext === 'sqlite') {
+    const arrayBuffer = await file.arrayBuffer();
+    const uInt8Array = new Uint8Array(arrayBuffer);
+    fileRecord.originalData = uInt8Array;
+    const sqlEngine = await initSql();
+    records = await adapter.importSqlite(uInt8Array, fileRecord.id, fileRecord.name, sqlEngine);
+    count = records.length;
+  } else {
+    const err = new Error(`不支援的檔案格式「.${ext}」`);
+    err[UNSUPPORTED_TYPE_FLAG] = true;
+    throw err;
+  }
+
+  return { fileRecord, records, count, skipped, dropped, checkNote };
+}
+
+/**
+ * Capture a complete snapshot of in-memory state that an import or overwrite
+ * could mutate, so failed writes or rollbacks can rewind deterministically.
+ */
+function captureImportSnapshot() {
+  return {
+    sourceFiles: new Map(state.sourceFiles),
+    bookmarks: [...state.bookmarks],
+    selectedIds: new Set(state.selectedIds),
+    activeFolder: state.activeFolder,
+  };
+}
+
+/**
+ * Restore in-memory state exactly to a previously captured snapshot.
+ *
+ * @param {ReturnType<typeof captureImportSnapshot>} snapshot
+ */
+function restoreImportSnapshot(snapshot) {
+  state.setSourceFiles(new Map(snapshot.sourceFiles));
+  state.setBookmarks([...snapshot.bookmarks]);
+  state.setSelectedIds(new Set(snapshot.selectedIds));
+  state.setActiveFolder(snapshot.activeFolder);
+}
+
+/**
+ * Process a single uploaded file, parsing it and updating state.
+ *
+ * Transaction shape: parse & validate into staging → commit to working set →
+ * persist. Overwrite purges the previous source and its active/trashed
+ * bookmarks in the SAME transaction, so a malformed or empty replacement leaves
+ * the previous source intact.
+ *
+ * @param {File} file
+ * @param {string} finalName
+ * @param {string} profile Import profile id chosen in the source picker.
+ * @param {object} [options]
+ * @param {string|null} [options.replaceSourceId] Replaced source id when overwriting.
+ */
+async function processSingleFile(file, finalName, profile, options = {}) {
+  const { replaceSourceId = null } = options;
+  const ext = finalName.split('.').pop().toLowerCase();
+  const snapshot = captureImportSnapshot();
 
   try {
-    if (ext === 'csv') {
-      const text = await file.text();
-      fileRecord.originalData = text;
-      const results = await parseCsvWithPapa(text);
-      const rows = results.data || [];
-      const parseErrors = results.errors || [];
-      if (rows.length === 0 && parseErrors.length > 0) {
-        // Nothing usable came out — treat the whole file as failed.
-        throw new Error('CSV 解析失敗');
-      }
-      checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
-      const records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
-      // Counts come from the adapter OUTPUT so rows it dropped (no usable
-      // URL) are reported instead of being counted as imported.
-      count = records.length;
-      skipped = parseErrors.length;
-      dropped = rows.length - records.length;
-      merge = acceptRecords(records);
-    } else if (ext === 'json') {
-      const text = await file.text();
-      fileRecord.originalData = text;
-      const parsed = JSON.parse(text);
-      const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
-      checkNote = sanityCheckOrThrow(profile, 'json', parsed, arrayData);
-      const records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
-      count = records.length;
-      dropped = arrayData.length - records.length;
-      merge = acceptRecords(records);
-    } else if (ext === 'db' || ext === 'sqlite') {
-      const arrayBuffer = await file.arrayBuffer();
-      const uInt8Array = new Uint8Array(arrayBuffer);
-      fileRecord.originalData = uInt8Array;
-      const sqlEngine = await initSql();
-      const records = await adapter.importSqlite(
-        uInt8Array,
-        fileRecord.id,
-        fileRecord.name,
-        sqlEngine,
-      );
-      count = records.length;
-      merge = acceptRecords(records);
-    } else {
-      const err = new Error(`不支援的檔案格式「.${ext}」`);
-      err[UNSUPPORTED_TYPE_FLAG] = true;
+    const prepared = await prepareSingleFile(file, finalName, profile);
+
+    // Overwrite safety: an overwrite choice replaces data, but must never
+    // destroy an existing source for an empty file (0 valid bookmarks).
+    if (replaceSourceId && prepared.count === 0) {
+      const err = new Error('新檔案未匯入任何有效書籤，已保留原來源檔案');
+      err[EMPTY_OVERWRITE_FLAG] = true;
       throw err;
     }
 
-    // Close the transaction. A write that did not land means this session holds
-    // records the user will not find after a reload, so the import is undone
-    // instead of being reported as a success.
+    if (replaceSourceId) {
+      const doomedIds = state.bookmarks
+        .filter((b) => b.source_file_id === replaceSourceId)
+        .map((b) => b.id);
+      const doomedSet = new Set(doomedIds);
+      state.sourceFiles.delete(replaceSourceId);
+      state.purgeBookmarks(doomedIds);
+      state.setSelectedIds(new Set([...state.selectedIds].filter((id) => !doomedSet.has(id))));
+      if (state.activeFolder === replaceSourceId) {
+        state.setActiveFolder('ALL');
+      }
+    }
+
+    // Register the source record and merged bookmarks into the live working
+    // set, then cross the transaction boundary with storage.
+    state.sourceFiles.set(prepared.fileRecord.id, prepared.fileRecord);
+    const merge = acceptRecords(prepared.records);
+
     if (!(await persistWorkingSet())) {
       const err = new Error('無法寫入本機快取');
       err[PERSIST_FAILED_FLAG] = true;
       throw err;
     }
+
+    showToast(
+      buildImportedMessage(
+        finalName,
+        merge.displaced,
+        prepared.count,
+        prepared.skipped,
+        prepared.dropped,
+        prepared.checkNote,
+      ),
+    );
   } catch (err) {
-    rollbackImport(fileId, merge);
-    // persistAndRender() may have rendered the merged state before reporting
-    // that storage failed. Re-render after rewinding so the visible session is
-    // consistent with module state; never persist again from this recovery path.
+    restoreImportSnapshot(snapshot);
     try {
       deps.render?.();
     } catch (renderErr) {
       console.warn('Rollback render failed:', renderErr);
     }
+
+    if (err[EMPTY_OVERWRITE_FLAG]) {
+      showToast(err.message);
+      return;
+    }
+
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     showToast(
       err[PERSIST_FAILED_FLAG]
@@ -399,14 +472,7 @@ async function processSingleFile(file, finalName, profile) {
             ? err.message
             : `解析檔案 ${finalName} 失敗，請確認格式`,
     );
-    return;
   }
-
-  // Past the boundary the working set is durable, so nothing down here may fail
-  // the import: a toast can never announce a rollback that did not happen.
-  // Re-importing an id that sits in the trash replaces (resurrects) that
-  // record, so say so explicitly instead of letting the trash count drop.
-  showToast(buildImportedMessage(finalName, merge.displaced, count, skipped, dropped, checkNote));
 }
 
 /**
@@ -421,19 +487,18 @@ async function processSingleFile(file, finalName, profile) {
  *
  * Persisting is deliberately NOT part of this function: the merge is only one
  * half of the import transaction, and the caller closes it once the whole file
- * has been parsed (see persistWorkingSet and processSingleFile).
+ * has been parsed (see persistWorkingSet). Rollback does not need an undo
+ * record from here — processSingleFile() restores a full snapshot captured
+ * before parsing, so a failed write rewinds the purge and the merge together.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} newBookmarks
- * @returns {{displaced: number, before: import('../model/BookmarkRecord.js').BookmarkRecord[]}}
- *   `displaced`: trashed records this batch resurrected. `before`: the pre-merge
- *   snapshot, i.e. the undo record for rollbackImport().
+ * @returns {{displaced: number}} `displaced`: trashed records this batch resurrected.
  */
 function acceptRecords(newBookmarks) {
   const incomingIds = new Set(newBookmarks.map((b) => b.id));
   const displaced = state.bookmarks.filter((b) => b.deleted_at && incomingIds.has(b.id)).length;
-  const before = state.bookmarks;
   state.mergeBookmarks(newBookmarks);
-  return { displaced, before };
+  return { displaced };
 }
 
 /**
@@ -451,24 +516,6 @@ async function persistWorkingSet() {
   const result = await deps.persistAndRender?.();
   if (result && typeof result === 'object') return result.persisted !== false;
   return result !== false;
-}
-
-/**
- * Undo an import that never reached storage.
- *
- * Register → merge → persist is ONE unit, so a failure anywhere must undo BOTH
- * halves: the merged records (rewound to the pre-merge snapshot) and the source
- * record. Keeping either half alone desynchronizes the session from the cache —
- * records left behind point at a `source_file_id` that no longer exists, so they
- * vanish from the folder list and are gone after the next reload.
- *
- * @param {string} fileId
- * @param {{before: import('../model/BookmarkRecord.js').BookmarkRecord[]}|null} merge
- *   The merge receipt, or null when the import failed before merging.
- */
-function rollbackImport(fileId, merge) {
-  if (merge) state.setBookmarks(merge.before);
-  state.sourceFiles.delete(fileId);
 }
 
 /**
@@ -499,8 +546,7 @@ export async function handleFileUploads(files, options = {}) {
           `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
         const action = await waitForDuplicateResolution();
         if (action === 'overwrite') {
-          deps.deleteFolder(duplicateId, false);
-          await processSingleFile(file, fileName, profile);
+          await processSingleFile(file, fileName, profile, { replaceSourceId: duplicateId });
         } else if (action === 'keep') {
           const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
           const newName = createUniqueSourceName(fileName, existingNames);
