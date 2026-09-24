@@ -10,6 +10,11 @@ import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
 
+const initSql = vi.hoisted(() => vi.fn());
+const mockEngine = vi.hoisted(() => ({ Database: class {} }));
+
+vi.mock('../src/io/sqlLoader.js', () => ({ initSql }));
+
 vi.mock('../src/providers/index.js', () => {
   const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) =>
     rows.map((r, i) => ({
@@ -101,8 +106,6 @@ function fakeFile(name, text) {
   return { name, text: async () => text, arrayBuffer: async () => new ArrayBuffer(8) };
 }
 
-const fakeEngine = { Database: class {} };
-
 beforeAll(() => {
   globalThis.window = globalThis.window || {};
   globalThis.document = {
@@ -120,11 +123,14 @@ beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
   setBookmarks([]);
   setSourceFiles(new Map());
-  setSQL(fakeEngine);
+  setSQL(mockEngine);
+  initSql.mockReset();
+  initSql.mockResolvedValue(mockEngine);
   initImporter({ persistAndRender: vi.fn(), deleteFolder: vi.fn() });
   applyProfileSelection(defaultProfileId());
   vi.mocked(importJsonOrCsv).mockClear();
   vi.mocked(importSqlite).mockClear();
+  initSql.mockClear();
   globalThis.Papa.parse.mockClear();
   // Default: resolve the import immediately with an empty result. Individual
   // tests override with mockImplementationOnce for specific data/errors.
@@ -210,10 +216,21 @@ describe('handleFileUploads — format dispatch', () => {
     );
   });
 
+  it('does not initialize SQL.js for CSV or JSON imports', async () => {
+    await handleFileUploads([
+      fakeFile('a.csv', 'id,title\n1,hello'),
+      fakeFile('a.json', JSON.stringify([{ id: '2', title: 'world' }])),
+    ]);
+
+    expect(initSql).not.toHaveBeenCalled();
+    expect(sourceFiles.size).toBe(2);
+  });
+
   it('routes .db files through importSqlite with a Uint8Array and the SQL engine', async () => {
     const { SQL: engine } = await import('../src/core/state.js');
     await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
 
+    expect(initSql).toHaveBeenCalledTimes(1);
     expect(importSqlite).toHaveBeenCalledTimes(1);
     const [bytes, id, name, usedEngine] = importSqlite.mock.calls[0];
     expect(bytes).toBeInstanceOf(Uint8Array);
@@ -772,6 +789,28 @@ describe('registerImporterListeners', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(globalThis.Papa.parse).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaits an unexpected import failure without leaking a rejection to the change event', async () => {
+    setSourceFiles(
+      new Map([
+        [
+          'broken',
+          {
+            get name() {
+              throw new Error('unexpected state failure');
+            },
+          },
+        ],
+      ]),
+    );
+    registerImporterListeners();
+
+    const input = el('fileInput');
+    input.dispatch('change', { target: { files: [fakeFile('a.csv', 'id,title\n1,x')] } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(el('toastMsg').innerText).toBe('檔案匯入失敗，請稍後再試');
   });
 
   it('no-ops when #fileInput is missing', () => {
