@@ -1,22 +1,34 @@
 /**
- * @fileoverview Lazy loader for SQL.js via CDN.
+ * @fileoverview Lazy loader for the locally bundled SQL.js engine.
  * Ensures the SQL.js engine is initialized once and cached in state.
  */
 
+import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { setSQL, SQL } from '../core/state.js';
+
+/** @type {Promise<object>|null} Shared while initialization is in flight. */
+let sqlInitPromise = null;
 
 /**
  * Initializes SQL.js if not already present in state.
- * Uses the CDN global `initSqlJs` provided by the script tag in index.html.
+ * The module and WASM are bundled by Vite and resolved only when this is called.
  */
 export async function initSql() {
-  if (!SQL) {
-    // The global initSqlJs is provided by the <script> tag in index.html
-    // https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js
-    const sqlEngine = await window.initSqlJs({
-      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-    });
-    setSQL(sqlEngine);
+  if (SQL) return SQL;
+
+  if (!sqlInitPromise) {
+    sqlInitPromise = import('sql.js')
+      .then(({ default: initSqlJs }) => initSqlJs({ locateFile: () => wasmUrl }))
+      .then((sqlEngine) => {
+        setSQL(sqlEngine);
+        return sqlEngine;
+      })
+      .finally(() => {
+        // `state.SQL` caches the completed engine; this promise only coalesces
+        // concurrent initialization. Clearing it also allows a later retry.
+        sqlInitPromise = null;
+      });
   }
-  return SQL;
+
+  return sqlInitPromise;
 }
