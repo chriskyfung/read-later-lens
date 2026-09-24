@@ -18,10 +18,15 @@ import { initSql } from './sqlLoader.js';
  *   nothing for a fire-and-forget stub. `persisted: false` marks a failed cache
  *   write, which the importer rolls back.
  * @property {function} deleteFolder - Function to remove a source file and its bookmarks.
+ * @property {function} [render] - Re-render the views after state is rolled back.
+ *   Persistence is intentionally not retried here: the transaction already failed
+ *   to reach storage, and the rollback must only make the in-memory session match
+ *   what the next reload will show.
  */
 let deps = {
   persistAndRender: () => {},
   deleteFolder: () => {},
+  render: () => {},
 };
 
 /**
@@ -350,6 +355,14 @@ async function processSingleFile(file, finalName, profile) {
     }
   } catch (err) {
     rollbackImport(fileId, merge);
+    // persistAndRender() may have rendered the merged state before reporting
+    // that storage failed. Re-render after rewinding so the visible session is
+    // consistent with module state; never persist again from this recovery path.
+    try {
+      deps.render?.();
+    } catch (renderErr) {
+      console.warn('Rollback render failed:', renderErr);
+    }
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     showToast(
       err[PERSIST_FAILED_FLAG]

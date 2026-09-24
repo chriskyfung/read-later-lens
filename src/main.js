@@ -81,7 +81,7 @@ async function boot() {
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
-  initImporter({ persistAndRender, deleteFolder });
+  initImporter({ persistAndRender, deleteFolder, render: renderAll });
   initWorkspaceActions({
     persist: async () => {
       await saveState();

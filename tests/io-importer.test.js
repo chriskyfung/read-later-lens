@@ -397,7 +397,11 @@ describe('processSingleFile — transaction boundary', () => {
   });
 
   it('rolls both halves of the unit back when the write failed', async () => {
-    initImporter({ persistAndRender: vi.fn(async () => ({ persisted: false, rendered: true })) });
+    const render = vi.fn();
+    initImporter({
+      persistAndRender: vi.fn(async () => ({ persisted: false, rendered: true })),
+      render,
+    });
     setBookmarks([{ id: 'keep', title: 'kept', source_file_id: 'F0' }]);
     completeWith([{ id: '1', title: 'x' }]);
 
@@ -407,6 +411,7 @@ describe('processSingleFile — transaction boundary', () => {
     // Neither half survives: no imported records and no ghost folder.
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
+    expect(render).toHaveBeenCalledTimes(1);
     expect(el('toastMsg').innerText).toBe('已還原匯入 a.csv：無法寫入本機快取，資料不會保留');
   });
 

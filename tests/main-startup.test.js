@@ -21,6 +21,7 @@ describe('entry-point feature wiring', () => {
 
   it('rolls the import back when the cache write fails (e2e)', async () => {
     const store = await import('../src/core/store.js');
+    const { saveState } = store;
     const { showToast } = await import('../src/utils/dom.js');
     // A write can fail outright (rejected promise): the import must be undone
     // rather than announced as a success that a reload would not reproduce.
@@ -43,10 +44,14 @@ describe('entry-point feature wiring', () => {
       expect(showToast).toHaveBeenCalledWith(expect.stringContaining('無法寫入本機快取')),
     );
     // The transaction boundary: nothing from the failed import survives, so the
-    // session can never disagree with what the next reload will show.
+    // session can never disagree with what the next reload will show. This must
+    // hold for both module state and the rendered view — persistAndRender()
+    // renders the merged state before it discovers the write failure.
     const state = await import('../src/core/state.js');
     expect(state.bookmarks).toHaveLength(0);
     expect(state.sourceFiles.size).toBe(0);
+    expect(els.filteredCount.innerText).toBe(0);
+    expect(saveState).toHaveBeenCalledTimes(1);
   });
 
   it('imports through the source picker modal opened from the header (e2e)', async () => {
