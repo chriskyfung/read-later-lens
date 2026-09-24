@@ -8,7 +8,7 @@ import {
 } from '../src/io/importer.js';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
-import { setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
+import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
 
 const initSql = vi.hoisted(() => vi.fn());
@@ -127,7 +127,7 @@ beforeEach(() => {
   setSQL(mockEngine);
   initSql.mockReset();
   initSql.mockResolvedValue(mockEngine);
-  initImporter({ persistAndRender: vi.fn(), deleteFolder: vi.fn() });
+  initImporter({ persistAndRender: vi.fn(), render: vi.fn() });
   applyProfileSelection(defaultProfileId());
   vi.mocked(importJsonOrCsv).mockClear();
   vi.mocked(importSqlite).mockClear();
@@ -497,30 +497,80 @@ describe('handleFileUploads — duplicate name resolution', () => {
     setBookmarks([{ id: '1', source_file_id: 'F1', title: 'old' }]);
   };
 
-  it('overwrite: deletes the old source silently and re-imports under the same name', async () => {
+  it('overwrite: replaces the old source and its bookmarks in a single transaction', async () => {
     seedDuplicate();
-    const deleteFolder = vi.fn();
-    initImporter({ deleteFolder });
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
+    });
 
     await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'overwrite');
 
     expect(el('duplicateFileText').innerText).toContain('已存在名為「a.csv」的檔案');
-    expect(deleteFolder).toHaveBeenCalledWith('F1', false);
-    const names = [...sourceFiles.values()].map((f) => f.name);
-    expect(names).toContain('a.csv');
+    expect(sourceFiles.has('F1')).toBe(false);
+    const [newId] = [...sourceFiles.keys()];
+    expect(newId).toMatch(/^file_/);
+    expect(sourceFiles.get(newId).name).toBe('a.csv');
+    expect(bookmarks.filter((b) => b.source_file_id === 'F1')).toHaveLength(0);
+    expect(bookmarks.filter((b) => b.source_file_id === newId)).toHaveLength(1);
+  });
+
+  it('overwrite: keeps the old source intact when the replacement fails parsing', async () => {
+    seedDuplicate();
+    setBookmarks([
+      { id: '1', source_file_id: 'F1', title: 'old-active' },
+      { id: '2', source_file_id: 'F1', title: 'old-trash', deleted_at: '2026-01-01T00:00:00.000Z' },
+    ]);
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [], errors: [{ code: 'UndetectableDelimiter' }] });
+    });
+
+    await uploadResolving([fakeFile('a.csv', '{broken csv')], 'overwrite');
+
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(sourceFiles.get('F1').name).toBe('a.csv');
+    expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+    expect(el('toastMsg').innerText).toBe('解析檔案 a.csv 失敗，請確認格式');
+  });
+
+  it('overwrite: preserves the old source and shows a toast when replacement yields zero valid bookmarks', async () => {
+    seedDuplicate();
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [], errors: [] });
+    });
+
+    await uploadResolving([fakeFile('a.csv', 'id,title\n')], 'overwrite');
+
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(sourceFiles.get('F1').name).toBe('a.csv');
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+    expect(el('toastMsg').innerText).toBe('新檔案未匯入任何有效書籤，已保留原來源檔案');
+  });
+
+  it('overwrite: restores the old source if cache write fails at the boundary', async () => {
+    seedDuplicate();
+    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
+    });
+    initImporter({ persistAndRender: vi.fn(async () => ({ persisted: false, rendered: true })) });
+
+    await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'overwrite');
+
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(sourceFiles.get('F1').name).toBe('a.csv');
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+    expect(el('toastMsg').innerText).toContain('已還原匯入 a.csv：無法寫入本機快取');
   });
 
   it('keep: imports under a unique timestamped name and keeps the original', async () => {
     seedDuplicate();
-    const deleteFolder = vi.fn();
-    initImporter({ deleteFolder });
 
     await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'keep');
 
-    expect(deleteFolder).not.toHaveBeenCalled();
     const names = [...sourceFiles.values()].map((f) => f.name);
     expect(names.filter((n) => n !== 'a.csv')[0]).toMatch(/a_\d{13}\.csv$/);
     expect(names.filter((n) => n === 'a.csv')).toHaveLength(1); // original kept
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(bookmarks.filter((b) => b.source_file_id === 'F1').map((b) => b.id)).toEqual(['1']);
   });
 
   it('createUniqueSourceName: adds a suffix to extension-less names', () => {
@@ -549,7 +599,6 @@ describe('handleFileUploads — duplicate name resolution', () => {
           ['F2', { id: 'F2', name: 'a_1735680000000.csv', type: 'csv', originalData: '' }],
         ]),
       );
-      initImporter({ deleteFolder: vi.fn() });
 
       await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'keep');
 
@@ -561,13 +610,11 @@ describe('handleFileUploads — duplicate name resolution', () => {
 
   it('cancel: imports nothing and deletes nothing', async () => {
     seedDuplicate();
-    const deleteFolder = vi.fn();
-    initImporter({ deleteFolder });
 
     await uploadResolving([fakeFile('a.csv', 'id,title\n1,hello')], 'cancel');
 
-    expect(deleteFolder).not.toHaveBeenCalled();
     expect(sourceFiles.size).toBe(1); // only the seeded duplicate remains
+    expect(bookmarks.filter((b) => b.source_file_id === 'F1').map((b) => b.id)).toEqual(['1']);
     expect(el('duplicateModal').classList.contains('hidden')).toBe(true);
   });
 });
