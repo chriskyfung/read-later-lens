@@ -159,23 +159,23 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 - **Everything runs locally in your browser.** No account, no server, no analytics; your bookmarks and source files are never transmitted anywhere.
 - Your working set is cached in your browser’s **IndexedDB** (database `ReadLaterLensDB`) and automatically restored when you revisit the page.
-- **Cache caveat for SQLite files:** while `.db` files are parsed with in-memory SQL.js SQLite (safe for browsing/searching), the raw SQLite buffer is retained in **memory only** and is _not_ persisted to IndexedDB. To reliably re-export a `.db` source after closing the page, re-import it — or use the unified `JSON` / `CSV` export, which is always persisted and available.
+- **SQLite parsing is local and lazy:** CSV/JSON imports do not initialize SQL.js; `.db`/`.sqlite` imports load the locally bundled SQL.js/WASM engine only when needed. The raw SQLite buffer is retained in **memory only** and is _not_ persisted to IndexedDB. To reliably re-export a `.db` source after closing the page, re-import it — or use the unified `JSON` / `CSV` export, which is always persisted and available.
 - Use the **清除快取 (Clear cache)** button in the header to wipe the stored bookmark cache.
 
 ## Technology Stack
 
-Runtime libraries (PapaParse, SQL.js, D3.js) are loaded from public CDNs via `<script>` tags in `index.html`. Build tooling, styling, and the IndexedDB wrapper are provided through bundled npm dependencies declared in `package.json`.
+PapaParse and D3.js remain runtime CDN dependencies. SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling, styling, and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
 
-| Library                                                          | Version | Loading       | Purpose                                           |
-| ---------------------------------------------------------------- | ------- | ------------- | ------------------------------------------------- |
-| [Tailwind CSS](https://tailwindcss.com/)                         | 4.3.3   | npm (bundled) | Utility-first styling and the dark slate UI       |
-| [PapaParse](https://github.com/mholt/PapaParse)                  | 5.4.1   | CDN (runtime) | CSV parsing                                       |
-| [SQL.js](https://sql.js.org/)                                    | 1.8.0   | CDN (runtime) | WebAssembly SQLite — `.db` import/parse/re-export |
-| [D3.js](https://d3js.org/)                                       | 7.8.5   | CDN (runtime) | Force-directed concept linkage graph              |
-| [idb](https://github.com/jakearchibald/idb)                      | 8.x     | npm (bundled) | IndexedDB promise wrapper                         |
-| [Vite](https://vite.dev/)                                        | 8.x     | npm (dev)     | Dev server and production bundler                 |
-| [Vitest](https://vitest.dev/)                                    | 4.x     | npm (dev)     | Unit testing framework                            |
-| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/) | latest  | npm (dev)     | Linting and formatting                            |
+| Library                                                          | Version | Loading            | Purpose                                           |
+| ---------------------------------------------------------------- | ------- | ------------------ | ------------------------------------------------- |
+| [Tailwind CSS](https://tailwindcss.com/)                         | 4.3.3   | npm (bundled)      | Utility-first styling and the dark slate UI       |
+| [PapaParse](https://github.com/mholt/PapaParse)                  | 5.4.1   | CDN (runtime)      | CSV parsing                                       |
+| [SQL.js](https://sql.js.org/)                                    | 1.14.2  | npm (lazy bundled) | WebAssembly SQLite — `.db` import/parse/re-export |
+| [D3.js](https://d3js.org/)                                       | 7.8.5   | CDN (runtime)      | Force-directed concept linkage graph              |
+| [idb](https://github.com/jakearchibald/idb)                      | 8.x     | npm (bundled)      | IndexedDB promise wrapper                         |
+| [Vite](https://vite.dev/)                                        | 8.x     | npm (dev)          | Dev server and production bundler                 |
+| [Vitest](https://vitest.dev/)                                    | 4.x     | npm (dev)          | Unit testing framework                            |
+| [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/) | latest  | npm (dev)          | Linting and formatting                            |
 
 See `package.json` for the full dependency list.
 
