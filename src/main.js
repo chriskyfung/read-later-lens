@@ -17,7 +17,6 @@ import { initHeader, registerHeaderListeners } from './views/header.js';
 import {
   initSidebarActions,
   registerSidebarListeners,
-  deleteFolder,
   updateStorageUsageUI,
 } from './views/sidebarActions.js';
 import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspaceActions.js';
@@ -81,7 +80,7 @@ async function boot() {
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
-  initImporter({ persistAndRender, deleteFolder, render: renderAll });
+  initImporter({ persistAndRender, render: renderAll });
   initWorkspaceActions({
     persist: async () => {
       await saveState();
