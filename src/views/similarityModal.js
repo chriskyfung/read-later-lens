@@ -49,6 +49,9 @@ export function renderSimilarityModal(bookmarkId) {
         'p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl flex items-center justify-between hover:border-indigo-500 cursor-pointer transition';
       // Stack the reader on top; the drawer stays open and is restored on close.
       item.onclick = () => openReaderModal(doc.id);
+      // doc.title and doc.article_preview are passed through escapeHtml() in the
+      // template below, and pct is a number: nothing user-supplied stays raw.
+      // eslint-disable-next-line no-restricted-syntax -- escaped strings, numeric pct
       item.innerHTML = `
         <div class="truncate flex-1 pr-3">
           <p class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(doc.title)}</p>
