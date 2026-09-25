@@ -41,6 +41,25 @@ const makeSqliteBuffer = () => {
   return buffer;
 };
 
+/**
+ * Wraps the real engine so a test can assert the database is released.
+ * Subclassing the real `Database` keeps genuine SQLite semantics — only
+ * `close()` is observed, so a passing assertion cannot be an accident.
+ *
+ * @param {object} SQL Real sql.js static from `initSqlJs`.
+ * @returns {{ engine: { Database: Function }, closed: object[] }}
+ */
+const trackingEngine = (SQL) => {
+  const closed = [];
+  class TrackingDatabase extends SQL.Database {
+    close() {
+      closed.push(this);
+      return super.close();
+    }
+  }
+  return { engine: { Database: TrackingDatabase }, closed };
+};
+
 describe('resolveImportAdapter', () => {
   it('exposes an adapter pair for known and stale profile ids', () => {
     for (const id of ['instapaper-scraper', 'rll-unified', 'unknown-stale-id', undefined]) {
@@ -179,5 +198,28 @@ describe('importSqlite', () => {
     });
     expect(records[0].instapaper_url).toBe('https://www.instapaper.com/read/1');
     expect(records[1].detected_language).toBe('zh');
+  });
+
+  it('releases the SQLite database after a successful import', async () => {
+    const { engine, closed } = trackingEngine(SQL);
+    const records = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', engine);
+
+    // The result is fully materialized before the handle goes away.
+    expect(records).toHaveLength(2);
+    expect(records[0]).toMatchObject({ id: '1', title: 'Hello World' });
+    expect(closed).toHaveLength(1);
+    expect(closed[0].db).toBeNull();
+  });
+
+  it('releases the SQLite database when the file cannot be parsed', async () => {
+    const { engine, closed } = trackingEngine(SQL);
+    // Garbage bytes are accepted by the constructor and only rejected at the
+    // first query — exactly the path that used to strand the handle, once per
+    // corrupt or mislabelled file.
+    const corrupt = new Uint8Array(65536);
+
+    await expect(importSqlite(corrupt, 'file_db', 'corrupt.db', engine)).rejects.toThrow();
+    expect(closed).toHaveLength(1);
+    expect(closed[0].db).toBeNull();
   });
 });
