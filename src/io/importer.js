@@ -119,14 +119,87 @@ function handleProfileKeydown(event) {
 }
 
 /**
+ * Node ids the duplicate prompt needs before a user can answer it. The modal
+ * sits outside the layer stack (no Esc/backdrop resolution), so every one of
+ * these controls is load-bearing: without them the question cannot be answered
+ * and the batch would wait for a reply that can never arrive.
+ */
+const DUPLICATE_PROMPT_IDS = [
+  'duplicateModal',
+  'duplicateFileText',
+  'dupBtnOverwrite',
+  'dupBtnKeepBoth',
+  'dupBtnCancel',
+];
+
+/**
+ * @returns {boolean} Whether the duplicate prompt can be shown and answered.
+ */
+function duplicatePromptReady() {
+  return DUPLICATE_PROMPT_IDS.every((id) => document.getElementById(id));
+}
+
+/**
+ * Refusal copy for an unusable duplicate prompt. Used by the batch preflight
+ * and by a mid-batch escape where nothing has been committed yet — both cases
+ * where "not a single file was imported" is literally true.
+ *
+ * @param {string} names Colliding file name(s), already formatted.
+ * @returns {string}
+ */
+function promptUnavailableMessage(names) {
+  return `無法顯示同名檔案的處理選項，因此未匯入任何檔案（${names}）。請重新載入頁面後再試。`;
+}
+
+/**
+ * Render the duplicate prompt's body text.
+ *
+ * @param {string} fileName
+ * @returns {boolean} false when the prompt body is missing; the caller must
+ *   not ask the question then, or the user would be choosing blind.
+ */
+function showDuplicatePrompt(fileName) {
+  const text = document.getElementById('duplicateFileText');
+  if (!text) {
+    console.warn('Duplicate prompt body is missing:', fileName);
+    return false;
+  }
+  text.innerText = `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+  return true;
+}
+
+/**
+ * @param {string} fileName
+ * @returns {string|null} Id of the registered source with this exact name.
+ */
+function findDuplicateSourceId(fileName) {
+  for (const [id, source] of state.sourceFiles.entries()) {
+    if (source.name === fileName) return id;
+  }
+  return null;
+}
+
+/**
  * Logic for resolving duplicate filename conflicts via a modal promise.
  */
 function waitForDuplicateResolution() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const modal = document.getElementById('duplicateModal');
     const btnOverwrite = document.getElementById('dupBtnOverwrite');
     const btnKeep = document.getElementById('dupBtnKeepBoth');
     const btnCancel = document.getElementById('dupBtnCancel');
+
+    // Defence-in-depth: the batch preflight verifies these nodes before any
+    // state is mutated, but the markup can still change between files. A
+    // half-wired modal must neither throw inside this executor (which would
+    // reject the awaiting batch with a raw TypeError) nor leave the batch
+    // waiting for a reply no remaining button can give.
+    if (!modal || !btnOverwrite || !btnKeep || !btnCancel) {
+      const err = new Error('無法顯示同名檔案的處理選項');
+      err[DUPLICATE_PROMPT_FLAG] = true;
+      reject(err);
+      return;
+    }
 
     const cleanup = () => {
       // The modal markup is optional: a missing node must not turn a resolution
@@ -251,6 +324,9 @@ const PERSIST_FAILED_FLAG = 'persistFailed';
 
 /** Marker property when an overwrite file contains zero valid bookmark records. */
 const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
+
+/** Marker property when the duplicate prompt cannot be shown or answered. */
+const DUPLICATE_PROMPT_FLAG = 'duplicatePromptUnavailable';
 
 /**
  * Run the header sanity check for a parsed file. Throws for a blocked source
@@ -529,21 +605,33 @@ export async function handleFileUploads(files, options = {}) {
   const { profile = selectedProfileId } = options;
 
   try {
-    for (let file of files) {
-      const fileName = file.name;
+    const pending = [...files];
 
-      // Check for duplicate names
-      let duplicateId = null;
-      for (let [id, val] of state.sourceFiles.entries()) {
-        if (val.name === fileName) {
-          duplicateId = id;
-          break;
-        }
-      }
+    // Fail-closed preflight: the duplicate prompt is the only interaction a
+    // batch may need, and its absence is knowable BEFORE any state is mutated.
+    // Refusing here keeps "no partial import" true by construction instead of
+    // aborting halfway through this loop, which used to abandon the remaining
+    // files behind a single generic toast.
+    const collisions = pending.filter((file) => findDuplicateSourceId(file.name));
+    if (collisions.length > 0 && !duplicatePromptReady()) {
+      const names = collisions.map((file) => file.name).join('、');
+      console.error('檔案匯入中止：無法顯示同名檔案的處理選項:', names);
+      showToast(promptUnavailableMessage(names));
+      return;
+    }
+
+    for (const file of pending) {
+      const fileName = file.name;
+      const duplicateId = findDuplicateSourceId(fileName);
 
       if (duplicateId) {
-        document.getElementById('duplicateFileText').innerText =
-          `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+        // Ask only with the body text in place: without it the user would pick
+        // an action without seeing which file it affects.
+        if (!showDuplicatePrompt(fileName)) {
+          const err = new Error(promptUnavailableMessage(fileName));
+          err[DUPLICATE_PROMPT_FLAG] = true;
+          throw err;
+        }
         const action = await waitForDuplicateResolution();
         if (action === 'overwrite') {
           await processSingleFile(file, fileName, profile, { replaceSourceId: duplicateId });
@@ -558,7 +646,7 @@ export async function handleFileUploads(files, options = {}) {
     }
   } catch (err) {
     console.error('檔案匯入失敗:', err);
-    showToast('檔案匯入失敗，請稍後再試');
+    showToast(err[DUPLICATE_PROMPT_FLAG] ? err.message : '檔案匯入失敗，請稍後再試');
   }
 }
 
