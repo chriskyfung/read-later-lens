@@ -1,7 +1,4 @@
-import {
-  linkageEmptyStateHtml,
-  linkageTooltipTagsHtml,
-} from '../src/components/linkage/graph.js';
+import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../src/components/linkage/graph.js';
 import { describe, it, expect } from 'vitest';
 
 /**
@@ -30,5 +27,14 @@ describe('linkage graph helpers', () => {
   it('returns an empty string for missing or empty tags', () => {
     expect(linkageTooltipTagsHtml(undefined)).toBe('');
     expect(linkageTooltipTagsHtml([])).toBe('');
+  });
+
+  it('escapes tags instead of emitting markup (the tooltip is an innerHTML sink)', () => {
+    const html = linkageTooltipTagsHtml(['<img src=x onerror=alert(1)>', 'tech']);
+
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('>tech</span>'); // benign tags render unchanged
+    expect(html.match(/<span/g)).toHaveLength(2); // both pills are still emitted
   });
 });
