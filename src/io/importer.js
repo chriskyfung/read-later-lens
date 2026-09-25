@@ -605,6 +605,44 @@ async function persistWorkingSet() {
 }
 
 /**
+ * Rewind a whole batch after an unexpected failure and re-sync the cache.
+ *
+ * The rewrite matters as much as the restore: every file the batch already
+ * committed was individually persisted, so restoring only memory would leave a
+ * cache the session's view no longer matches (a reload would resurrect the
+ * files this rollback just removed). When the rewrite itself fails the toast
+ * says so instead of claiming a clean restore.
+ *
+ * @param {ReturnType<typeof captureImportSnapshot>} snapshot Taken before the batch.
+ * @param {string} fileName The file whose handling failed.
+ * @returns {Promise<void>}
+ */
+async function rollbackBatch(snapshot, fileName) {
+  restoreImportSnapshot(snapshot);
+
+  let status = { persisted: false, rendered: false };
+  try {
+    status = await persistWorkingSet();
+  } catch (err) {
+    console.warn('Batch rollback write failed:', err);
+  }
+
+  if (!status.rendered) {
+    try {
+      deps.render?.();
+    } catch (renderErr) {
+      console.warn('Rollback render failed:', renderErr);
+    }
+  }
+
+  showToast(
+    status.persisted
+      ? `匯入「${fileName}」時發生錯誤，已還原本次匯入的全部檔案`
+      : `匯入「${fileName}」時發生錯誤，且無法還原快取；重新載入後可能仍會看到部分匯入結果`,
+  );
+}
+
+/**
  * Entry point for handling multiple file uploads.
  * @param {File[]} files
  * @param {object} [options]
@@ -612,9 +650,8 @@ async function persistWorkingSet() {
  *   (defaults to the session selection — InstapaperScraper unless changed).
  */
 export async function handleFileUploads(files, options = {}) {
-  const { profile = selectedProfileId } = options;
-
   try {
+    const { profile = selectedProfileId } = options;
     const pending = [...files];
 
     // Fail-closed preflight: the duplicate prompt is the only interaction a
@@ -630,28 +667,55 @@ export async function handleFileUploads(files, options = {}) {
       return;
     }
 
+    // Batch atomicity: a failure a file could not handle itself (an escape from
+    // the prompt, the duplicate scan or the merge) rewinds every file this batch
+    // committed, so the batch lands all-or-nothing instead of half-imported.
+    // Failures processSingleFile reports and rolls back itself — parse errors,
+    // empty overwrites, cache-write failures — do not trigger this: they are
+    // reported per file and the batch carries on.
+    const batchSnapshot = captureImportSnapshot();
+    let committed = 0;
+
     for (const file of pending) {
       const fileName = file.name;
-      const duplicateId = findDuplicateSourceId(fileName);
+      try {
+        const duplicateId = findDuplicateSourceId(fileName);
+        let imported = false;
 
-      if (duplicateId) {
-        // Ask only with the body text in place: without it the user would pick
-        // an action without seeing which file it affects.
-        if (!showDuplicatePrompt(fileName)) {
-          const err = new Error(promptUnavailableMessage(fileName));
-          err[DUPLICATE_PROMPT_FLAG] = true;
-          throw err;
+        if (!duplicateId) {
+          imported = await processSingleFile(file, fileName, profile);
+        } else {
+          // Ask only with the body text in place: without it the user would pick
+          // an action without seeing which file it affects.
+          if (!showDuplicatePrompt(fileName)) {
+            const err = new Error(promptUnavailableMessage(fileName));
+            err[DUPLICATE_PROMPT_FLAG] = true;
+            throw err;
+          }
+          const action = await waitForDuplicateResolution();
+          if (action === 'overwrite') {
+            imported = await processSingleFile(file, fileName, profile, {
+              replaceSourceId: duplicateId,
+            });
+          } else if (action === 'keep') {
+            const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
+            const newName = createUniqueSourceName(fileName, existingNames);
+            imported = await processSingleFile(file, newName, profile);
+          }
+          // 'cancel' imports nothing and reports nothing: that is the user's call.
         }
-        const action = await waitForDuplicateResolution();
-        if (action === 'overwrite') {
-          await processSingleFile(file, fileName, profile, { replaceSourceId: duplicateId });
-        } else if (action === 'keep') {
-          const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
-          const newName = createUniqueSourceName(fileName, existingNames);
-          await processSingleFile(file, newName, profile);
+
+        if (imported) committed += 1;
+      } catch (err) {
+        console.error(`檔案匯入失敗 (${fileName}):`, err);
+        if (committed > 0) {
+          await rollbackBatch(batchSnapshot, fileName);
+        } else {
+          showToast(err[DUPLICATE_PROMPT_FLAG] ? err.message : '檔案匯入失敗，請稍後再試');
         }
-      } else {
-        await processSingleFile(file, fileName, profile);
+        // Unexpected failures are fail-closed for the rest of the batch: nothing
+        // after this point is attempted behind a toast nobody can act on.
+        return;
       }
     }
   } catch (err) {
