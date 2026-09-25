@@ -119,14 +119,87 @@ function handleProfileKeydown(event) {
 }
 
 /**
+ * Node ids the duplicate prompt needs before a user can answer it. The modal
+ * sits outside the layer stack (no Esc/backdrop resolution), so every one of
+ * these controls is load-bearing: without them the question cannot be answered
+ * and the batch would wait for a reply that can never arrive.
+ */
+const DUPLICATE_PROMPT_IDS = [
+  'duplicateModal',
+  'duplicateFileText',
+  'dupBtnOverwrite',
+  'dupBtnKeepBoth',
+  'dupBtnCancel',
+];
+
+/**
+ * @returns {boolean} Whether the duplicate prompt can be shown and answered.
+ */
+function duplicatePromptReady() {
+  return DUPLICATE_PROMPT_IDS.every((id) => document.getElementById(id));
+}
+
+/**
+ * Refusal copy for an unusable duplicate prompt. Used by the batch preflight
+ * and by a mid-batch escape where nothing has been committed yet — both cases
+ * where "not a single file was imported" is literally true.
+ *
+ * @param {string} names Colliding file name(s), already formatted.
+ * @returns {string}
+ */
+function promptUnavailableMessage(names) {
+  return `無法顯示同名檔案的處理選項，因此未匯入任何檔案（${names}）。請重新載入頁面後再試。`;
+}
+
+/**
+ * Render the duplicate prompt's body text.
+ *
+ * @param {string} fileName
+ * @returns {boolean} false when the prompt body is missing; the caller must
+ *   not ask the question then, or the user would be choosing blind.
+ */
+function showDuplicatePrompt(fileName) {
+  const text = document.getElementById('duplicateFileText');
+  if (!text) {
+    console.warn('Duplicate prompt body is missing:', fileName);
+    return false;
+  }
+  text.innerText = `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
+  return true;
+}
+
+/**
+ * @param {string} fileName
+ * @returns {string|null} Id of the registered source with this exact name.
+ */
+function findDuplicateSourceId(fileName) {
+  for (const [id, source] of state.sourceFiles.entries()) {
+    if (source.name === fileName) return id;
+  }
+  return null;
+}
+
+/**
  * Logic for resolving duplicate filename conflicts via a modal promise.
  */
 function waitForDuplicateResolution() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const modal = document.getElementById('duplicateModal');
     const btnOverwrite = document.getElementById('dupBtnOverwrite');
     const btnKeep = document.getElementById('dupBtnKeepBoth');
     const btnCancel = document.getElementById('dupBtnCancel');
+
+    // Defence-in-depth: the batch preflight verifies these nodes before any
+    // state is mutated, but the markup can still change between files. A
+    // half-wired modal must neither throw inside this executor (which would
+    // reject the awaiting batch with a raw TypeError) nor leave the batch
+    // waiting for a reply no remaining button can give.
+    if (!modal || !btnOverwrite || !btnKeep || !btnCancel) {
+      const err = new Error('無法顯示同名檔案的處理選項');
+      err[DUPLICATE_PROMPT_FLAG] = true;
+      reject(err);
+      return;
+    }
 
     const cleanup = () => {
       // The modal markup is optional: a missing node must not turn a resolution
@@ -251,6 +324,9 @@ const PERSIST_FAILED_FLAG = 'persistFailed';
 
 /** Marker property when an overwrite file contains zero valid bookmark records. */
 const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
+
+/** Marker property when the duplicate prompt cannot be shown or answered. */
+const DUPLICATE_PROMPT_FLAG = 'duplicatePromptUnavailable';
 
 /**
  * Run the header sanity check for a parsed file. Throws for a blocked source
@@ -398,6 +474,9 @@ function restoreImportSnapshot(snapshot) {
  * @param {string} profile Import profile id chosen in the source picker.
  * @param {object} [options]
  * @param {string|null} [options.replaceSourceId] Replaced source id when overwriting.
+ * @returns {Promise<boolean>} Whether this file's transaction committed. A
+ *   handled failure (parse error, empty overwrite, cache-write failure) rolls
+ *   itself back and resolves false — it never throws past this function.
  */
 async function processSingleFile(file, finalName, profile, options = {}) {
   const { replaceSourceId = null } = options;
@@ -433,7 +512,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     state.sourceFiles.set(prepared.fileRecord.id, prepared.fileRecord);
     const merge = acceptRecords(prepared.records);
 
-    if (!(await persistWorkingSet())) {
+    if (!(await persistWorkingSet()).persisted) {
       const err = new Error('無法寫入本機快取');
       err[PERSIST_FAILED_FLAG] = true;
       throw err;
@@ -449,6 +528,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
         prepared.checkNote,
       ),
     );
+    return true;
   } catch (err) {
     restoreImportSnapshot(snapshot);
     try {
@@ -459,7 +539,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
 
     if (err[EMPTY_OVERWRITE_FLAG]) {
       showToast(err.message);
-      return;
+      return false;
     }
 
     console.error(`解析檔案 ${finalName} 失敗:`, err);
@@ -472,6 +552,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
             ? err.message
             : `解析檔案 ${finalName} 失敗，請確認格式`,
     );
+    return false;
   }
 }
 
@@ -510,12 +591,55 @@ function acceptRecords(newBookmarks) {
  * returns nothing counts as committed (the legacy fire-and-forget contract,
  * still used by other callers); the real one reports `{persisted, rendered}`.
  *
- * @returns {Promise<boolean>} Whether the working set reached storage.
+ * @returns {Promise<{persisted: boolean, rendered: boolean}>} Whether the
+ *   working set reached storage, and whether the view was refreshed from it.
+ *   The legacy contract reports `rendered: false`: a stub that says nothing
+ *   proves nothing, so callers that must show fresh state re-render themselves.
  */
 async function persistWorkingSet() {
   const result = await deps.persistAndRender?.();
-  if (result && typeof result === 'object') return result.persisted !== false;
-  return result !== false;
+  if (result && typeof result === 'object') {
+    return { persisted: result.persisted !== false, rendered: result.rendered !== false };
+  }
+  return { persisted: result !== false, rendered: false };
+}
+
+/**
+ * Rewind a whole batch after an unexpected failure and re-sync the cache.
+ *
+ * The rewrite matters as much as the restore: every file the batch already
+ * committed was individually persisted, so restoring only memory would leave a
+ * cache the session's view no longer matches (a reload would resurrect the
+ * files this rollback just removed). When the rewrite itself fails the toast
+ * says so instead of claiming a clean restore.
+ *
+ * @param {ReturnType<typeof captureImportSnapshot>} snapshot Taken before the batch.
+ * @param {string} fileName The file whose handling failed.
+ * @returns {Promise<void>}
+ */
+async function rollbackBatch(snapshot, fileName) {
+  restoreImportSnapshot(snapshot);
+
+  let status = { persisted: false, rendered: false };
+  try {
+    status = await persistWorkingSet();
+  } catch (err) {
+    console.warn('Batch rollback write failed:', err);
+  }
+
+  if (!status.rendered) {
+    try {
+      deps.render?.();
+    } catch (renderErr) {
+      console.warn('Rollback render failed:', renderErr);
+    }
+  }
+
+  showToast(
+    status.persisted
+      ? `匯入「${fileName}」時發生錯誤，已還原本次匯入的全部檔案`
+      : `匯入「${fileName}」時發生錯誤，且無法還原快取；重新載入後可能仍會看到部分匯入結果`,
+  );
 }
 
 /**
@@ -526,39 +650,77 @@ async function persistWorkingSet() {
  *   (defaults to the session selection — InstapaperScraper unless changed).
  */
 export async function handleFileUploads(files, options = {}) {
-  const { profile = selectedProfileId } = options;
-
   try {
-    for (let file of files) {
+    const { profile = selectedProfileId } = options;
+    const pending = [...files];
+
+    // Fail-closed preflight: the duplicate prompt is the only interaction a
+    // batch may need, and its absence is knowable BEFORE any state is mutated.
+    // Refusing here keeps "no partial import" true by construction instead of
+    // aborting halfway through this loop, which used to abandon the remaining
+    // files behind a single generic toast.
+    const collisions = pending.filter((file) => findDuplicateSourceId(file.name));
+    if (collisions.length > 0 && !duplicatePromptReady()) {
+      const names = collisions.map((file) => file.name).join('、');
+      console.error('檔案匯入中止：無法顯示同名檔案的處理選項:', names);
+      showToast(promptUnavailableMessage(names));
+      return;
+    }
+
+    // Batch atomicity: a failure a file could not handle itself (an escape from
+    // the prompt, the duplicate scan or the merge) rewinds every file this batch
+    // committed, so the batch lands all-or-nothing instead of half-imported.
+    // Failures processSingleFile reports and rolls back itself — parse errors,
+    // empty overwrites, cache-write failures — do not trigger this: they are
+    // reported per file and the batch carries on.
+    const batchSnapshot = captureImportSnapshot();
+    let committed = 0;
+
+    for (const file of pending) {
       const fileName = file.name;
+      try {
+        const duplicateId = findDuplicateSourceId(fileName);
+        let imported = false;
 
-      // Check for duplicate names
-      let duplicateId = null;
-      for (let [id, val] of state.sourceFiles.entries()) {
-        if (val.name === fileName) {
-          duplicateId = id;
-          break;
+        if (!duplicateId) {
+          imported = await processSingleFile(file, fileName, profile);
+        } else {
+          // Ask only with the body text in place: without it the user would pick
+          // an action without seeing which file it affects.
+          if (!showDuplicatePrompt(fileName)) {
+            const err = new Error(promptUnavailableMessage(fileName));
+            err[DUPLICATE_PROMPT_FLAG] = true;
+            throw err;
+          }
+          const action = await waitForDuplicateResolution();
+          if (action === 'overwrite') {
+            imported = await processSingleFile(file, fileName, profile, {
+              replaceSourceId: duplicateId,
+            });
+          } else if (action === 'keep') {
+            const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
+            const newName = createUniqueSourceName(fileName, existingNames);
+            imported = await processSingleFile(file, newName, profile);
+          }
+          // 'cancel' imports nothing and reports nothing: that is the user's call.
         }
-      }
 
-      if (duplicateId) {
-        document.getElementById('duplicateFileText').innerText =
-          `已存在名為「${fileName}」的檔案。請選擇要如何處理？`;
-        const action = await waitForDuplicateResolution();
-        if (action === 'overwrite') {
-          await processSingleFile(file, fileName, profile, { replaceSourceId: duplicateId });
-        } else if (action === 'keep') {
-          const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
-          const newName = createUniqueSourceName(fileName, existingNames);
-          await processSingleFile(file, newName, profile);
+        if (imported) committed += 1;
+      } catch (err) {
+        console.error(`檔案匯入失敗 (${fileName}):`, err);
+        if (committed > 0) {
+          await rollbackBatch(batchSnapshot, fileName);
+        } else {
+          showToast(err[DUPLICATE_PROMPT_FLAG] ? err.message : '檔案匯入失敗，請稍後再試');
         }
-      } else {
-        await processSingleFile(file, fileName, profile);
+        // Unexpected failures are fail-closed for the rest of the batch: nothing
+        // after this point is attempted behind a toast nobody can act on.
+        return;
       }
     }
   } catch (err) {
     console.error('檔案匯入失敗:', err);
-    showToast('檔案匯入失敗，請稍後再試');
+    showToast(err[DUPLICATE_PROMPT_FLAG] ? err.message : '檔案匯入失敗，請稍後再試');
   }
 }
 

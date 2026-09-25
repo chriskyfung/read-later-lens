@@ -864,6 +864,195 @@ describe('handleFileUploads — row validation reporting', () => {
 });
 
 // ---- listener registration -------------------------------------------------
+// ---- batch resilience (fail-closed DOM assumptions) -------------------------
+describe('handleFileUploads — batch resilience', () => {
+  const seedDuplicate = () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv', originalData: '' }]]));
+    setBookmarks([{ id: '1', source_file_id: 'F1', title: 'old' }]);
+  };
+
+  /** Hide specific ids from the stub document; call restore() to put them back. */
+  const hideNodes = (ids) => {
+    const missing = new Set(ids);
+    const spy = vi
+      .spyOn(globalThis.document, 'getElementById')
+      .mockImplementation((id) => (missing.has(id) ? null : el(id)));
+    return { missing, restore: () => spy.mockRestore() };
+  };
+
+  it('refuses a colliding batch before importing anything when the prompt body is missing', async () => {
+    seedDuplicate();
+    const prompt = hideNodes(['duplicateFileText']);
+    try {
+      await handleFileUploads([
+        fakeFile('b.csv', 'id,title\n1,x'),
+        fakeFile('a.csv', 'id,title\n2,y'),
+      ]);
+    } finally {
+      prompt.restore();
+    }
+
+    // Refused before anything was parsed or staged: no partial import, and the
+    // file queued ahead of the collision is not sacrificed either.
+    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(sourceFiles.size).toBe(1);
+    expect(sourceFiles.get('F1').name).toBe('a.csv');
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+    expect(el('toastMsg').innerText).toBe(
+      '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
+    );
+  });
+  it('refuses instead of hanging when a duplicate-modal control is missing', async () => {
+    seedDuplicate();
+    const prompt = hideNodes(['dupBtnOverwrite']);
+    try {
+      // Would time out if the resolver waited for a reply no button can give.
+      await handleFileUploads([fakeFile('a.csv', 'id,title\n2,y')]);
+    } finally {
+      prompt.restore();
+    }
+
+    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe(
+      '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
+    );
+  });
+
+  it('imports a collision-free batch even when the duplicate prompt markup is missing', async () => {
+    let rows = 0;
+    globalThis.Papa.parse.mockImplementation((_text, config) =>
+      config.complete({ data: [{ id: String(++rows), title: 'x' }], errors: [] }),
+    );
+    const prompt = hideNodes(['duplicateFileText', 'dupBtnKeepBoth']);
+    try {
+      await handleFileUploads([
+        fakeFile('b.csv', 'id,title\n1,x'),
+        fakeFile('c.csv', 'id,title\n2,y'),
+      ]);
+    } finally {
+      prompt.restore();
+    }
+
+    expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['b.csv', 'c.csv']);
+    expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+  });
+  it('keeps importing the remaining files when one file fails to parse', async () => {
+    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({ data: [], errors: [{ message: 'broken row' }] }),
+    );
+
+    await handleFileUploads([
+      fakeFile('bad.csv', 'id,title\n'), // a handled failure: that file alone
+      fakeFile('ok.csv', 'id,title\n1,x'),
+    ]);
+
+    expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['ok.csv']);
+    expect(el('toastMsg').innerText).toBe('已載入檔案: ok.csv，但未偵測到任何書籤');
+  });
+
+  it('rolls the whole batch back when a file fails unexpectedly after one committed', async () => {
+    seedDuplicate();
+    let parsed = 0;
+    globalThis.Papa.parse.mockImplementation((_text, config) =>
+      config.complete({ data: [{ id: `p${++parsed}`, title: 'x' }], errors: [] }),
+    );
+
+    const prompt = hideNodes([]);
+    let writes = 0;
+    const persistAndRender = vi.fn(async () => {
+      writes += 1;
+      // The prompt body disappears once the first file has committed — the DOM
+      // assumption under review, hit one file later than the preflight checks.
+      if (writes === 1) prompt.missing.add('duplicateFileText');
+      return { persisted: true, rendered: true };
+    });
+    const render = vi.fn();
+    initImporter({ persistAndRender, render });
+
+    try {
+      await handleFileUploads([
+        fakeFile('x.csv', 'id,title\np1,x'), // commits
+        fakeFile('a.csv', 'id,title\np2,y'), // collides with the seeded a.csv
+        fakeFile('z.csv', 'id,title\np3,z'), // must never be attempted
+      ]);
+    } finally {
+      prompt.restore();
+    }
+
+    expect(parsed).toBe(1); // only x.csv ever reached the parser
+    expect(writes).toBe(2); // the commit, plus the rollback write
+    expect(render).not.toHaveBeenCalled(); // the rollback write reported rendered
+    expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['a.csv']);
+    expect(sourceFiles.has('F1')).toBe(true); // the seeded source came back
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+    expect(el('toastMsg').innerText).toBe('匯入「a.csv」時發生錯誤，已還原本次匯入的全部檔案');
+  });
+
+  it('reports honestly when the batch rollback itself cannot be cached', async () => {
+    seedDuplicate();
+    let parsed = 0;
+    globalThis.Papa.parse.mockImplementation((_text, config) =>
+      config.complete({ data: [{ id: `q${++parsed}`, title: 'x' }], errors: [] }),
+    );
+
+    const prompt = hideNodes([]);
+    let writes = 0;
+    const persistAndRender = vi.fn(async () => {
+      writes += 1;
+      if (writes === 1) prompt.missing.add('duplicateFileText');
+      return writes === 1
+        ? { persisted: true, rendered: true }
+        : { persisted: false, rendered: true };
+    });
+    initImporter({ persistAndRender });
+
+    try {
+      await handleFileUploads([
+        fakeFile('x.csv', 'id,title\nq1,x'),
+        fakeFile('a.csv', 'id,title\nq2,y'),
+        fakeFile('z.csv', 'id,title\nq3,z'),
+      ]);
+    } finally {
+      prompt.restore();
+    }
+
+    // Memory is still rewound; only the cache rewrite failed, and the toast
+    // must not pretend the restore was complete.
+    expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['a.csv']);
+    expect(bookmarks.map((b) => b.id)).toEqual(['1']);
+    expect(el('toastMsg').innerText).toBe(
+      '匯入「a.csv」時發生錯誤，且無法還原快取；重新載入後可能仍會看到部分匯入結果',
+    );
+  });
+
+  it('does not claim a rollback when nothing in the batch was committed yet', async () => {
+    seedDuplicate();
+    // The body node passes the preflight, then disappears before the prompt is
+    // drawn: the loop's own guard fires while the commit count is still zero.
+    let lookups = 0;
+    const spy = vi.spyOn(globalThis.document, 'getElementById').mockImplementation((id) => {
+      if (id === 'duplicateFileText' && ++lookups > 1) return null;
+      return el(id);
+    });
+    const persistAndRender = vi.fn(async () => ({ persisted: true, rendered: true }));
+    initImporter({ persistAndRender });
+
+    try {
+      await handleFileUploads([fakeFile('a.csv', 'id,title\n2,y')]);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(persistAndRender).not.toHaveBeenCalled();
+    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe(
+      '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
+    );
+  });
+});
+
 describe('registerImporterListeners', () => {
   it('wires #fileInput change events to handleFileUploads', async () => {
     registerImporterListeners();
