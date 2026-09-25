@@ -60,4 +60,20 @@ describe('sidebar folder helpers', () => {
     expect(html).toContain('data-delete-folder');
     expect(html).toContain('title="刪除檔案與其書籤"');
   });
+
+  it('escapes a hostile file name and type instead of emitting markup', () => {
+    const html = sidebarFolderItemHtml({
+      file: { id: 'f1', name: '"><img src=x onerror=alert(1)>.csv', type: '<i>evil</i>' },
+      count: 2,
+    });
+
+    expect(html).toContain('&quot;&gt;&lt;img src=x onerror=alert(1)&gt;.csv');
+    expect(html).toContain('&lt;i&gt;evil&lt;/i&gt;');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<i>');
+    // The badge stays a whitelisted class, so type cannot inject attributes.
+    expect(html).toContain('bg-sky-900/60 text-sky-200');
+    expect(html).toContain('data-delete-folder');
+    expect(html).toContain('title="刪除檔案與其書籤"');
+  });
 });

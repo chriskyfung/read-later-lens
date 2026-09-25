@@ -172,6 +172,7 @@ Dependabot opens weekly PRs for dependency updates (grouped by type) — review 
 - Preserve the **component-markup vs. view-behavior separation**:
   - Markup helpers live in `src/components/` (pure functions that return DOM elements).
   - Listener wiring and view behavior live in `src/views/`.
+- **Escape anything that came from imported data before it becomes markup.** File names, titles, previews, tags, URLs and domains are untrusted — a downloaded file's name or a CSV/JSON cell is attacker-influenceable. Pass them through `escapeHtml()` (`src/utils/dom.js`) inside markup builders, or write them with `textContent` instead of `innerHTML`; never sanitize them on import (that would corrupt the data and break export round-trips). ESLint's `no-restricted-syntax` rule fails any `innerHTML` / `insertAdjacentHTML` assignment built from an interpolated template — an already-escaped template opts out locally with an `eslint-disable-next-line` comment that states why (see `src/views/similarityModal.js`), and the audit in `tests/dom-xss-sinks.test.js` covers every registered data-fed builder.
 - **End-user-facing copy** is currently **Traditional Chinese (zh-TW)**; preserve that unless intentionally changing the localization approach.
 - The app is **fully client-side** — do not introduce server-side calls or transmit user data anywhere.
 

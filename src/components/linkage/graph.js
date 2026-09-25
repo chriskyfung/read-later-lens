@@ -8,6 +8,8 @@
  * and interactions.
  */
 
+import { escapeHtml } from '../../utils/dom.js';
+
 /**
  * Returns the exact empty-state markup that the monolith uses.
  */
@@ -18,6 +20,10 @@ export function linkageEmptyStateHtml() {
 /**
  * Builds the joined tag-pill markup for the graph tooltip (`#ttTags`).
  *
+ * Tags come straight from imported records (CSV/JSON cells are split, never
+ * sanitized), so each one is escaped before it reaches `innerHTML` — otherwise a
+ * crafted tag would run the moment the user hovers a graph node.
+ *
  * @param {string[]|undefined} tags
  * @returns {string}
  */
@@ -25,7 +31,7 @@ export function linkageTooltipTagsHtml(tags) {
   return (tags || [])
     .map(
       (t) =>
-        `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${t}</span>`,
+        `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${escapeHtml(t)}</span>`,
     )
     .join('');
 }

@@ -7,6 +7,8 @@
  * the monolith; the host view still owns DOM creation and dataset wiring.
  */
 
+import { escapeHtml } from '../../utils/dom.js';
+
 /**
  * Class list for the "all files" folder button, driven by selection state.
  *
@@ -70,6 +72,10 @@ export function sidebarFolderBadgeColorClass(type) {
  * Preserved exactly from the monolith: the type badge, the file name, the
  * bookmark count and the delete button. No DOM reads — pure string builder.
  *
+ * The name and type originate from the file picker (and the IndexedDB cache that
+ * replays them on later visits), so both are escaped before the host view assigns
+ * this markup to `innerHTML`.
+ *
  * @param {{file: {id: string, name: string, type: string}, count: number}} opts
  * @returns {string}
  */
@@ -77,8 +83,8 @@ export function sidebarFolderItemHtml({ file, count }) {
   const typeBadgeColor = sidebarFolderBadgeColorClass(file.type);
   return `
         <div class="flex items-center space-x-2 truncate flex-1">
-          <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor} shrink-0">${file.type}</span>
-          <span class="truncate">${file.name}</span>
+          <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${typeBadgeColor} shrink-0">${escapeHtml(file.type)}</span>
+          <span class="truncate">${escapeHtml(file.name)}</span>
         </div>
         <div class="flex items-center space-x-1 shrink-0">
             <span class="block group-hover:hidden bg-slate-800 text-slate-400 text-xs px-1.5 py-0.5 rounded">${count}</span>
