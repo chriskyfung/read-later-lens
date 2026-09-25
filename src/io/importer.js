@@ -474,6 +474,9 @@ function restoreImportSnapshot(snapshot) {
  * @param {string} profile Import profile id chosen in the source picker.
  * @param {object} [options]
  * @param {string|null} [options.replaceSourceId] Replaced source id when overwriting.
+ * @returns {Promise<boolean>} Whether this file's transaction committed. A
+ *   handled failure (parse error, empty overwrite, cache-write failure) rolls
+ *   itself back and resolves false — it never throws past this function.
  */
 async function processSingleFile(file, finalName, profile, options = {}) {
   const { replaceSourceId = null } = options;
@@ -509,7 +512,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     state.sourceFiles.set(prepared.fileRecord.id, prepared.fileRecord);
     const merge = acceptRecords(prepared.records);
 
-    if (!(await persistWorkingSet())) {
+    if (!(await persistWorkingSet()).persisted) {
       const err = new Error('無法寫入本機快取');
       err[PERSIST_FAILED_FLAG] = true;
       throw err;
@@ -525,6 +528,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
         prepared.checkNote,
       ),
     );
+    return true;
   } catch (err) {
     restoreImportSnapshot(snapshot);
     try {
@@ -535,7 +539,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
 
     if (err[EMPTY_OVERWRITE_FLAG]) {
       showToast(err.message);
-      return;
+      return false;
     }
 
     console.error(`解析檔案 ${finalName} 失敗:`, err);
@@ -548,6 +552,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
             ? err.message
             : `解析檔案 ${finalName} 失敗，請確認格式`,
     );
+    return false;
   }
 }
 
@@ -586,12 +591,17 @@ function acceptRecords(newBookmarks) {
  * returns nothing counts as committed (the legacy fire-and-forget contract,
  * still used by other callers); the real one reports `{persisted, rendered}`.
  *
- * @returns {Promise<boolean>} Whether the working set reached storage.
+ * @returns {Promise<{persisted: boolean, rendered: boolean}>} Whether the
+ *   working set reached storage, and whether the view was refreshed from it.
+ *   The legacy contract reports `rendered: false`: a stub that says nothing
+ *   proves nothing, so callers that must show fresh state re-render themselves.
  */
 async function persistWorkingSet() {
   const result = await deps.persistAndRender?.();
-  if (result && typeof result === 'object') return result.persisted !== false;
-  return result !== false;
+  if (result && typeof result === 'object') {
+    return { persisted: result.persisted !== false, rendered: result.rendered !== false };
+  }
+  return { persisted: result !== false, rendered: false };
 }
 
 /**
