@@ -5,6 +5,7 @@
 
 import * as state from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
+import { saveSourceFileRowHtml } from '../components/io/saveModal.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer, on } from '../utils/dom.js';
@@ -31,13 +32,7 @@ export function renderSaveModal() {
       const item = document.createElement('div');
       item.className =
         'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
-      item.innerHTML = `
-        <div>
-          <div class="font-medium text-slate-200 truncate flex-1">${file.name}</div>
-          <div class="text-slate-500 text-[10px] uppercase font-bold">${file.type} 格式</div>
-        </div>
-        <button data-save-file class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
-      `;
+      item.innerHTML = saveSourceFileRowHtml({ file });
       item.querySelector('[data-save-file]').dataset.saveFile = file.id;
       container.appendChild(item);
     });

@@ -5,6 +5,8 @@
  * Behavior lives in src/io/exporter.js (openSaveModal + button listeners).
  */
 
+import { escapeHtml } from '../../utils/dom.js';
+
 /** @returns {string} The save/export modal markup. */
 export function saveModalHtml() {
   return `
@@ -40,4 +42,25 @@ export function saveModalHtml() {
     </div>
   </div>
 `;
+}
+
+/**
+ * Build one source-file row for the modal's file list.
+ *
+ * `file.name` is whatever name the OS handed the picker — and what the IndexedDB
+ * cache reproduces on later visits — so it is treated as untrusted markup. Both
+ * interpolations are escaped here, in the markup layer, before anything can reach
+ * `innerHTML` (the view only assigns the result and wires the dataset).
+ *
+ * @param {{file: {id: string, name: string, type: string}}} opts
+ * @returns {string}
+ */
+export function saveSourceFileRowHtml({ file }) {
+  return `
+        <div>
+          <div class="font-medium text-slate-200 truncate flex-1">${escapeHtml(file.name)}</div>
+          <div class="text-slate-500 text-[10px] uppercase font-bold">${escapeHtml(file.type)} 格式</div>
+        </div>
+        <button data-save-file class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">儲存/下載</button>
+      `;
 }
