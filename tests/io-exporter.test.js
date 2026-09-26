@@ -295,6 +295,57 @@ describe('saveSingleFile', () => {
     );
   });
 
+  it('refuses a recorded layout whose table name is missing', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // Only reachable from malformed persisted state (store.js maps a missing
+    // field to null, which the `!schema` check already catches), but without
+    // this the name is quoted straight into `CREATE TABLE "undefined" (...)`,
+    // producing a file that is quietly not the user's own.
+    seed('db', { sqliteSchema: { columns: ['id', 'title'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements).toEqual([]);
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
+  it('still re-emits a table legitimately named "" rather than refusing it', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // Pins the `typeof` check against a future `!schema.table`: the empty string
+    // is a valid SQLite table name, so it must be quoted, not rejected.
+    seed('db', { sqliteSchema: { table: '', columns: ['id', 'title'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe('CREATE TABLE "" ("id" TEXT, "title" TEXT);');
+    expect(statements[1].sql).toBe('INSERT INTO "" VALUES (?, ?);');
+  });
+
   it('reports columns it had to write as NULL instead of dropping them silently', async () => {
     const statements = [];
     setSQL({
