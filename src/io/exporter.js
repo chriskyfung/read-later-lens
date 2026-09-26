@@ -80,18 +80,31 @@ export async function saveSingleFile(fileId) {
   } else if (file.type === 'sqlite' || file.type === 'db') {
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
-    db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);');
-    fileBookmarks.forEach((b) => {
-      db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [
-        b.id,
-        b.title,
-        b.url,
-        b.article_preview,
-      ]);
-    });
-    const binaryArray = db.export();
-    const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
-    downloadBlob(blob, file.name);
+    try {
+      db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);');
+      fileBookmarks.forEach((b) => {
+        db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [
+          b.id,
+          b.title,
+          b.url,
+          b.article_preview,
+        ]);
+      });
+      // export() copies the bytes out of the database, so the blob handed to
+      // the downloader below stays valid after the handle is released.
+      const binaryArray = db.export();
+      const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
+      downloadBlob(blob, file.name);
+    } finally {
+      // The handle holds an in-WASM-heap database for the rest of the session.
+      // close() is idempotent, but guard it so a failing teardown can never
+      // mask the real export error (see processSqliteAsBookmarks).
+      try {
+        db.close();
+      } catch {
+        // Already closed, or nothing left to free — the download already ran.
+      }
+    }
   }
 }
 

@@ -165,13 +165,18 @@ describe('saveSingleFile', () => {
 
   it('rebuilds the monolith sqlite schema and downloads a binary blob', async () => {
     const statements = [];
+    const lifecycle = [];
     setSQL({
       Database: class {
         run(sql, params) {
           statements.push({ sql, params });
         }
         export() {
+          lifecycle.push('export');
           return new Uint8Array([1, 2, 3]);
+        }
+        close() {
+          lifecycle.push('close');
         }
       },
     });
@@ -190,6 +195,28 @@ describe('saveSingleFile', () => {
     expect(blob.type).toBe('application/octet-stream');
     expect(blob.size).toBe(3);
     expect(filename).toBe('a.db');
+
+    // Released exactly once, and only after export() copied the bytes out.
+    expect(lifecycle).toEqual(['export', 'close']);
+  });
+
+  it('releases the sqlite database when the table build throws', async () => {
+    let closes = 0;
+    setSQL({
+      Database: class {
+        run() {
+          throw new Error('disk full');
+        }
+        close() {
+          closes += 1;
+        }
+      },
+    });
+    seed('db');
+
+    await expect(saveSingleFile('F1')).rejects.toThrow('disk full');
+    expect(closes).toBe(1);
+    expect(downloadBlob).not.toHaveBeenCalled();
   });
 
   it('no-ops for unknown ids', async () => {

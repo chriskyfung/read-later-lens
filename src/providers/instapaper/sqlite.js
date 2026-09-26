@@ -33,47 +33,61 @@ export async function processSqliteAsBookmarks(
   const { preserveMeta = false } = options;
   const db = new SQL.Database(wasmBuffer);
 
-  const tablesRes = db.exec(`SELECT name FROM sqlite_master WHERE type='table';`);
-  let rows = [];
-  if (tablesRes.length > 0) {
-    const tableName = tablesRes[0].values[0][0];
-    // Quote the table name so hyphens/special chars don't break the query.
-    const queryRes = db.exec(`SELECT * FROM "${tableName}"`);
-    if (queryRes.length > 0) {
-      const cols = queryRes[0].columns;
-      rows = queryRes[0].values.map((valArr) => {
-        const obj = {};
-        for (let i = 0; i < cols.length; i++) obj[cols[i]] = valArr[i];
-        return obj;
-      });
+  try {
+    const tablesRes = db.exec(`SELECT name FROM sqlite_master WHERE type='table';`);
+    let rows = [];
+    if (tablesRes.length > 0) {
+      const tableName = tablesRes[0].values[0][0];
+      // Quote the table name so hyphens/special chars don't break the query.
+      const queryRes = db.exec(`SELECT * FROM "${tableName}"`);
+      if (queryRes.length > 0) {
+        const cols = queryRes[0].columns;
+        rows = queryRes[0].values.map((valArr) => {
+          const obj = {};
+          for (let i = 0; i < cols.length; i++) obj[cols[i]] = valArr[i];
+          return obj;
+        });
+      }
+    }
+
+    return (
+      rows
+        .map((rec, index) => {
+          const { id, title, url, preview, content } = normalizeFields(rec, index);
+          const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
+          const readerUrl =
+            preserveMeta && rec.instapaper_url != null
+              ? String(rec.instapaper_url)
+              : makeReaderUrl(rowProvider, id);
+          return {
+            id,
+            title,
+            url,
+            article_preview: preview,
+            content,
+            source_file_id: sourceFileId,
+            source_file_name: sourceFileName,
+            detected_language: detectLanguage(title + ' ' + preview),
+            tags: normalizeTags(rec.tags),
+            instapaper_url: readerUrl,
+            provider: rowProvider,
+          };
+        })
+        // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
+        // never inject '#' placeholder bookmarks.
+        .filter((record) => record.url !== UNKNOWN_URL)
+    );
+  } finally {
+    // sql.js keeps the whole database inside the WASM heap and the Emscripten
+    // heap never shrinks, so an unreleased handle costs the file's full size
+    // for the rest of the session — on every import, including the ones that
+    // fail (a corrupt file only throws at the first query, not the ctor).
+    // close() is idempotent, but guard it so a failing teardown can never mask
+    // the real parse error.
+    try {
+      db.close();
+    } catch {
+      // Already closed, or nothing left to free — the import result stands.
     }
   }
-
-  return (
-    rows
-      .map((rec, index) => {
-        const { id, title, url, preview, content } = normalizeFields(rec, index);
-        const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
-        const readerUrl =
-          preserveMeta && rec.instapaper_url != null
-            ? String(rec.instapaper_url)
-            : makeReaderUrl(rowProvider, id);
-        return {
-          id,
-          title,
-          url,
-          article_preview: preview,
-          content,
-          source_file_id: sourceFileId,
-          source_file_name: sourceFileName,
-          detected_language: detectLanguage(title + ' ' + preview),
-          tags: normalizeTags(rec.tags),
-          instapaper_url: readerUrl,
-          provider: rowProvider,
-        };
-      })
-      // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
-      // never inject '#' placeholder bookmarks.
-      .filter((record) => record.url !== UNKNOWN_URL)
-  );
 }
