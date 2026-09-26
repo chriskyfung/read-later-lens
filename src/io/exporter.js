@@ -7,6 +7,7 @@ import * as state from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
 import { saveSourceFileRowHtml } from '../components/io/saveModal.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
+import { hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer, on } from '../utils/dom.js';
 
@@ -72,7 +73,10 @@ export async function saveSingleFile(fileId) {
   const fileBookmarks = getActiveBookmarks().filter((b) => b.source_file_id === fileId);
 
   if (file.type === 'csv') {
-    const csv = Papa.unparse(fileBookmarks);
+    // Harden only the rows handed to Papa: a formula-prefixed cell in a title or
+    // tag would otherwise execute when the user reopens the file in a
+    // spreadsheet. The in-memory records stay untouched.
+    const csv = Papa.unparse(hardenRecordsForCsv(fileBookmarks));
     await saveFileWithFallback(csv, file.name, 'text/csv');
   } else if (file.type === 'json') {
     const json = JSON.stringify(fileBookmarks, null, 2);
@@ -130,7 +134,7 @@ export function exportAllUnifiedJson() {
  * Exports all current bookmarks to a unified CSV file (trash excluded).
  */
 export function exportAllUnifiedCsv() {
-  const csv = Papa.unparse(getActiveBookmarks());
+  const csv = Papa.unparse(hardenRecordsForCsv(getActiveBookmarks()));
   const blob = new Blob([csv], { type: 'text/csv' });
   downloadBlob(blob, 'all_bookmarks_export.csv');
 }
