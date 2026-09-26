@@ -160,7 +160,7 @@ describe('showToast', () => {
 });
 
 describe('downloadBlob', () => {
-  it('clicks a temporary anchor, revokes the URL and toasts', () => {
+  it('clicks a temporary anchor and toasts', () => {
     const { anchors, body, msg } = setupDom();
     downloadBlob(new Blob(['x'], { type: 'text/plain' }), 'file.csv');
     expect(anchors).toHaveLength(1);
@@ -169,8 +169,19 @@ describe('downloadBlob', () => {
     expect(anchors[0].click).toHaveBeenCalledOnce();
     expect(body.appendChild).toHaveBeenCalledOnce();
     expect(body.removeChild).toHaveBeenCalledOnce();
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
     expect(msg.innerText).toContain('file.csv');
+  });
+
+  it('defers the object-URL release past the click', () => {
+    const { anchors } = setupDom();
+    downloadBlob(new Blob(['x'], { type: 'text/plain' }), 'file.csv');
+    expect(anchors[0].click).toHaveBeenCalledOnce();
+    // The old code revoked here, in the same task as the click: the pattern
+    // Mozilla bug 1282407 showed can end a download before it starts.
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
   });
 });
 
