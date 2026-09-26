@@ -9,7 +9,7 @@ import { saveSourceFileRowHtml } from '../components/io/saveModal.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
-import { pushLayer, popLayer, on } from '../utils/dom.js';
+import { pushLayer, popLayer, on, showToast } from '../utils/dom.js';
 
 /**
  * Populate the source-file list of the save/export modal without touching
@@ -59,6 +59,53 @@ export function closeSaveModal() {
 }
 
 /**
+ * Columns this app can fill when re-emitting a `.db` source, mapped from the
+ * source column name to the bookmark field that supplies its value.
+ *
+ * Anything not listed here is written as NULL and counted, so an unexpected
+ * column is announced rather than silently dropped. `tags` is joined with a
+ * comma because that is exactly what `normalizeTags` splits on, which makes the
+ * round trip lossless.
+ */
+const SQLITE_COLUMN_VALUES = {
+  id: (b) => b.id,
+  title: (b) => b.title,
+  url: (b) => b.url,
+  preview: (b) => b.article_preview,
+  article_preview: (b) => b.article_preview,
+  content: (b) => b.content,
+  tags: (b) => (Array.isArray(b.tags) ? b.tags.join(',') : (b.tags ?? null)),
+  instapaper_url: (b) => b.instapaper_url,
+  provider: (b) => b.provider,
+};
+
+/**
+ * Escape an identifier for use inside a double-quoted SQLite name by doubling
+ * any embedded quote — the same rule the read path uses, so a table or column
+ * named maliciously cannot inject DDL into the file we emit.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+function quoteSqliteIdentifier(name) {
+  return `"${String(name).replace(/"/g, '""')}"`;
+}
+
+/**
+ * Build the `CREATE TABLE` statement reproducing a source's own layout.
+ *
+ * Columns are declared TEXT: the app stores every field as a string, and the
+ * original declared types are not part of the recorded schema.
+ *
+ * @param {{table: string, columns: string[]}} schema
+ * @returns {string}
+ */
+function createTableSql(schema) {
+  const cols = schema.columns.map((c) => `${quoteSqliteIdentifier(c)} TEXT`).join(', ');
+  return `CREATE TABLE ${quoteSqliteIdentifier(schema.table)} (${cols});`;
+}
+
+/**
  * Saves a single source file's bookmarks back to disk.
  *
  * Trashed bookmarks are excluded: the trash is a local holding area, and
@@ -82,17 +129,47 @@ export async function saveSingleFile(fileId) {
     const json = JSON.stringify(fileBookmarks, null, 2);
     await saveFileWithFallback(json, file.name, 'application/json');
   } else if (file.type === 'sqlite' || file.type === 'db') {
+    // Without the observed layout there is no honest way to rebuild the file:
+    // emitting the app's own schema instead would hand back something that
+    // merely looks like the user's original. Say so and let them use the
+    // always-persisted unified export. An empty column list is refused for the
+    // same reason: PRAGMA table_info yields no rows for a name it cannot
+    // introspect, and `CREATE TABLE "x" ()` is a syntax error, so emitting it
+    // would surface a parser message from sql.js instead of this one. The table
+    // name is checked by type rather than truthiness on purpose: `""` is a
+    // legal SQLite table name and must still round-trip as `CREATE TABLE ""`,
+    // whereas a missing name would otherwise be quoted into a table literally
+    // called "undefined".
+    const schema = file.sqliteSchema;
+    if (
+      !schema ||
+      typeof schema.table !== 'string' ||
+      !Array.isArray(schema.columns) ||
+      schema.columns.length === 0
+    ) {
+      showToast('此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出');
+      return;
+    }
+
+    // Column lookup is case-insensitive, matching how the import path reads
+    // them (lowerKeyed) and SQLite's own identifier rules. A source declaring
+    // `Title` / `URL` would otherwise find no mapping and be written back as
+    // all-NULL while the app held every value.
+    const unmapped = schema.columns.filter((c) => !SQLITE_COLUMN_VALUES[c.toLowerCase()]);
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
     try {
-      db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);');
+      const table = quoteSqliteIdentifier(schema.table);
+      db.run(createTableSql(schema));
+      const placeholders = schema.columns.map(() => '?').join(', ');
       fileBookmarks.forEach((b) => {
-        db.run('INSERT INTO bookmarks VALUES (?, ?, ?, ?);', [
-          b.id,
-          b.title,
-          b.url,
-          b.article_preview,
-        ]);
+        db.run(
+          `INSERT INTO ${table} VALUES (${placeholders});`,
+          schema.columns.map((c) => {
+            const value = SQLITE_COLUMN_VALUES[c.toLowerCase()];
+            return value ? value(b) : null;
+          }),
+        );
       });
       // export() copies the bytes out of the database, so the blob handed to
       // the downloader below stays valid after the handle is released.
@@ -108,6 +185,12 @@ export async function saveSingleFile(fileId) {
       } catch {
         // Already closed, or nothing left to free — the download already ran.
       }
+    }
+
+    // The file is structurally faithful, but any column the app has no value
+    // for came back as NULL. Report that rather than implying a clean copy.
+    if (unmapped.length > 0) {
+      showToast(`已匯出 ${file.name}，但有 ${unmapped.length} 個欄位無對應資料，已寫入空白`);
     }
   }
 }
@@ -148,7 +231,14 @@ export function exportAllUnifiedCsv() {
  */
 function handleSaveFileClick(e) {
   const btn = e.target.closest('[data-save-file]');
-  if (btn) saveSingleFile(btn.dataset.saveFile);
+  if (!btn) return;
+  // The export is async and the handler is a plain DOM listener, so a rejection
+  // here would surface as an unhandled promise with nothing on screen. Report it
+  // the way the import path does rather than failing silently.
+  Promise.resolve(saveSingleFile(btn.dataset.saveFile)).catch((err) => {
+    console.error('檔案匯出失敗:', err);
+    showToast('檔案匯出失敗，請稍後再試');
+  });
 }
 
 /**

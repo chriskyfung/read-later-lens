@@ -138,8 +138,10 @@ describe('openSaveModal', () => {
 });
 
 describe('saveSingleFile', () => {
-  const seed = (type) => {
-    setSourceFiles(new Map([['F1', { id: 'F1', name: `a.${type === 'db' ? 'db' : type}`, type }]]));
+  const seed = (type, extra = {}) => {
+    setSourceFiles(
+      new Map([['F1', { id: 'F1', name: `a.${type === 'db' ? 'db' : type}`, type, ...extra }]]),
+    );
     setBookmarks([
       { id: '1', title: 't1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
       { id: '2', title: 't2', url: 'https://b.com', article_preview: 'q', source_file_id: 'OTHER' },
@@ -163,7 +165,7 @@ describe('saveSingleFile', () => {
     expect(saveFileWithFallback).toHaveBeenCalledWith(json, 'a.json', 'application/json');
   });
 
-  it('rebuilds the monolith sqlite schema and downloads a binary blob', async () => {
+  it('rebuilds the source table in its own recorded layout and downloads a binary blob', async () => {
     const statements = [];
     const lifecycle = [];
     setSQL({
@@ -180,12 +182,14 @@ describe('saveSingleFile', () => {
         }
       },
     });
-    seed('db');
+    seed('db', { sqliteSchema: { table: 'articles', columns: ['id', 'title', 'url', 'preview'] } });
     await saveSingleFile('F1');
 
+    // The source's own table and columns — not the app's assumed schema.
     expect(statements[0].sql).toBe(
-      'CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);',
+      'CREATE TABLE "articles" ("id" TEXT, "title" TEXT, "url" TEXT, "preview" TEXT);',
     );
+    expect(statements[1].sql).toBe('INSERT INTO "articles" VALUES (?, ?, ?, ?);');
     expect(statements[1].params).toEqual(['1', 't1', 'https://a.com', 'p']);
     expect(statements).toHaveLength(2);
 
@@ -198,6 +202,253 @@ describe('saveSingleFile', () => {
 
     // Released exactly once, and only after export() copied the bytes out.
     expect(lifecycle).toEqual(['export', 'close']);
+    // Every column mapped, so nothing to report.
+    expect(el('toastMsg').innerText).toBe('');
+  });
+
+  it('carries every column the app knows about, not just four', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // The InstapaperScraper layout: content/tags/reader metadata used to be
+    // dropped on the floor by the hardcoded four-column table.
+    seed('db', {
+      sqliteSchema: {
+        table: 'articles',
+        columns: ['id', 'title', 'url', 'preview', 'content', 'tags', 'instapaper_url'],
+      },
+    });
+    setBookmarks([
+      {
+        id: '1',
+        source_file_id: 'F1',
+        title: 't1',
+        url: 'https://a.com',
+        article_preview: 'p',
+        content: 'full text',
+        tags: ['news', 'tech'],
+        instapaper_url: 'https://www.instapaper.com/read/1',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    expect(statements[1].params).toEqual([
+      '1',
+      't1',
+      'https://a.com',
+      'p',
+      'full text',
+      // normalizeTags splits on the comma, so joining on it round-trips exactly.
+      'news,tech',
+      'https://www.instapaper.com/read/1',
+    ]);
+  });
+
+  it('refuses to emit a .db whose original layout was never recorded', async () => {
+    setSQL({
+      Database: class {
+        run() {}
+      },
+    });
+    seed('db'); // no sqliteSchema — e.g. a source cached by an older version
+
+    await saveSingleFile('F1');
+
+    // Substituting the app's own schema would hand back a file that only looks
+    // like the user's original, so nothing is written at all.
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
+  it('refuses a recorded layout with no columns instead of emitting invalid DDL', async () => {
+    setSQL({
+      Database: class {
+        run() {
+          // What the real engine raises for `CREATE TABLE "articles" ();`
+          throw new Error('near ")": syntax error');
+        }
+        close() {}
+      },
+    });
+    // PRAGMA table_info returns no rows for a name it cannot introspect, so an
+    // empty column list is representable. Without the guard this reaches the
+    // engine and surfaces a parser error instead of the honest refusal.
+    seed('db', { sqliteSchema: { table: 'articles', columns: [] } });
+
+    await saveSingleFile('F1');
+
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
+  it('refuses a recorded layout whose table name is missing', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // Only reachable from malformed persisted state (store.js maps a missing
+    // field to null, which the `!schema` check already catches), but without
+    // this the name is quoted straight into `CREATE TABLE "undefined" (...)`,
+    // producing a file that is quietly not the user's own.
+    seed('db', { sqliteSchema: { columns: ['id', 'title'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements).toEqual([]);
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
+  it('still re-emits a table legitimately named "" rather than refusing it', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // Pins the `typeof` check against a future `!schema.table`: the empty string
+    // is a valid SQLite table name, so it must be quoted, not rejected.
+    seed('db', { sqliteSchema: { table: '', columns: ['id', 'title'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe('CREATE TABLE "" ("id" TEXT, "title" TEXT);');
+    expect(statements[1].sql).toBe('INSERT INTO "" VALUES (?, ?);');
+  });
+
+  it('reports columns it had to write as NULL instead of dropping them silently', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    seed('db', {
+      sqliteSchema: { table: 'articles', columns: ['id', 'title', 'mystery_column'] },
+    });
+
+    await saveSingleFile('F1');
+
+    // The column is still emitted — the file keeps its shape — but the app has
+    // no value for it, so the gap is reported rather than passed off as a
+    // faithful copy.
+    expect(statements[0].sql).toContain('"mystery_column" TEXT');
+    expect(statements[1].params).toEqual(['1', 't1', null]);
+    expect(downloadBlob).toHaveBeenCalledTimes(1);
+    expect(el('toastMsg').innerText).toBe('已匯出 a.db，但有 1 個欄位無對應資料，已寫入空白');
+  });
+
+  it('escapes a quote in a recorded identifier so it cannot inject DDL', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    seed('db', { sqliteSchema: { table: 'we"ird', columns: ['id"x'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe('CREATE TABLE "we""ird" ("id""x" TEXT);');
+    expect(statements[1].sql).toBe('INSERT INTO "we""ird" VALUES (?);');
+  });
+
+  it('maps columns case-insensitively so a mixed-case source keeps its values', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // The import path reads columns through lowerKeyed(), so a source declaring
+    // `Title` / `URL` imports fine. A case-sensitive lookup here would match
+    // nothing and write every column back as NULL while reporting that the app
+    // had no data for them.
+    seed('db', {
+      sqliteSchema: { table: 'Articles', columns: ['ID', 'Title', 'URL', 'Preview'] },
+    });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe(
+      'CREATE TABLE "Articles" ("ID" TEXT, "Title" TEXT, "URL" TEXT, "Preview" TEXT);',
+    );
+    expect(statements[1].params).toEqual(['1', 't1', 'https://a.com', 'p']);
+    // Every column resolved, so the "no corresponding data" report stays silent.
+    expect(el('toastMsg').innerText).toBe('');
+  });
+
+  it('surfaces an export failure from the save button as a toast', async () => {
+    setSQL({
+      Database: class {
+        run() {
+          throw new Error('disk full');
+        }
+        close() {}
+      },
+    });
+    seed('db', { sqliteSchema: { table: 'bookmarks', columns: ['id', 'title'] } });
+    registerExporterListeners();
+
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Minimal stand-in for the clicked row: the shared element stub has no
+    // closest(), and adding one would change behaviour for every other test.
+    const target = { closest: () => ({ dataset: { saveFile: 'F1' } }) };
+    el('saveSourceFilesList').dispatch('click', { target, stopPropagation() {} });
+
+    // The listener is synchronous and saveSingleFile is not, so let the
+    // rejection settle before asserting it was reported rather than dropped.
+    await vi.waitFor(() => expect(el('toastMsg').innerText).toBe('檔案匯出失敗，請稍後再試'));
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('releases the sqlite database when the table build throws', async () => {
@@ -212,7 +463,9 @@ describe('saveSingleFile', () => {
         }
       },
     });
-    seed('db');
+    seed('db', {
+      sqliteSchema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'preview'] },
+    });
 
     await expect(saveSingleFile('F1')).rejects.toThrow('disk full');
     expect(closes).toBe(1);
@@ -373,7 +626,19 @@ describe('CSV formula injection hardening', () => {
         close() {}
       },
     });
-    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.db', type: 'db' }]]));
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'a.db',
+            type: 'db',
+            sqliteSchema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'preview'] },
+          },
+        ],
+      ]),
+    );
     setBookmarks([
       { id: '1', title: '=1+1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
     ]);

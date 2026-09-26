@@ -135,6 +135,10 @@ export async function saveState() {
       type: v.type,
       profile: v.profile,
       originalData: v.type === 'sqlite' || v.type === 'db' ? null : v.originalData,
+      // The observed table layout is tiny (a name plus a column list), unlike the
+      // payload above, so it IS persisted: without it a reload would make the
+      // original `.db` shape unknowable and save-back would have to guess.
+      sqliteSchema: v.sqliteSchema ?? null,
     }));
     await db.put(STORE_NAME, { key: 'bookmarks', data: bookmarks });
     await db.put(STORE_NAME, { key: 'sources', data: sourcesArray });

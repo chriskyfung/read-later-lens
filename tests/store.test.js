@@ -93,6 +93,28 @@ describe('store (IndexedDB)', () => {
     expect(sourceFiles.get('f3').originalData).toBe('{}');
   });
 
+  it('persists the observed SQLite schema so a reload keeps the original shape', async () => {
+    // Unlike the payload above, the table layout is a name plus a column list —
+    // cheap enough to cache, and the only way save-back stays faithful after a
+    // reload (the raw buffer is memory-only).
+    const schema = { table: 'articles', columns: ['id', 'title', 'url', 'preview'] };
+    setSourceFiles(
+      new Map([
+        ['f1', { id: 'f1', name: 'a.db', type: 'db', originalData: null, sqliteSchema: schema }],
+        // A source cached by a version that predates this field.
+        ['f2', { id: 'f2', name: 'b.db', type: 'db', originalData: null }],
+        ['f3', { id: 'f3', name: 'c.csv', type: 'csv', originalData: 'x' }],
+      ]),
+    );
+    await saveState();
+    setSourceFiles(new Map());
+    await loadState();
+
+    expect(sourceFiles.get('f1').sqliteSchema).toEqual(schema);
+    expect(sourceFiles.get('f2').sqliteSchema).toBeNull();
+    expect(sourceFiles.get('f3').sqliteSchema).toBeNull();
+  });
+
   it('reports true once the working set is written', async () => {
     setBookmarks([bookmark(1)]);
 
