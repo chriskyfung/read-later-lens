@@ -17,7 +17,7 @@ import {
 } from '../src/utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 
-function setupDom() {
+function setupDom({ onClick } = {}) {
   const classes = new Set(['translate-y-20', 'opacity-0']);
   const toast = {
     classList: {
@@ -33,7 +33,7 @@ function setupDom() {
     getElementById: (id) => (id === 'toastNotification' ? toast : id === 'toastMsg' ? msg : null),
     createElement: (tag) => {
       if (tag !== 'a') return {};
-      const a = { href: '', download: '', style: {}, click: vi.fn() };
+      const a = { href: '', download: '', style: {}, click: vi.fn(onClick) };
       anchors.push(a);
       return a;
     },
@@ -179,6 +179,20 @@ describe('downloadBlob', () => {
     // The old code revoked here, in the same task as the click: the pattern
     // Mozilla bug 1282407 showed can end a download before it starts.
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+  });
+
+  it('still releases the object URL when the click itself throws', () => {
+    setupDom({
+      onClick: () => {
+        throw new Error('click blocked');
+      },
+    });
+    // The error still propagates: swallowing it would be a behaviour change
+    // this patch is not making. Only the release is made unconditional.
+    expect(() => downloadBlob(new Blob(['x']), 'file.csv')).toThrow('click blocked');
     vi.runAllTimers();
     expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');

@@ -38,9 +38,11 @@ export function downloadBlob(blob, filename) {
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
+  // Armed before the click, so a click that throws cannot strand the URL for
+  // the lifetime of the page.
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
   showToast(`已開始下載檔案: ${filename}`);
 }
 
