@@ -272,6 +272,29 @@ describe('saveSingleFile', () => {
     );
   });
 
+  it('refuses a recorded layout with no columns instead of emitting invalid DDL', async () => {
+    setSQL({
+      Database: class {
+        run() {
+          // What the real engine raises for `CREATE TABLE "articles" ();`
+          throw new Error('near ")": syntax error');
+        }
+        close() {}
+      },
+    });
+    // PRAGMA table_info returns no rows for a name it cannot introspect, so an
+    // empty column list is representable. Without the guard this reaches the
+    // engine and surfaces a parser error instead of the honest refusal.
+    seed('db', { sqliteSchema: { table: 'articles', columns: [] } });
+
+    await saveSingleFile('F1');
+
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
   it('reports columns it had to write as NULL instead of dropping them silently', async () => {
     const statements = [];
     setSQL({

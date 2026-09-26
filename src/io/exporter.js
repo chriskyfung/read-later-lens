@@ -132,9 +132,12 @@ export async function saveSingleFile(fileId) {
     // Without the observed layout there is no honest way to rebuild the file:
     // emitting the app's own schema instead would hand back something that
     // merely looks like the user's original. Say so and let them use the
-    // always-persisted unified export.
+    // always-persisted unified export. An empty column list is refused for the
+    // same reason: PRAGMA table_info yields no rows for a name it cannot
+    // introspect, and `CREATE TABLE "x" ()` is a syntax error, so emitting it
+    // would surface a parser message from sql.js instead of this one.
     const schema = file.sqliteSchema;
-    if (!schema || !Array.isArray(schema.columns)) {
+    if (!schema || !Array.isArray(schema.columns) || schema.columns.length === 0) {
       showToast('此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出');
       return;
     }
