@@ -138,8 +138,10 @@ describe('openSaveModal', () => {
 });
 
 describe('saveSingleFile', () => {
-  const seed = (type) => {
-    setSourceFiles(new Map([['F1', { id: 'F1', name: `a.${type === 'db' ? 'db' : type}`, type }]]));
+  const seed = (type, extra = {}) => {
+    setSourceFiles(
+      new Map([['F1', { id: 'F1', name: `a.${type === 'db' ? 'db' : type}`, type, ...extra }]]),
+    );
     setBookmarks([
       { id: '1', title: 't1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
       { id: '2', title: 't2', url: 'https://b.com', article_preview: 'q', source_file_id: 'OTHER' },
@@ -163,7 +165,7 @@ describe('saveSingleFile', () => {
     expect(saveFileWithFallback).toHaveBeenCalledWith(json, 'a.json', 'application/json');
   });
 
-  it('rebuilds the monolith sqlite schema and downloads a binary blob', async () => {
+  it('rebuilds the source table in its own recorded layout and downloads a binary blob', async () => {
     const statements = [];
     const lifecycle = [];
     setSQL({
@@ -180,12 +182,14 @@ describe('saveSingleFile', () => {
         }
       },
     });
-    seed('db');
+    seed('db', { sqliteSchema: { table: 'articles', columns: ['id', 'title', 'url', 'preview'] } });
     await saveSingleFile('F1');
 
+    // The source's own table and columns — not the app's assumed schema.
     expect(statements[0].sql).toBe(
-      'CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT, article_preview TEXT);',
+      'CREATE TABLE "articles" ("id" TEXT, "title" TEXT, "url" TEXT, "preview" TEXT);',
     );
+    expect(statements[1].sql).toBe('INSERT INTO "articles" VALUES (?, ?, ?, ?);');
     expect(statements[1].params).toEqual(['1', 't1', 'https://a.com', 'p']);
     expect(statements).toHaveLength(2);
 
@@ -198,6 +202,123 @@ describe('saveSingleFile', () => {
 
     // Released exactly once, and only after export() copied the bytes out.
     expect(lifecycle).toEqual(['export', 'close']);
+    // Every column mapped, so nothing to report.
+    expect(el('toastMsg').innerText).toBe('');
+  });
+
+  it('carries every column the app knows about, not just four', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // The InstapaperScraper layout: content/tags/reader metadata used to be
+    // dropped on the floor by the hardcoded four-column table.
+    seed('db', {
+      sqliteSchema: {
+        table: 'articles',
+        columns: ['id', 'title', 'url', 'preview', 'content', 'tags', 'instapaper_url'],
+      },
+    });
+    setBookmarks([
+      {
+        id: '1',
+        source_file_id: 'F1',
+        title: 't1',
+        url: 'https://a.com',
+        article_preview: 'p',
+        content: 'full text',
+        tags: ['news', 'tech'],
+        instapaper_url: 'https://www.instapaper.com/read/1',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    expect(statements[1].params).toEqual([
+      '1',
+      't1',
+      'https://a.com',
+      'p',
+      'full text',
+      // normalizeTags splits on the comma, so joining on it round-trips exactly.
+      'news,tech',
+      'https://www.instapaper.com/read/1',
+    ]);
+  });
+
+  it('refuses to emit a .db whose original layout was never recorded', async () => {
+    setSQL({
+      Database: class {
+        run() {}
+      },
+    });
+    seed('db'); // no sqliteSchema — e.g. a source cached by an older version
+
+    await saveSingleFile('F1');
+
+    // Substituting the app's own schema would hand back a file that only looks
+    // like the user's original, so nothing is written at all.
+    expect(downloadBlob).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(
+      '此來源檔案的原始結構未記錄，無法還原 .db；請改用統一 JSON / CSV 匯出',
+    );
+  });
+
+  it('reports columns it had to write as NULL instead of dropping them silently', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    seed('db', {
+      sqliteSchema: { table: 'articles', columns: ['id', 'title', 'mystery_column'] },
+    });
+
+    await saveSingleFile('F1');
+
+    // The column is still emitted — the file keeps its shape — but the app has
+    // no value for it, so the gap is reported rather than passed off as a
+    // faithful copy.
+    expect(statements[0].sql).toContain('"mystery_column" TEXT');
+    expect(statements[1].params).toEqual(['1', 't1', null]);
+    expect(downloadBlob).toHaveBeenCalledTimes(1);
+    expect(el('toastMsg').innerText).toBe('已匯出 a.db，但有 1 個欄位無對應資料，已寫入空白');
+  });
+
+  it('escapes a quote in a recorded identifier so it cannot inject DDL', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    seed('db', { sqliteSchema: { table: 'we"ird', columns: ['id"x'] } });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe('CREATE TABLE "we""ird" ("id""x" TEXT);');
+    expect(statements[1].sql).toBe('INSERT INTO "we""ird" VALUES (?);');
   });
 
   it('releases the sqlite database when the table build throws', async () => {
@@ -212,7 +333,9 @@ describe('saveSingleFile', () => {
         }
       },
     });
-    seed('db');
+    seed('db', {
+      sqliteSchema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'preview'] },
+    });
 
     await expect(saveSingleFile('F1')).rejects.toThrow('disk full');
     expect(closes).toBe(1);
@@ -373,7 +496,19 @@ describe('CSV formula injection hardening', () => {
         close() {}
       },
     });
-    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.db', type: 'db' }]]));
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'a.db',
+            type: 'db',
+            sqliteSchema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'preview'] },
+          },
+        ],
+      ]),
+    );
     setBookmarks([
       { id: '1', title: '=1+1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
     ]);
