@@ -291,6 +291,99 @@ describe('unified exports', () => {
   });
 });
 
+describe('CSV formula injection hardening', () => {
+  // A malicious import can carry a formula/DDE payload in any field; the export
+  // must neutralize it without corrupting the stored data or the other formats.
+  it('quotes formula-prefixed fields in a per-source CSV export', async () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    setBookmarks([
+      {
+        id: '1',
+        title: '=HYPERLINK("http://evil.example","click")',
+        url: 'https://a.com',
+        article_preview: 'safe preview',
+        source_file_id: 'F1',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    expect(rows[0].title).toBe('\'=HYPERLINK("http://evil.example","click")');
+    // Inert fields keep their exact original value.
+    expect(rows[0].url).toBe('https://a.com');
+    expect(rows[0].id).toBe('1');
+  });
+
+  it('quotes formula-prefixed tags in the unified CSV export', () => {
+    setBookmarks([{ id: '1', title: 'ok', tags: ['=CMD|calc'], source_file_id: 'F1' }]);
+
+    exportAllUnifiedCsv();
+
+    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    expect(rows[0].tags).toBe("'=CMD|calc");
+  });
+
+  it('leaves an inert tag list byte-identical so a CSV round-trip stays lossless', () => {
+    setBookmarks([{ id: '1', title: 'ok', tags: ['news', '=2+2'], source_file_id: 'F1' }]);
+
+    exportAllUnifiedCsv();
+
+    // The emitted cell is "news,=2+2", which starts with 'n' and is therefore
+    // already inert. Prefixing here would turn the tag into "'=2+2" on re-import.
+    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    expect(rows[0].tags).toEqual(['news', '=2+2']);
+  });
+
+  it('never mutates the in-memory bookmarks', async () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    const bookmark = { id: '1', title: '=1+1', tags: ['=2+2'], source_file_id: 'F1' };
+    setBookmarks([bookmark]);
+
+    await saveSingleFile('F1');
+    exportAllUnifiedCsv();
+
+    // A shared-mutation bug here would silently corrupt every later JSON and
+    // SQLite export, and would persist into IndexedDB on the next autosave.
+    expect(bookmark.title).toBe('=1+1');
+    expect(bookmark.tags).toEqual(['=2+2']);
+  });
+
+  it('leaves the JSON export unquoted so round-trips stay byte-faithful', async () => {
+    setBookmarks([{ id: '1', title: '=1+1', source_file_id: 'F1' }]);
+
+    exportAllUnifiedJson();
+    const [blob] = downloadBlob.mock.calls[0];
+    expect(blob).toBeInstanceOf(Blob);
+    const parsed = JSON.parse(await blob.text());
+    expect(parsed.bookmarks[0].title).toBe('=1+1');
+  });
+
+  it('leaves the sqlite export unquoted', async () => {
+    const inserts = [];
+    setSQL({
+      Database: class {
+        run(sql, p) {
+          // Only the INSERT carries bound values; CREATE TABLE passes none.
+          if (p) inserts.push(p);
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.db', type: 'db' }]]));
+    setBookmarks([
+      { id: '1', title: '=1+1', url: 'https://a.com', article_preview: 'p', source_file_id: 'F1' },
+    ]);
+
+    await saveSingleFile('F1');
+
+    expect(inserts).toEqual([['1', '=1+1', 'https://a.com', 'p']]);
+  });
+});
+
 describe('registerExporterListeners', () => {
   it('wires the save/back, close and unified export buttons', () => {
     registerExporterListeners();
