@@ -421,11 +421,21 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
     // or older export still restores a sensibly named folder.
     const name = (entry && entry.name) || (named && named.source_file_name) || baseRecord.name;
 
-    if (state.sourceFiles.has(originalId)) {
-      // Already loaded. Reuse the record as it stands: overwriting it would
-      // discard the payload and layout this source was loaded with, and the
-      // incoming rows merge into that folder either way.
-      records.push(...adapter.importJsonOrCsv(groupRows, originalId, name));
+    // "Already loaded" is evaluated here, i.e. AFTER any overwrite purge the
+    // caller performs before staging, so a source the user just chose to replace
+    // is correctly treated as absent and rebuilt rather than merged into a record
+    // that is about to be deleted.
+    const existing = state.sourceFiles.get(originalId);
+    if (existing) {
+      // Reuse the record as it stands: overwriting it would discard the payload
+      // and layout this source was loaded with, and the incoming rows merge into
+      // that folder either way.
+      //
+      // The rows are stamped with the folder's OWN name, not the manifest's, so a
+      // stale or hand-edited manifest cannot relabel records underneath a source
+      // the user still sees under a different name. A record loaded without a
+      // usable name falls back rather than stamping the rows with undefined.
+      records.push(...adapter.importJsonOrCsv(groupRows, originalId, existing.name || name));
       continue;
     }
 

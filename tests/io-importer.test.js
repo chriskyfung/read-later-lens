@@ -1248,6 +1248,42 @@ describe('handleFileUploads — unified source manifest', () => {
     expect(bookmarks[0].source_file_id).toBe('file_a');
   });
 
+  it('stamps merged rows with the existing folder name, not the manifest name', async () => {
+    setSourceFiles(
+      new Map([['file_a', { id: 'file_a', name: 'original.csv', type: 'csv', originalData: 'k' }]]),
+    );
+
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'from-export.csv', type: 'csv' }],
+        [bookmark('1', 'file_a', 'from-export.csv')],
+      ),
+    );
+
+    // The source record is deliberately not rewritten, so letting the manifest
+    // name through would leave the folder reading "original.csv" while every
+    // record inside it claimed to come from "from-export.csv".
+    expect(sourceFiles.get('file_a').name).toBe('original.csv');
+    expect(bookmarks[0].source_file_name).toBe('original.csv');
+  });
+
+  it('falls back to the manifest name when the loaded source record has none', async () => {
+    // saveState round-trips a record's own name, but migrateLegacyDb copies
+    // sources rows verbatim out of the pre-rebrand database, whose shape this app
+    // does not control, so a nameless record is reachable on load. Preferring its
+    // name blindly would label every merged row with undefined.
+    setSourceFiles(new Map([['file_a', { id: 'file_a', type: 'csv', originalData: 'k' }]]));
+
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'from-export.csv', type: 'csv' }],
+        [bookmark('1', 'file_a', 'from-export.csv')],
+      ),
+    );
+
+    expect(bookmarks[0].source_file_name).toBe('from-export.csv');
+  });
+
   it('rebuilds the folder an overwrite just deleted instead of orphaning its records', async () => {
     // Importing a unified export under any non-unified profile registers it as a
     // single source named after the file. Re-importing that export under the
