@@ -1147,3 +1147,157 @@ describe('registerImporterListeners', () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * A unified export carries a `sources` manifest so a re-import can rebuild the
+ * per-source folders the export was taken from.
+ *
+ * Before this, `importJsonOrCsv` stamped the NEW file's identity onto every
+ * record, so N folders collapsed into one: the sidebar listed a single entry,
+ * folder counts were wrong, and saving back could only ever write one file.
+ *
+ * The adapter is mocked here and stamps the id it is HANDED, which is exactly
+ * the seam this feature uses — rows are partitioned per source first, then each
+ * group is adapted with its own id, so ownership is never rewritten afterwards.
+ */
+describe('handleFileUploads — unified source manifest', () => {
+  const bookmark = (id, sourceFileId, sourceFileName) => ({
+    id,
+    title: `t-${id}`,
+    url: `https://example.com/${id}`,
+    source_file_id: sourceFileId,
+    source_file_name: sourceFileName,
+  });
+
+  const envelope = (sources, bookmarks) =>
+    JSON.stringify({ format: 'read-later-lens', version: 2, sources, bookmarks });
+
+  const importUnified = (text) => {
+    applyProfileSelection('rll-unified');
+    return handleFileUploads([fakeFile('all_bookmarks_export.json', text)]);
+  };
+
+  it('rebuilds one source per manifest entry instead of collapsing them into one', async () => {
+    await importUnified(
+      envelope(
+        [
+          { id: 'file_a', name: 'instapaper.csv', type: 'csv' },
+          { id: 'file_b', name: 'raindrop.json', type: 'json' },
+        ],
+        [
+          bookmark('1', 'file_a', 'instapaper.csv'),
+          bookmark('2', 'file_b', 'raindrop.json'),
+          bookmark('3', 'file_a', 'instapaper.csv'),
+        ],
+      ),
+    );
+
+    expect(sourceFiles.size).toBe(2);
+    expect([...sourceFiles.values()].map((f) => f.name).sort()).toEqual([
+      'instapaper.csv',
+      'raindrop.json',
+    ]);
+    // The counts the sidebar renders come from these ids.
+    const byFolder = new Map();
+    for (const b of bookmarks) {
+      byFolder.set(b.source_file_id, (byFolder.get(b.source_file_id) || 0) + 1);
+    }
+    expect(byFolder.get('file_a')).toBe(2);
+    expect(byFolder.get('file_b')).toBe(1);
+  });
+
+  it('leaves no active record pointing at a source that does not exist', async () => {
+    // A record whose owner is unregistered is invisible in the sidebar AND
+    // unreachable by the folder filter — the one failure mode worth guarding.
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'instapaper.csv', type: 'csv' }],
+        [bookmark('1', 'file_a', 'instapaper.csv'), bookmark('2', 'ghost', 'nowhere.csv')],
+      ),
+    );
+
+    for (const b of bookmarks) {
+      expect(sourceFiles.has(b.source_file_id)).toBe(true);
+    }
+  });
+
+  it('restores a folder for a record the manifest does not mention, named from its own row', async () => {
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'instapaper.csv', type: 'csv' }],
+        [bookmark('1', 'file_a', 'instapaper.csv'), bookmark('2', 'ghost', 'hand-edited.csv')],
+      ),
+    );
+
+    expect(sourceFiles.get('ghost').name).toBe('hand-edited.csv');
+  });
+  it('keeps the existing source record when the incoming id is already taken', async () => {
+    const richer = { id: 'file_a', name: 'original.csv', type: 'csv', originalData: 'keep me' };
+    setSourceFiles(new Map([['file_a', richer]]));
+
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'from-export.csv', type: 'csv' }],
+        [bookmark('1', 'file_a', 'from-export.csv')],
+      ),
+    );
+
+    // Clobbering it would discard the payload the source was loaded from.
+    expect(sourceFiles.get('file_a').name).toBe('original.csv');
+    expect(sourceFiles.get('file_a').originalData).toBe('keep me');
+    expect(bookmarks[0].source_file_id).toBe('file_a');
+  });
+
+  it('rebuilds folders for a legacy envelope that has no manifest at all', async () => {
+    // Unified exports have always carried per-record source ids; only the
+    // manifest is new, so an older file still has enough to restore folders.
+    await importUnified(
+      JSON.stringify({
+        format: 'read-later-lens',
+        version: 1,
+        bookmarks: [bookmark('1', 'file_a', 'a.csv'), bookmark('2', 'file_b', 'b.json')],
+      }),
+    );
+
+    expect(sourceFiles.size).toBe(2);
+    expect(sourceFiles.get('file_a').name).toBe('a.csv');
+    expect(sourceFiles.get('file_b').name).toBe('b.json');
+  });
+
+  it('registers no folder for the uploaded file itself when every row names a source', async () => {
+    // Otherwise re-importing a whole-library export would leave a bogus extra
+    // "all_bookmarks_export.json" folder sitting next to the real ones.
+    await importUnified(JSON.stringify([bookmark('1', 'file_a', 'a.csv')]));
+
+    expect(sourceFiles.size).toBe(1);
+    expect([...sourceFiles.keys()]).toEqual(['file_a']);
+    expect(sourceFiles.get('file_a').name).toBe('a.csv');
+  });
+
+  it('keeps the imported file as the owner for rows that carry no source id', async () => {
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'a.csv', type: 'csv' }],
+        [{ id: '1', title: 'x', url: 'https://example.com/1' }],
+      ),
+    );
+
+    const [file] = [...sourceFiles.values()];
+    expect(sourceFiles.size).toBe(1);
+    expect(bookmarks[0].source_file_id).toBe(file.id);
+  });
+
+  it('leaves grouping to the unified profile only, so a scraper import stays one source', async () => {
+    // The rows still carry source ids, but under the scraper profile the user's
+    // choice wins: those ids are the app's, not the file's.
+    applyProfileSelection('instapaper-scraper');
+    await handleFileUploads([
+      fakeFile(
+        'rows.json',
+        JSON.stringify([bookmark('1', 'file_a', 'a.csv'), bookmark('2', 'file_b', 'b.json')]),
+      ),
+    ]);
+
+    expect(sourceFiles.size).toBe(1);
+  });
+});
