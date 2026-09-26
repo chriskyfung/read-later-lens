@@ -67,11 +67,17 @@ export function hardenCsvValue(value) {
  * outside the CSV boundary. Only the string returned for a hardened cell differs;
  * every other value keeps its original type for `Papa.unparse`.
  *
+ * The clone has a null prototype so that it carries exactly the keys it was
+ * given. A source file's column names are attacker-influenceable, and on a plain
+ * `{}` the `__proto__` one would hit the inherited accessor instead of becoming
+ * a key — a clone that quietly drops a field is not a clone, and the column
+ * would vanish from the user's own header row at the last step before writing.
+ *
  * @param {Record<string, unknown>} record
  * @returns {Record<string, unknown>} A hardened shallow clone.
  */
 export function hardenRecordForCsv(record) {
-  const hardened = {};
+  const hardened = Object.create(null);
   for (const [key, value] of Object.entries(record)) {
     hardened[key] = hardenCsvValue(value);
   }

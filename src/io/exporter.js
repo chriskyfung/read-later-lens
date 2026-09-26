@@ -112,6 +112,25 @@ function exportColumnsFor(file) {
 }
 
 /**
+ * Reader for one source column name, or `undefined` when the app holds no value
+ * for it.
+ *
+ * Own-property lookup, deliberately: the column names come from an uploaded file
+ * and are therefore attacker-influenceable, and a plain index would resolve
+ * `SOURCE_COLUMN_VALUES['constructor']` (or `toString`, `valueOf`, …) to the
+ * matching `Object.prototype` member. That member is truthy, so the column would
+ * be reported as mapped while actually being written as `Object(record)` — a
+ * literal `{}` cell — and the unmapped-column count would silently under-report.
+ *
+ * @param {string} column Source column name, matched case-insensitively.
+ * @returns {((b: import('../model/BookmarkRecord.js').BookmarkRecord) => unknown)|undefined}
+ */
+function sourceColumnReader(column) {
+  const key = String(column).toLowerCase();
+  return Object.hasOwn(SOURCE_COLUMN_VALUES, key) ? SOURCE_COLUMN_VALUES[key] : undefined;
+}
+
+/**
  * Reshape one record onto a source's own columns.
  *
  * Keys are inserted in `columns` order and every column is always present (empty
@@ -119,6 +138,11 @@ function exportColumnsFor(file) {
  * own insertion order. That keeps the emitted layout identical to the source's
  * without depending on Papa's `columns` option, which the browser build and
  * the test-time build do not share a version with.
+ *
+ * The accumulator has a null prototype because the column names come from the
+ * file: on a plain `{}` an assignment to a `__proto__` column would hit the
+ * accessor on `Object.prototype` instead of creating a key, and that column
+ * would vanish from the emitted header row.
  *
  * Lookup is case-insensitive for the same reason the `.db` path is: the import
  * path lowercases keys (`lowerKeyed`), so a source declaring `Title` / `URL`
@@ -129,9 +153,9 @@ function exportColumnsFor(file) {
  * @returns {Record<string, unknown>} A new object; the record is not mutated.
  */
 function projectRecord(record, columns) {
-  const projected = {};
+  const projected = Object.create(null);
   for (const column of columns) {
-    const read = SOURCE_COLUMN_VALUES[String(column).toLowerCase()];
+    const read = sourceColumnReader(column);
     projected[column] = read ? (read(record) ?? null) : null;
   }
   return projected;
@@ -144,7 +168,7 @@ function projectRecord(record, columns) {
  * @returns {string[]}
  */
 function unfillableColumns(columns) {
-  return columns.filter((column) => !SOURCE_COLUMN_VALUES[String(column).toLowerCase()]);
+  return columns.filter((column) => !sourceColumnReader(column));
 }
 
 /**
@@ -244,7 +268,7 @@ export async function saveSingleFile(fileId) {
     // them (lowerKeyed) and SQLite's own identifier rules. A source declaring
     // `Title` / `URL` would otherwise find no mapping and be written back as
     // all-NULL while the app held every value.
-    const unmapped = schema.columns.filter((c) => !SOURCE_COLUMN_VALUES[c.toLowerCase()]);
+    const unmapped = schema.columns.filter((c) => !sourceColumnReader(c));
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
     try {
@@ -255,7 +279,7 @@ export async function saveSingleFile(fileId) {
         db.run(
           `INSERT INTO ${table} VALUES (${placeholders});`,
           schema.columns.map((c) => {
-            const value = SOURCE_COLUMN_VALUES[c.toLowerCase()];
+            const value = sourceColumnReader(c);
             return value ? value(b) : null;
           }),
         );

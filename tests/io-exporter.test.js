@@ -770,7 +770,7 @@ describe('closeSaveModal', () => {
  * Per-source save-back must re-emit the SOURCE's own schema, not the app's
  * internal unified fields — the principle the `.db` path already applies via
  * `sqliteSchema` (emitting the app's schema "would hand back something that
- * merely looks like the original", exporter.js:265).
+ * merely looks like the original", `saveSingleFile`'s `.db` branch).
  *
  * The emitted header list is fed back through the REAL `checkImport`, because
  * that is the observable defect this pins: a re-exported scraper CSV carried
@@ -875,6 +875,37 @@ describe('saveSingleFile — source-aware schema', () => {
     // The file keeps its shape — the column is present, just empty.
     expect(emittedHeaders()).toEqual(['id', 'title', 'starred']);
     expect(parseEmitted().data[0].starred).toBe('');
+    expect(el('toastMsg').innerText).toContain('1 個欄位無對應資料');
+  });
+
+  it('treats a column named after an Object.prototype member as unmapped, not as a reader', async () => {
+    // The column names come from the uploaded file, so they are untrusted keys.
+    // A plain index into the mapping table resolves `constructor` / `toString`
+    // to the matching `Object.prototype` member, which is truthy: the column
+    // reads as mapped, so it escapes the count below, and calling it writes the
+    // whole record object into the cell as a literal `{}`.
+    seedScraper({ csvColumns: ['id', 'title', 'constructor', 'toString'] });
+
+    await saveSingleFile('F1');
+
+    const [row] = parseEmitted().data;
+    expect(row.id).toBe('1');
+    expect(row.title).toBe('t1');
+    expect(row.constructor).toBe('');
+    expect(row.toString).toBe('');
+    expect(el('toastMsg').innerText).toContain('2 個欄位無對應資料');
+  });
+
+  it('emits a `__proto__` column rather than letting it vanish into the prototype', async () => {
+    // The projection accumulator must not inherit Object.prototype: assigning
+    // `__proto__` on a plain `{}` hits the inherited accessor instead of
+    // creating a key, so the column would silently disappear from the header row
+    // the user still has.
+    seedScraper({ csvColumns: ['id', '__proto__'] });
+
+    await saveSingleFile('F1');
+
+    expect(emittedHeaders()).toEqual(['id', '__proto__']);
     expect(el('toastMsg').innerText).toContain('1 個欄位無對應資料');
   });
 
