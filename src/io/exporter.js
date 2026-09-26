@@ -287,14 +287,23 @@ export async function saveSingleFile(fileId) {
 /**
  * Exports all current bookmarks to a versioned unified JSON file (trash
  * excluded). The envelope (`format` + `version`) gives re-imports an exact
- * fingerprint instead of a column guess; the importer already unwraps the
- * `bookmarks` array, so plain pre-envelope files keep round-tripping.
+ * fingerprint instead of a column guess, and the `sources` manifest records
+ * which source owned each group of bookmarks — without it the per-source
+ * structure is unrecoverable and a re-import collapses every folder into one.
+ *
+ * Only sources that actually own an exported record are listed: a source whose
+ * bookmarks are all in the trash would otherwise restore as an empty folder.
  */
 export function exportAllUnifiedJson() {
+  const bookmarks = getActiveBookmarks();
+  const exportedSourceIds = new Set(bookmarks.map((b) => b.source_file_id));
   const envelope = {
     format: 'read-later-lens',
-    version: 1,
-    bookmarks: getActiveBookmarks(),
+    version: 2,
+    sources: [...state.sourceFiles.values()]
+      .filter((file) => exportedSourceIds.has(file.id))
+      .map((file) => ({ id: file.id, name: file.name, type: file.type, profile: file.profile })),
+    bookmarks,
   };
   const blob = new Blob([JSON.stringify(envelope, null, 2)], {
     type: 'application/json',

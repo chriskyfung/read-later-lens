@@ -516,8 +516,54 @@ describe('unified exports', () => {
     expect(blob.type).toBe('application/json');
     const parsed = JSON.parse(await blob.text());
     expect(parsed.format).toBe('read-later-lens');
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+  });
+
+  it('lists the sources it was taken from, so a re-import can rebuild the folders', async () => {
+    // Without this the per-source structure is unrecoverable: a re-import would
+    // see only the bookmarks and collapse every folder into one.
+    setSourceFiles(
+      new Map([
+        ['F1', { id: 'F1', name: 'instapaper.csv', type: 'csv', profile: 'instapaper-scraper' }],
+        ['F2', { id: 'F2', name: 'raindrop.json', type: 'json', profile: 'rll-unified' }],
+        // Owns no exported record — a source whose bookmarks are all in the
+        // trash would restore as an empty folder, so it is left out.
+        ['F3', { id: 'F3', name: 'empty.csv', type: 'csv' }],
+      ]),
+    );
+    setBookmarks([
+      { id: '1', title: 'a', url: 'https://a.com', source_file_id: 'F1' },
+      { id: '2', title: 'b', url: 'https://b.com', source_file_id: 'F2' },
+    ]);
+
+    exportAllUnifiedJson();
+
+    const [blob] = downloadBlob.mock.calls[0];
+    const parsed = JSON.parse(await blob.text());
+    expect(parsed.sources).toEqual([
+      { id: 'F1', name: 'instapaper.csv', type: 'csv', profile: 'instapaper-scraper' },
+      { id: 'F2', name: 'raindrop.json', type: 'json', profile: 'rll-unified' },
+    ]);
+  });
+
+  it('omits a source whose records are all in the trash', async () => {
+    setSourceFiles(
+      new Map([
+        ['F1', { id: 'F1', name: 'live.csv', type: 'csv' }],
+        ['F2', { id: 'F2', name: 'trashed.csv', type: 'csv' }],
+      ]),
+    );
+    setBookmarks([
+      { id: '1', title: 'a', url: 'https://a.com', source_file_id: 'F1' },
+      { id: '2', title: 'b', url: 'https://b.com', source_file_id: 'F2', deleted_at: 'x' },
+    ]);
+
+    exportAllUnifiedJson();
+
+    const [blob] = downloadBlob.mock.calls[0];
+    const parsed = JSON.parse(await blob.text());
+    expect(parsed.sources.map((s) => s.id)).toEqual(['F1']);
   });
 
   it('unparses all bookmarks as all_bookmarks_export.csv', () => {
