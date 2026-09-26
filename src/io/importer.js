@@ -361,6 +361,138 @@ function sanityCheckOrThrow(profile, ext, parsed, rows) {
   return result.verdict === 'mismatch' ? result.message : '';
 }
 
+/** Source types a source record may declare; mirrors the union documented in `state.js`. */
+const SOURCE_FILE_TYPES = new Set(['csv', 'json', 'sqlite', 'db']);
+
+/**
+ * The source type a restored folder's own name implies, or `''` when the name
+ * carries no supported extension.
+ *
+ * @param {string} name Restored source file name.
+ * @returns {string}
+ */
+function typeFromSourceName(name) {
+  const ext = String(name).split('.').pop().toLowerCase();
+  return SOURCE_FILE_TYPES.has(ext) ? ext : '';
+}
+
+/**
+ * Rebuild one source record per source a unified export was taken from.
+ *
+ * A unified export's rows carry the `source_file_id` that owned them, and a
+ * version-2 envelope also carries a `sources` manifest. Handing the adapter the
+ * RIGHT id per group is the whole mechanism: it stamps ownership from the id it
+ * is given, so ownership is never rewritten after the fact and the adapter needs
+ * no knowledge of this feature.
+ *
+ * Returns `null` when the rows name no source at all — an ordinary
+ * single-source import, which must keep behaving exactly as before.
+ *
+ * @param {string} profile
+ * @param {object[]} rows
+ * @param {import('../core/state.js').SourceFileRecord} baseRecord
+ * @param {object[]|null} manifest `sources` entries from a unified envelope.
+ * @param {ReturnType<import('../providers/index.js').resolveImportAdapter>} adapter
+ * @returns {{
+ *   fileRecords: import('../core/state.js').SourceFileRecord[],
+ *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
+ * }|null}
+ */
+function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
+  // Grouping is a unified-format semantic. Under any other profile the user has
+  // explicitly asked for the file's own data, and those ids belong to the app.
+  if (profile !== 'rll-unified') return null;
+
+  const groups = new Map();
+  for (const row of rows) {
+    const key = row && row.source_file_id != null ? String(row.source_file_id) : '';
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+  // Nothing names a source, or everything defers to the uploaded file: there is
+  // no grouping to rebuild.
+  if (groups.size === 0 || (groups.size === 1 && groups.has(''))) return null;
+
+  const manifestById = new Map();
+  for (const entry of manifest ?? []) {
+    if (entry && entry.id != null) manifestById.set(String(entry.id), entry);
+  }
+
+  const fileRecords = [];
+  const records = [];
+  for (const [originalId, groupRows] of groups) {
+    // Rows that name no source belong to the uploaded file itself, which is
+    // exactly what a single-source import would have done with them.
+    if (!originalId) {
+      fileRecords.push(baseRecord);
+      records.push(...adapter.importJsonOrCsv(groupRows, baseRecord.id, baseRecord.name));
+      continue;
+    }
+
+    const entry = manifestById.get(originalId);
+    const named = groupRows.find((row) => row && row.source_file_name);
+    // Prefer the manifest's name; fall back to the rows' own, so a hand-edited
+    // or older export still restores a sensibly named folder.
+    const name = (entry && entry.name) || (named && named.source_file_name) || baseRecord.name;
+
+    // "Already loaded" is evaluated here, i.e. AFTER any overwrite purge the
+    // caller performs before staging, so a source the user just chose to replace
+    // is correctly treated as absent and rebuilt rather than merged into a record
+    // that is about to be deleted.
+    const existing = state.sourceFiles.get(originalId);
+    if (existing) {
+      // Reuse the record as it stands: overwriting it would discard the payload
+      // and layout this source was loaded with, and the incoming rows merge into
+      // that folder either way.
+      //
+      // The rows are stamped with the folder's OWN name, not the manifest's, so a
+      // stale or hand-edited manifest cannot relabel records underneath a source
+      // the user still sees under a different name. A record loaded without a
+      // usable name falls back rather than stamping the rows with undefined.
+      records.push(...adapter.importJsonOrCsv(groupRows, originalId, existing.name || name));
+      continue;
+    }
+
+    fileRecords.push({
+      ...baseRecord,
+      id: originalId,
+      name,
+      // The manifest's `type` selects the writer save-back uses, so it is
+      // whitelisted rather than trusted: an unrecognized value matches neither
+      // branch in `saveSingleFile`, which would make the save button a silent
+      // no-op. With no entry declaring one, the restored folder's OWN name is the
+      // honest source — it is the original file's name, so its extension is the
+      // original file's type. `baseRecord.type` is the ENVELOPE's extension, and
+      // inheriting it would have every folder restored from a unified CSV save as
+      // CSV under a `.json` or `.db` file name.
+      type:
+        (entry && SOURCE_FILE_TYPES.has(entry.type) && entry.type) ||
+        typeFromSourceName(name) ||
+        baseRecord.type,
+      profile: (entry && entry.profile) || baseRecord.profile,
+      // `csvColumns` / `sqliteSchema` describe the UPLOADED file's layout, not
+      // this source's own, so the spread must not carry them over. Inherited,
+      // every restored folder would re-emit the unified export's header row —
+      // reintroducing exactly the "this looks like a Read Later Lens export"
+      // mismatch that per-source layout capture exists to prevent. Cleared, the
+      // exporter falls back to the profile's own columns, which is the closest
+      // honest description available: a manifest records WHICH sources an export
+      // came from, never what shape they had.
+      csvColumns: null,
+      sqliteSchema: null,
+      // A restored folder has no file of its own behind it — the envelope was.
+      // Referencing the same payload from every reconstructed source would also
+      // store one copy of it N times.
+      originalData: null,
+      fileHandle: null,
+    });
+    records.push(...adapter.importJsonOrCsv(groupRows, originalId, name));
+  }
+
+  return { fileRecords, records };
+}
+
 /**
  * Prepare a single uploaded file by parsing, validating and normalizing it
  * into a staging result without mutating global application state.
@@ -369,7 +501,7 @@ function sanityCheckOrThrow(profile, ext, parsed, rows) {
  * @param {string} finalName
  * @param {string} profile Import profile id chosen in the source picker.
  * @returns {Promise<{
- *   fileRecord: import('../core/state.js').SourceFileRecord,
+ *   fileRecords: import('../core/state.js').SourceFileRecord[],
  *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
  *   count: number,
  *   skipped: number,
@@ -396,6 +528,9 @@ async function prepareSingleFile(file, finalName, profile) {
   let skipped = 0;
   let dropped = 0;
   let records = [];
+  // One entry per source this file resolves to. A unified export naming several
+  // sources expands into several; every other import stays at exactly one.
+  let fileRecords = [fileRecord];
 
   if (ext === 'csv') {
     const text = await file.text();
@@ -406,8 +541,22 @@ async function prepareSingleFile(file, finalName, profile) {
     if (rows.length === 0 && parseErrors.length > 0) {
       throw new Error('CSV 解析失敗');
     }
+    // Remember the header row this file actually had, so save-back re-emits the
+    // source's own columns and order instead of the app's internal schema. The
+    // raw text is persisted, but after a reload the exporter must not have to
+    // re-parse the file to learn its shape.
+    fileRecord.csvColumns = Array.isArray(results.meta?.fields) ? [...results.meta.fields] : null;
     checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
-    records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+    // The unified CSV has no envelope to hang a manifest on, but it writes
+    // `source_file_id` / `source_file_name` on every row, which carries the same
+    // information — so its round trip is just as faithful.
+    const expanded = expandEnvelopeSources(profile, rows, fileRecord, null, adapter);
+    if (expanded) {
+      fileRecords = expanded.fileRecords;
+      records = expanded.records;
+    } else {
+      records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+    }
     count = records.length;
     skipped = parseErrors.length;
     dropped = rows.length - records.length;
@@ -417,7 +566,22 @@ async function prepareSingleFile(file, finalName, profile) {
     const parsed = JSON.parse(text);
     const arrayData = Array.isArray(parsed) ? parsed : parsed.bookmarks || [parsed];
     checkNote = sanityCheckOrThrow(profile, 'json', parsed, arrayData);
-    records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+    // A version-2 unified envelope lists the sources it was taken from, so the
+    // per-source folders can be rebuilt. An older envelope has no manifest, but
+    // its rows still carry per-record source ids, which is enough on its own.
+    const expanded = expandEnvelopeSources(
+      profile,
+      arrayData,
+      fileRecord,
+      Array.isArray(parsed?.sources) ? parsed.sources : null,
+      adapter,
+    );
+    if (expanded) {
+      fileRecords = expanded.fileRecords;
+      records = expanded.records;
+    } else {
+      records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+    }
     count = records.length;
     dropped = arrayData.length - records.length;
   } else if (ext === 'db' || ext === 'sqlite') {
@@ -443,7 +607,7 @@ async function prepareSingleFile(file, finalName, profile) {
     throw err;
   }
 
-  return { fileRecord, records, count, skipped, dropped, checkNote };
+  return { fileRecords, records, count, skipped, dropped, checkNote };
 }
 
 /**
@@ -494,16 +658,18 @@ async function processSingleFile(file, finalName, profile, options = {}) {
   const snapshot = captureImportSnapshot();
 
   try {
-    const prepared = await prepareSingleFile(file, finalName, profile);
-
-    // Overwrite safety: an overwrite choice replaces data, but must never
-    // destroy an existing source for an empty file (0 valid bookmarks).
-    if (replaceSourceId && prepared.count === 0) {
-      const err = new Error('新檔案未匯入任何有效書籤，已保留原來源檔案');
-      err[EMPTY_OVERWRITE_FLAG] = true;
-      throw err;
-    }
-
+    // The overwrite purge runs BEFORE staging, not after it.
+    //
+    // Staging asks the live working set which source ids are already loaded, to
+    // decide what to reconstruct versus what to merge into. A purge that ran
+    // afterwards would therefore be invisible to the very decision it is about to
+    // invalidate: the group naming the doomed source would be merged rather than
+    // rebuilt, and the purge would then delete the folder those records had just
+    // been attached to — orphaning every one of them, with a success toast.
+    //
+    // The empty-overwrite guard below still keeps the source safe: it throws, and
+    // the catch restores this same snapshot, so a replacement with no valid
+    // bookmarks leaves the original exactly as it was.
     if (replaceSourceId) {
       const doomedIds = state.bookmarks
         .filter((b) => b.source_file_id === replaceSourceId)
@@ -517,9 +683,21 @@ async function processSingleFile(file, finalName, profile, options = {}) {
       }
     }
 
-    // Register the source record and merged bookmarks into the live working
-    // set, then cross the transaction boundary with storage.
-    state.sourceFiles.set(prepared.fileRecord.id, prepared.fileRecord);
+    const prepared = await prepareSingleFile(file, finalName, profile);
+
+    // Overwrite safety: an overwrite choice replaces data, but must never
+    // destroy an existing source for an empty file (0 valid bookmarks).
+    if (replaceSourceId && prepared.count === 0) {
+      const err = new Error('新檔案未匯入任何有效書籤，已保留原來源檔案');
+      err[EMPTY_OVERWRITE_FLAG] = true;
+      throw err;
+    }
+
+    // Register the source record(s) and merged bookmarks into the live working
+    // set, then cross the transaction boundary with storage. A unified export
+    // can expand into several sources, and all of them land in this one
+    // transaction — a failure rolls the whole expansion back together.
+    for (const record of prepared.fileRecords) state.sourceFiles.set(record.id, record);
     const merge = acceptRecords(prepared.records);
 
     if (!(await persistWorkingSet()).persisted) {

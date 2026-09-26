@@ -139,6 +139,10 @@ export async function saveState() {
       // payload above, so it IS persisted: without it a reload would make the
       // original `.db` shape unknowable and save-back would have to guess.
       sqliteSchema: v.sqliteSchema ?? null,
+      // Same reasoning as `sqliteSchema` above: a header row is a few short
+      // strings, so persisting it keeps the source's own CSV layout knowable
+      // after a reload instead of re-guessed from the app's internal schema.
+      csvColumns: v.csvColumns ?? null,
     }));
     await db.put(STORE_NAME, { key: 'bookmarks', data: bookmarks });
     await db.put(STORE_NAME, { key: 'sources', data: sourcesArray });
