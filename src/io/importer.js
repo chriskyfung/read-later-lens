@@ -361,6 +361,21 @@ function sanityCheckOrThrow(profile, ext, parsed, rows) {
   return result.verdict === 'mismatch' ? result.message : '';
 }
 
+/** Source types a source record may declare; mirrors the union documented in `state.js`. */
+const SOURCE_FILE_TYPES = new Set(['csv', 'json', 'sqlite', 'db']);
+
+/**
+ * The source type a restored folder's own name implies, or `''` when the name
+ * carries no supported extension.
+ *
+ * @param {string} name Restored source file name.
+ * @returns {string}
+ */
+function typeFromSourceName(name) {
+  const ext = String(name).split('.').pop().toLowerCase();
+  return SOURCE_FILE_TYPES.has(ext) ? ext : '';
+}
+
 /**
  * Rebuild one source record per source a unified export was taken from.
  *
@@ -443,7 +458,18 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       ...baseRecord,
       id: originalId,
       name,
-      type: (entry && entry.type) || baseRecord.type,
+      // The manifest's `type` selects the writer save-back uses, so it is
+      // whitelisted rather than trusted: an unrecognized value matches neither
+      // branch in `saveSingleFile`, which would make the save button a silent
+      // no-op. With no entry declaring one, the restored folder's OWN name is the
+      // honest source — it is the original file's name, so its extension is the
+      // original file's type. `baseRecord.type` is the ENVELOPE's extension, and
+      // inheriting it would have every folder restored from a unified CSV save as
+      // CSV under a `.json` or `.db` file name.
+      type:
+        (entry && SOURCE_FILE_TYPES.has(entry.type) && entry.type) ||
+        typeFromSourceName(name) ||
+        baseRecord.type,
       profile: (entry && entry.profile) || baseRecord.profile,
       // `csvColumns` / `sqliteSchema` describe the UPLOADED file's layout, not
       // this source's own, so the spread must not carry them over. Inherited,

@@ -1404,5 +1404,39 @@ describe('handleFileUploads — unified source manifest', () => {
     // to prevent — so it is cleared and the profile default takes over.
     expect(sourceFiles.get('file_a').csvColumns).toBe(null);
     expect(sourceFiles.get('file_b').csvColumns).toBe(null);
+    // Likewise the envelope's extension: this file is a CSV, but `b.json` was
+    // always a JSON source, and save-back would otherwise write CSV text under
+    // that name for the user to discover on their filesystem.
+    expect(sourceFiles.get('file_b').type).toBe('json');
+  });
+
+  it('gives a folder restored from a legacy envelope the type its own name implies', async () => {
+    // Same defect on the JSON path. A v1 export carries no manifest, so the type
+    // has to come from the folder's own name; inheriting the envelope's would
+    // make every restored folder JSON, whatever the originals were.
+    await importUnified(
+      JSON.stringify({
+        format: 'read-later-lens',
+        version: 1,
+        bookmarks: [bookmark('1', 'file_a', 'a.csv')],
+      }),
+    );
+
+    expect(sourceFiles.get('file_a').type).toBe('csv');
+  });
+
+  it('refuses a manifest type the app cannot write and falls back to the folder name', async () => {
+    // `type` is what `saveSingleFile` branches on and it has no final else, so an
+    // unrecognized value makes the save button do nothing at all: no file, no
+    // toast, no error. A manifest is untrusted input, so its type is honoured
+    // only when the app can actually write it.
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'a.csv', type: 'application/pdf' }],
+        [bookmark('1', 'file_a', 'a.csv')],
+      ),
+    );
+
+    expect(sourceFiles.get('file_a').type).toBe('csv');
   });
 });
