@@ -406,6 +406,11 @@ async function prepareSingleFile(file, finalName, profile) {
     if (rows.length === 0 && parseErrors.length > 0) {
       throw new Error('CSV 解析失敗');
     }
+    // Remember the header row this file actually had, so save-back re-emits the
+    // source's own columns and order instead of the app's internal schema. The
+    // raw text is persisted, but after a reload the exporter must not have to
+    // re-parse the file to learn its shape.
+    fileRecord.csvColumns = Array.isArray(results.meta?.fields) ? [...results.meta.fields] : null;
     checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
     records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
     count = records.length;

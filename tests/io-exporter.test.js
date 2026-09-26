@@ -7,7 +7,9 @@ import {
   exportAllUnifiedCsv,
   registerExporterListeners,
 } from '../src/io/exporter.js';
+import PapaReal from 'papaparse';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
+import { checkImport } from '../src/providers/profiles.js';
 import { setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
 import { resetLayers } from '../src/utils/dom.js';
 
@@ -715,5 +717,216 @@ describe('closeSaveModal', () => {
     globalThis.document.getElementById = (id) => (id === 'saveModal' ? null : el(id));
     expect(() => closeSaveModal()).not.toThrow();
     globalThis.document.getElementById = original;
+  });
+});
+
+/**
+ * Per-source save-back must re-emit the SOURCE's own schema, not the app's
+ * internal unified fields — the principle the `.db` path already applies via
+ * `sqliteSchema` (emitting the app's schema "would hand back something that
+ * merely looks like the original", exporter.js:265).
+ *
+ * The emitted header list is fed back through the REAL `checkImport`, because
+ * that is the observable defect this pins: a re-exported scraper CSV carried
+ * `source_file_id` / `detected_language`, so re-importing the user's own file
+ * warned 「檔案欄位較符合…統一匯出」. Assertions read the header row back through
+ * the real Papa build instead of inspecting objects, so they pin what a
+ * spreadsheet and our own importer would actually see.
+ */
+describe('saveSingleFile — source-aware schema', () => {
+  const SCRAPER_COLUMNS = ['id', 'title', 'url', 'preview', 'tags'];
+
+  const seedScraper = (extra = {}) => {
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'scraper.csv',
+            type: 'csv',
+            profile: 'instapaper-scraper',
+            csvColumns: SCRAPER_COLUMNS,
+            ...extra,
+          },
+        ],
+      ]),
+    );
+    setBookmarks([
+      {
+        id: '1',
+        title: 't1',
+        url: 'https://a.com',
+        article_preview: 'p',
+        content: 'body',
+        tags: ['news'],
+        detected_language: 'en',
+        provider: 'instapaper',
+        instapaper_url: 'https://www.instapaper.com/read/1',
+        source_file_id: 'F1',
+        source_file_name: 'scraper.csv',
+      },
+      { id: '2', title: 't2', url: 'https://b.com', source_file_id: 'OTHER' },
+    ]);
+  };
+
+  const emittedCsv = () => {
+    const [rows, config] = globalThis.Papa.unparse.mock.calls.at(-1);
+    return PapaReal.unparse(rows, config);
+  };
+  const parseEmitted = () => PapaReal.parse(emittedCsv(), { header: true });
+  const emittedHeaders = () => parseEmitted().meta.fields;
+
+  it('re-emits a scraper source under its own columns, so the round trip raises no profile warning', async () => {
+    seedScraper();
+
+    await saveSingleFile('F1');
+
+    expect(emittedHeaders()).toEqual(SCRAPER_COLUMNS);
+    expect(checkImport('instapaper-scraper', { csvHeaders: emittedHeaders() }).verdict).toBe('ok');
+  });
+
+  it('preserves the recorded column order rather than the record key order', async () => {
+    seedScraper({ csvColumns: ['url', 'title', 'id'] });
+
+    await saveSingleFile('F1');
+
+    expect(emittedHeaders()).toEqual(['url', 'title', 'id']);
+  });
+
+  it('never leaks app-internal fields into a source export', async () => {
+    seedScraper({ csvColumns: ['id', 'title', 'url', 'preview', 'content', 'tags'] });
+
+    await saveSingleFile('F1');
+
+    const headers = emittedHeaders();
+    for (const internal of [
+      'source_file_id',
+      'source_file_name',
+      'detected_language',
+      'deleted_at',
+      'provider',
+      'instapaper_url',
+    ]) {
+      expect(headers).not.toContain(internal);
+    }
+  });
+  it('fills the source columns from the matching record fields', async () => {
+    seedScraper();
+
+    await saveSingleFile('F1');
+
+    expect(parseEmitted().data).toEqual([
+      { id: '1', title: 't1', url: 'https://a.com', preview: 'p', tags: 'news' },
+    ]);
+  });
+
+  it('emits a column the app cannot fill and reports it rather than dropping it silently', async () => {
+    seedScraper({ csvColumns: ['id', 'title', 'starred'] });
+
+    await saveSingleFile('F1');
+
+    // The file keeps its shape — the column is present, just empty.
+    expect(emittedHeaders()).toEqual(['id', 'title', 'starred']);
+    expect(parseEmitted().data[0].starred).toBe('');
+    expect(el('toastMsg').innerText).toContain('1 個欄位無對應資料');
+  });
+
+  it('keeps the full internal schema for a unified source', async () => {
+    setSourceFiles(
+      new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv', profile: 'rll-unified' }]]),
+    );
+    setBookmarks([
+      {
+        id: '1',
+        title: 't1',
+        url: 'https://a.com',
+        detected_language: 'en',
+        source_file_id: 'F1',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    // The unified export IS the app's own schema — it must keep round-tripping
+    // as rll-unified, otherwise the scraper fix breaks the other profile.
+    expect(checkImport('rll-unified', { csvHeaders: emittedHeaders() }).verdict).toBe('ok');
+  });
+
+  it('falls back to the unified schema when no columns and no profile are recorded', async () => {
+    // A source cached by a version that predates column capture. Guessing a
+    // narrower schema here could silently drop fields, so the app keeps the
+    // lossless unified shape instead.
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    setBookmarks([
+      { id: '1', title: 't1', url: 'https://a.com', detected_language: 'en', source_file_id: 'F1' },
+    ]);
+
+    await saveSingleFile('F1');
+
+    expect(emittedHeaders()).toContain('source_file_id');
+    expect(emittedHeaders()).toContain('detected_language');
+  });
+  it('applies the profile fallback to the json branch as well', async () => {
+    setSourceFiles(
+      new Map([['F1', { id: 'F1', name: 'a.json', type: 'json', profile: 'instapaper-scraper' }]]),
+    );
+    setBookmarks([
+      {
+        id: '1',
+        title: 't1',
+        url: 'https://a.com',
+        article_preview: 'p',
+        content: 'body',
+        tags: ['news'],
+        detected_language: 'en',
+        provider: 'instapaper',
+        instapaper_url: 'https://www.instapaper.com/read/1',
+        source_file_id: 'F1',
+        source_file_name: 'a.json',
+      },
+    ]);
+
+    await saveSingleFile('F1');
+
+    const [json] = saveFileWithFallback.mock.calls[0];
+    // `content` is kept: normalizeFields reads it, so omitting it would lose the
+    // full article text on re-import.
+    expect(Object.keys(JSON.parse(json)[0])).toEqual([
+      'id',
+      'title',
+      'url',
+      'article_preview',
+      'content',
+      'tags',
+    ]);
+  });
+
+  it('never mutates the in-memory records while projecting them', async () => {
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'scraper.csv',
+            type: 'csv',
+            profile: 'instapaper-scraper',
+            csvColumns: SCRAPER_COLUMNS,
+          },
+        ],
+      ]),
+    );
+    const bookmark = { id: '1', title: '=1+1', url: 'https://a.com', source_file_id: 'F1' };
+    setBookmarks([bookmark]);
+
+    await saveSingleFile('F1');
+
+    expect(bookmark).toEqual({
+      id: '1',
+      title: '=1+1',
+      url: 'https://a.com',
+      source_file_id: 'F1',
+    });
   });
 });

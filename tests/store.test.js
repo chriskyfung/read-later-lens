@@ -115,6 +115,27 @@ describe('store (IndexedDB)', () => {
     expect(sourceFiles.get('f3').sqliteSchema).toBeNull();
   });
 
+  it('persists the observed CSV header row so a reload keeps the source layout', async () => {
+    // A header row is a handful of short strings, so it is cheap to cache and is
+    // the only way a per-source CSV export stays faithful after a reload.
+    const csvColumns = ['id', 'title', 'url', 'preview'];
+    setSourceFiles(
+      new Map([
+        ['f1', { id: 'f1', name: 'a.csv', type: 'csv', originalData: 'x', csvColumns }],
+        // A source cached by a version that predates this field.
+        ['f2', { id: 'f2', name: 'b.csv', type: 'csv', originalData: 'x' }],
+        ['f3', { id: 'f3', name: 'c.json', type: 'json', originalData: '{}', csvColumns: null }],
+      ]),
+    );
+    await saveState();
+    setSourceFiles(new Map());
+    await loadState();
+
+    expect(sourceFiles.get('f1').csvColumns).toEqual(csvColumns);
+    expect(sourceFiles.get('f2').csvColumns).toBeNull();
+    expect(sourceFiles.get('f3').csvColumns).toBeNull();
+  });
+
   it('reports true once the working set is written', async () => {
     setBookmarks([bookmark(1)]);
 

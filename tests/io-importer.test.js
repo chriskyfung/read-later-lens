@@ -263,6 +263,39 @@ describe('handleFileUploads — format dispatch', () => {
     expect(file.sqliteSchema).toBeUndefined();
   });
 
+  it('stamps the observed CSV header row onto the source record', async () => {
+    // The header row is the only surviving description of the file's own column
+    // layout, so save-back re-emits it instead of the app's internal schema.
+    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({
+        data: [{ id: '1', title: 't', url: 'https://a.com' }],
+        errors: [],
+        meta: { fields: ['id', 'title', 'url', 'preview'] },
+      }),
+    );
+
+    await handleFileUploads([fakeFile('a.csv', 'id,title,url,preview\n1,t,https://a.com,p')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.csvColumns).toEqual(['id', 'title', 'url', 'preview']);
+  });
+
+  it('records no header row when Papa reports none, instead of guessing one', async () => {
+    // The default parse mock returns no `meta`, matching an unparseable-header
+    // file. Guessing a layout here is what the `.db` path refuses to do.
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,t')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.csvColumns).toBeNull();
+  });
+
+  it('records no header row for non-CSV sources', async () => {
+    await handleFileUploads([fakeFile('a.json', '[]')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.csvColumns).toBeUndefined();
+  });
+
   it('shows the failure toast for invalid JSON and registers nothing', async () => {
     await handleFileUploads([fakeFile('bad.json', '{not json')]);
 
