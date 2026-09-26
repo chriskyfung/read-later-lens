@@ -501,7 +501,16 @@ async function prepareSingleFile(file, finalName, profile) {
     // re-parse the file to learn its shape.
     fileRecord.csvColumns = Array.isArray(results.meta?.fields) ? [...results.meta.fields] : null;
     checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
-    records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+    // The unified CSV has no envelope to hang a manifest on, but it writes
+    // `source_file_id` / `source_file_name` on every row, which carries the same
+    // information — so its round trip is just as faithful.
+    const expanded = expandEnvelopeSources(profile, rows, fileRecord, null, adapter);
+    if (expanded) {
+      fileRecords = expanded.fileRecords;
+      records = expanded.records;
+    } else {
+      records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+    }
     count = records.length;
     skipped = parseErrors.length;
     dropped = rows.length - records.length;

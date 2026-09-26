@@ -1300,4 +1300,29 @@ describe('handleFileUploads — unified source manifest', () => {
 
     expect(sourceFiles.size).toBe(1);
   });
+
+  it('rebuilds folders from the source columns of a unified CSV, which carries no manifest', async () => {
+    // The unified CSV has no envelope to hang a manifest on, but it already
+    // writes `source_file_id` / `source_file_name` on every row, which is the
+    // same information — so the round trip is just as faithful.
+    applyProfileSelection('rll-unified');
+    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({
+        data: [
+          bookmark('1', 'file_a', 'a.csv'),
+          bookmark('2', 'file_b', 'b.json'),
+          bookmark('3', 'file_a', 'a.csv'),
+        ],
+        errors: [],
+        meta: { fields: ['id', 'url', 'source_file_id', 'source_file_name'] },
+      }),
+    );
+
+    await handleFileUploads([fakeFile('all_bookmarks_export.csv', 'irrelevant')]);
+
+    expect(sourceFiles.size).toBe(2);
+    expect(sourceFiles.get('file_a').name).toBe('a.csv');
+    expect(sourceFiles.get('file_b').name).toBe('b.json');
+    for (const b of bookmarks) expect(sourceFiles.has(b.source_file_id)).toBe(true);
+  });
 });
