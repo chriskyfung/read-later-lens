@@ -612,16 +612,18 @@ async function processSingleFile(file, finalName, profile, options = {}) {
   const snapshot = captureImportSnapshot();
 
   try {
-    const prepared = await prepareSingleFile(file, finalName, profile);
-
-    // Overwrite safety: an overwrite choice replaces data, but must never
-    // destroy an existing source for an empty file (0 valid bookmarks).
-    if (replaceSourceId && prepared.count === 0) {
-      const err = new Error('新檔案未匯入任何有效書籤，已保留原來源檔案');
-      err[EMPTY_OVERWRITE_FLAG] = true;
-      throw err;
-    }
-
+    // The overwrite purge runs BEFORE staging, not after it.
+    //
+    // Staging asks the live working set which source ids are already loaded, to
+    // decide what to reconstruct versus what to merge into. A purge that ran
+    // afterwards would therefore be invisible to the very decision it is about to
+    // invalidate: the group naming the doomed source would be merged rather than
+    // rebuilt, and the purge would then delete the folder those records had just
+    // been attached to — orphaning every one of them, with a success toast.
+    //
+    // The empty-overwrite guard below still keeps the source safe: it throws, and
+    // the catch restores this same snapshot, so a replacement with no valid
+    // bookmarks leaves the original exactly as it was.
     if (replaceSourceId) {
       const doomedIds = state.bookmarks
         .filter((b) => b.source_file_id === replaceSourceId)
@@ -633,6 +635,16 @@ async function processSingleFile(file, finalName, profile, options = {}) {
       if (state.activeFolder === replaceSourceId) {
         state.setActiveFolder('ALL');
       }
+    }
+
+    const prepared = await prepareSingleFile(file, finalName, profile);
+
+    // Overwrite safety: an overwrite choice replaces data, but must never
+    // destroy an existing source for an empty file (0 valid bookmarks).
+    if (replaceSourceId && prepared.count === 0) {
+      const err = new Error('新檔案未匯入任何有效書籤，已保留原來源檔案');
+      err[EMPTY_OVERWRITE_FLAG] = true;
+      throw err;
     }
 
     // Register the source record(s) and merged bookmarks into the live working

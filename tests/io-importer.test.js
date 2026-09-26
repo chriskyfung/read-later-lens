@@ -1248,6 +1248,44 @@ describe('handleFileUploads — unified source manifest', () => {
     expect(bookmarks[0].source_file_id).toBe('file_a');
   });
 
+  it('rebuilds the folder an overwrite just deleted instead of orphaning its records', async () => {
+    // Importing a unified export under any non-unified profile registers it as a
+    // single source named after the file. Re-importing that export under the
+    // unified profile collides by name, and choosing 覆寫 purges the source —
+    // whose id is exactly the one the envelope's manifest names. If the reuse
+    // decision were made before the purge, this group would be merged into a
+    // record that is then deleted, leaving every row pointing at a folder that
+    // does not exist: invisible in the sidebar, unreachable by the folder
+    // filter, and unsaveable, behind a success toast.
+    applyProfileSelection('rll-unified');
+    setSourceFiles(
+      new Map([['file_a', { id: 'file_a', name: 'all_bookmarks_export.json', type: 'json' }]]),
+    );
+    setBookmarks([{ id: 'stale', title: 'old', source_file_id: 'file_a' }]);
+
+    await uploadResolving(
+      [
+        fakeFile(
+          'all_bookmarks_export.json',
+          envelope(
+            [{ id: 'file_a', name: 'a.csv', type: 'csv' }],
+            [bookmark('1', 'file_a', 'a.csv'), bookmark('2', 'file_a', 'a.csv')],
+          ),
+        ),
+      ],
+      'overwrite',
+    );
+
+    expect(sourceFiles.size).toBe(1);
+    expect(sourceFiles.get('file_a').name).toBe('a.csv');
+    // The replaced bookmark is gone, the envelope's rows are not, and every row
+    // still has a source to belong to.
+    expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
+    for (const b of bookmarks) {
+      expect(sourceFiles.has(b.source_file_id)).toBe(true);
+    }
+  });
+
   it('rebuilds folders for a legacy envelope that has no manifest at all', async () => {
     // Unified exports have always carried per-record source ids; only the
     // manifest is new, so an older file still has enough to restore folders.
