@@ -445,6 +445,16 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       name,
       type: (entry && entry.type) || baseRecord.type,
       profile: (entry && entry.profile) || baseRecord.profile,
+      // `csvColumns` / `sqliteSchema` describe the UPLOADED file's layout, not
+      // this source's own, so the spread must not carry them over. Inherited,
+      // every restored folder would re-emit the unified export's header row —
+      // reintroducing exactly the "this looks like a Read Later Lens export"
+      // mismatch that per-source layout capture exists to prevent. Cleared, the
+      // exporter falls back to the profile's own columns, which is the closest
+      // honest description available: a manifest records WHICH sources an export
+      // came from, never what shape they had.
+      csvColumns: null,
+      sqliteSchema: null,
       // A restored folder has no file of its own behind it — the envelope was.
       // Referencing the same payload from every reconstructed source would also
       // store one copy of it N times.

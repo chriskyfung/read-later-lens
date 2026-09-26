@@ -1398,5 +1398,11 @@ describe('handleFileUploads — unified source manifest', () => {
     expect(sourceFiles.get('file_a').name).toBe('a.csv');
     expect(sourceFiles.get('file_b').name).toBe('b.json');
     for (const b of bookmarks) expect(sourceFiles.has(b.source_file_id)).toBe(true);
+    // The header row captured above describes the ENVELOPE, not either folder.
+    // Handing it to a reconstructed source would make save-back re-emit the
+    // unified schema for it — the very mismatch per-source layout capture exists
+    // to prevent — so it is cleared and the profile default takes over.
+    expect(sourceFiles.get('file_a').csvColumns).toBe(null);
+    expect(sourceFiles.get('file_b').csvColumns).toBe(null);
   });
 });
