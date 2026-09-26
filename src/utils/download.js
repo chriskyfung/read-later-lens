@@ -10,6 +10,23 @@
 import { showToast } from './dom.js';
 
 /**
+ * Grace period before releasing a download's object URL.
+ *
+ * Revoking in the same task as `click()` is the pattern Mozilla bug 1282407
+ * showed can end a download before it starts (fixed in Firefox 50, and the
+ * spec says the synchronous form should work, so this is hardening rather
+ * than a repair of a reproducible defect). Bug 2005952 is still open for
+ * the neighbouring case where a download outlives its context.
+ *
+ * One second is not a measured requirement; it clears any sensible
+ * initiation boundary and sits inside Firefox's own 5s retained-revoked-URL
+ * window (bug 1420419). Deliberately not FileSaver.js's 40s: a `.db` export
+ * is a snapshot of the whole database already resident in memory, so 40s
+ * would pin that blob 40x longer for no demonstrable gain.
+ */
+const REVOKE_DELAY_MS = 1000;
+
+/**
  * Trigger a browser download of a Blob.
  *
  * @param {Blob} blob
@@ -21,9 +38,11 @@ export function downloadBlob(blob, filename) {
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
+  // Armed before the click, so a click that throws cannot strand the URL for
+  // the lifetime of the page.
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
   showToast(`已開始下載檔案: ${filename}`);
 }
 
