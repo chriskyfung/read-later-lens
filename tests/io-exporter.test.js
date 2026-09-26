@@ -321,6 +321,62 @@ describe('saveSingleFile', () => {
     expect(statements[1].sql).toBe('INSERT INTO "we""ird" VALUES (?);');
   });
 
+  it('maps columns case-insensitively so a mixed-case source keeps its values', async () => {
+    const statements = [];
+    setSQL({
+      Database: class {
+        run(sql, params) {
+          statements.push({ sql, params });
+        }
+        export() {
+          return new Uint8Array([1]);
+        }
+        close() {}
+      },
+    });
+    // The import path reads columns through lowerKeyed(), so a source declaring
+    // `Title` / `URL` imports fine. A case-sensitive lookup here would match
+    // nothing and write every column back as NULL while reporting that the app
+    // had no data for them.
+    seed('db', {
+      sqliteSchema: { table: 'Articles', columns: ['ID', 'Title', 'URL', 'Preview'] },
+    });
+
+    await saveSingleFile('F1');
+
+    expect(statements[0].sql).toBe(
+      'CREATE TABLE "Articles" ("ID" TEXT, "Title" TEXT, "URL" TEXT, "Preview" TEXT);',
+    );
+    expect(statements[1].params).toEqual(['1', 't1', 'https://a.com', 'p']);
+    // Every column resolved, so the "no corresponding data" report stays silent.
+    expect(el('toastMsg').innerText).toBe('');
+  });
+
+  it('surfaces an export failure from the save button as a toast', async () => {
+    setSQL({
+      Database: class {
+        run() {
+          throw new Error('disk full');
+        }
+        close() {}
+      },
+    });
+    seed('db', { sqliteSchema: { table: 'bookmarks', columns: ['id', 'title'] } });
+    registerExporterListeners();
+
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Minimal stand-in for the clicked row: the shared element stub has no
+    // closest(), and adding one would change behaviour for every other test.
+    const target = { closest: () => ({ dataset: { saveFile: 'F1' } }) };
+    el('saveSourceFilesList').dispatch('click', { target, stopPropagation() {} });
+
+    // The listener is synchronous and saveSingleFile is not, so let the
+    // rejection settle before asserting it was reported rather than dropped.
+    await vi.waitFor(() => expect(el('toastMsg').innerText).toBe('檔案匯出失敗，請稍後再試'));
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('releases the sqlite database when the table build throws', async () => {
     let closes = 0;
     setSQL({

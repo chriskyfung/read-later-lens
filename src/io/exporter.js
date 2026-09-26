@@ -139,7 +139,11 @@ export async function saveSingleFile(fileId) {
       return;
     }
 
-    const unmapped = schema.columns.filter((c) => !SQLITE_COLUMN_VALUES[c]);
+    // Column lookup is case-insensitive, matching how the import path reads
+    // them (lowerKeyed) and SQLite's own identifier rules. A source declaring
+    // `Title` / `URL` would otherwise find no mapping and be written back as
+    // all-NULL while the app held every value.
+    const unmapped = schema.columns.filter((c) => !SQLITE_COLUMN_VALUES[c.toLowerCase()]);
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
     try {
@@ -150,7 +154,7 @@ export async function saveSingleFile(fileId) {
         db.run(
           `INSERT INTO ${table} VALUES (${placeholders});`,
           schema.columns.map((c) => {
-            const value = SQLITE_COLUMN_VALUES[c];
+            const value = SQLITE_COLUMN_VALUES[c.toLowerCase()];
             return value ? value(b) : null;
           }),
         );
@@ -215,7 +219,14 @@ export function exportAllUnifiedCsv() {
  */
 function handleSaveFileClick(e) {
   const btn = e.target.closest('[data-save-file]');
-  if (btn) saveSingleFile(btn.dataset.saveFile);
+  if (!btn) return;
+  // The export is async and the handler is a plain DOM listener, so a rejection
+  // here would surface as an unhandled promise with nothing on screen. Report it
+  // the way the import path does rather than failing silently.
+  Promise.resolve(saveSingleFile(btn.dataset.saveFile)).catch((err) => {
+    console.error('檔案匯出失敗:', err);
+    showToast('檔案匯出失敗，請稍後再試');
+  });
 }
 
 /**
