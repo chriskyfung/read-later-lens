@@ -19,7 +19,7 @@ Everything runs as a single-page app powered by Vite. After a one-time install, 
   - 🕸️ **Concept linkage graph** — an interactive D3 force-directed graph built from shared keywords and domains.
 - **In-app reader** — preview article text without leaving the app, open the original URL, or jump straight to Instapaper's reader.
 - **Similarity recommendations** — pick any article to see related items ranked by TF-IDF vector cosine similarity.
-- **Export** — save your changes back as unified versioned `JSON` / `CSV`, or re-export each source in its original format.
+- **Export** — save your changes back as unified versioned `JSON` / `CSV`, or re-export each source in its original format (a `.db` comes back with its original table name and column list).
 - **Local persistence** — your working set is cached in IndexedDB and restored automatically on your next visit.
 
 ---
@@ -189,7 +189,7 @@ The whole app — interface, data processing, NLP/analytics, and visualizations 
 
 - The **concept graph is capped at the top 50** filtered bookmarks to keep the topology readable.
 - **The official Instapaper account CSV is not supported** (links-only schema, no previews or ids) — the picker's sanity check blocks it and suggests an InstapaperScraper export instead. Header fingerprinting covers CSV/JSON only; SQLite files are not header-checked.
-- **SQLite source re-export** depends on an in-memory SQL.js database; raw `.db` buffers are not cached to IndexedDB (see [Storage & Privacy](#storage--privacy)).
+- **SQLite source re-export** reproduces the source's own table name and column list, which is recorded at import time and cached. Raw `.db` buffers are still **not** cached to IndexedDB (see [Storage & Privacy](#storage--privacy)), so a source imported by a version that predates schema recording cannot be re-emitted as a `.db` — the app refuses and points you at the unified export rather than writing a file with a different schema. Columns the app has no value for are re-emitted as `NULL` and the count is reported.
 - CDN-loaded libraries require an internet connection on first load; the app is not designed for fully offline operation.
 - The project is a **single-page app with bundled dependencies** — there is a dev/build step (Vite + pnpm), not a self-contained single file.
 
