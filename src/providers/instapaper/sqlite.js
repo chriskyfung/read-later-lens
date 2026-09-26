@@ -20,7 +20,12 @@ import { detectLanguage } from '../../analytics/detectLanguage.js';
  * @param {object} [options]
  * @param {boolean} [options.preserveMeta] Round-trip `provider` /
  *   `instapaper_url` columns from the source rows when present.
- * @returns {Promise<import('../../model/BookmarkRecord.js').BookmarkRecord[]>}
+ * @returns {Promise<{
+ *   records: import('../../model/BookmarkRecord.js').BookmarkRecord[],
+ *   schema: { table: string, columns: string[] } | null,
+ * }>} The normalized rows plus the table layout that was actually read, so
+ *   the exporter can re-emit the source's own shape instead of a guessed one.
+ *   `schema` is null when the file holds no table at all.
  */
 export async function processSqliteAsBookmarks(
   wasmBuffer,
@@ -36,10 +41,20 @@ export async function processSqliteAsBookmarks(
   try {
     const tablesRes = db.exec(`SELECT name FROM sqlite_master WHERE type='table';`);
     let rows = [];
+    let schema = null;
     if (tablesRes.length > 0) {
-      const tableName = tablesRes[0].values[0][0];
+      const tableName = String(tablesRes[0].values[0][0]);
       // Quote the table name so hyphens/special chars don't break the query.
-      const queryRes = db.exec(`SELECT * FROM "${tableName}"`);
+      const quoted = `"${tableName.replace(/"/g, '""')}"`;
+      // PRAGMA (not `SELECT *`) is what describes an EMPTY table: sql.js returns
+      // `[]` for a query with no result rows, so the column list must come from
+      // the schema itself or a valid-but-empty source records no layout.
+      const infoRes = db.exec(`PRAGMA table_info(${quoted});`);
+      const columns = infoRes.length > 0 ? infoRes[0].values.map((row) => String(row[1])) : [];
+      // The layout is recorded even when the table holds no rows: a valid but
+      // empty source is still re-exportable in its original shape.
+      schema = { table: tableName, columns };
+      const queryRes = db.exec(`SELECT * FROM ${quoted}`);
       if (queryRes.length > 0) {
         const cols = queryRes[0].columns;
         rows = queryRes[0].values.map((valArr) => {
@@ -50,8 +65,8 @@ export async function processSqliteAsBookmarks(
       }
     }
 
-    return (
-      rows
+    return {
+      records: rows
         .map((rec, index) => {
           const { id, title, url, preview, content } = normalizeFields(rec, index);
           const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
@@ -75,8 +90,9 @@ export async function processSqliteAsBookmarks(
         })
         // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
         // never inject '#' placeholder bookmarks.
-        .filter((record) => record.url !== UNKNOWN_URL)
-    );
+        .filter((record) => record.url !== UNKNOWN_URL),
+      schema,
+    };
   } finally {
     // sql.js keeps the whole database inside the WASM heap and the Emscripten
     // heap never shrinks, so an unreleased handle costs the file's full size

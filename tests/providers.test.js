@@ -183,7 +183,7 @@ describe('importJsonOrCsv', () => {
 
 describe('importSqlite', () => {
   it('reads the first table and normalizes rows', async () => {
-    const records = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', SQL);
+    const { records } = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', SQL);
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({
       id: '1',
@@ -202,13 +202,45 @@ describe('importSqlite', () => {
 
   it('releases the SQLite database after a successful import', async () => {
     const { engine, closed } = trackingEngine(SQL);
-    const records = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', engine);
+    const { records } = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', engine);
 
     // The result is fully materialized before the handle goes away.
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({ id: '1', title: 'Hello World' });
     expect(closed).toHaveLength(1);
     expect(closed[0].db).toBeNull();
+  });
+
+  it('reports the observed table name and columns alongside the records', async () => {
+    // The exporter re-emits this layout, so it must be the layout the file
+    // actually had — not a schema the app assumes.
+    const { schema } = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', SQL);
+    expect(schema).toEqual({
+      table: 'bookmarks',
+      columns: ['id', 'title', 'url', 'article_preview', 'tags'],
+    });
+  });
+
+  it('reports the schema for a valid table that holds no rows', async () => {
+    const db = new SQL.Database();
+    db.run('CREATE TABLE articles (id TEXT, title TEXT);');
+    const buffer = db.export();
+    db.close();
+
+    const { records, schema } = await importSqlite(buffer, 'file_db', 'empty.db', SQL);
+    // An empty source is still re-exportable in its original shape.
+    expect(records).toEqual([]);
+    expect(schema).toEqual({ table: 'articles', columns: ['id', 'title'] });
+  });
+
+  it('reports a null schema for a database with no tables', async () => {
+    const db = new SQL.Database();
+    const buffer = db.export();
+    db.close();
+
+    const { records, schema } = await importSqlite(buffer, 'file_db', 'notables.db', SQL);
+    expect(records).toEqual([]);
+    expect(schema).toBeNull();
   });
 
   it('releases the SQLite database when the file cannot be parsed', async () => {

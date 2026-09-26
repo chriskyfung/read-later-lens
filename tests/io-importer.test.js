@@ -25,14 +25,17 @@ vi.mock('../src/providers/index.js', () => {
       title: r.title ?? '',
     })),
   );
-  const importSqlite = vi.fn(async (bytes, sourceFileId, sourceFileName) => [
-    {
-      id: 'sq1',
-      source_file_id: sourceFileId,
-      source_file_name: sourceFileName,
-      bytes: bytes.length,
-    },
-  ]);
+  const importSqlite = vi.fn(async (bytes, sourceFileId, sourceFileName) => ({
+    records: [
+      {
+        id: 'sq1',
+        source_file_id: sourceFileId,
+        source_file_name: sourceFileName,
+        bytes: bytes.length,
+      },
+    ],
+    schema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'article_preview', 'tags'] },
+  }));
   return {
     importJsonOrCsv,
     importSqlite,
@@ -239,6 +242,25 @@ describe('handleFileUploads — format dispatch', () => {
     expect(name).toBe('instapaper.db');
     expect(usedEngine).toBe(engine);
     expect([...sourceFiles.values()][0].type).toBe('db');
+  });
+
+  it('stamps the observed SQLite schema onto the source record', async () => {
+    // The raw buffer is memory-only, so this recorded layout is the only
+    // surviving description of the file's original shape.
+    await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.sqliteSchema).toEqual({
+      table: 'bookmarks',
+      columns: ['id', 'title', 'url', 'article_preview', 'tags'],
+    });
+  });
+
+  it('leaves sqliteSchema unset for non-SQL sources', async () => {
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,t')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.sqliteSchema).toBeUndefined();
   });
 
   it('shows the failure toast for invalid JSON and registers nothing', async () => {

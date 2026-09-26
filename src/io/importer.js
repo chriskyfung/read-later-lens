@@ -425,7 +425,17 @@ async function prepareSingleFile(file, finalName, profile) {
     const uInt8Array = new Uint8Array(arrayBuffer);
     fileRecord.originalData = uInt8Array;
     const sqlEngine = await initSql();
-    records = await adapter.importSqlite(uInt8Array, fileRecord.id, fileRecord.name, sqlEngine);
+    const { records: parsed, schema } = await adapter.importSqlite(
+      uInt8Array,
+      fileRecord.id,
+      fileRecord.name,
+      sqlEngine,
+    );
+    records = parsed;
+    // Remember the table layout this file actually had. The raw buffer is
+    // memory-only, so without this a reload would leave the exporter with no
+    // honest description of the source's own shape.
+    fileRecord.sqliteSchema = schema;
     count = records.length;
   } else {
     const err = new Error(`不支援的檔案格式「.${ext}」`);

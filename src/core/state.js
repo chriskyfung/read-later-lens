@@ -16,6 +16,11 @@
  * @property {string} [profile]        Import profile id chosen in the source
  *   picker (see src/providers/profiles.js), e.g. 'instapaper-scraper'.
  * @property {string|Uint8Array|null} [originalData] Serialized original payload (null for SQL).
+ * @property {{table: string, columns: string[]}|null} [sqliteSchema] The table
+ *   name and column list a `.db` source was read from, so save-back re-emits
+ *   the source's own layout. Persisted (it is small); `null` for other types,
+ *   for a file with no table, and for sources cached by a version that predates
+ *   this field — those are refused rather than re-emitted with a guessed shape.
  * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
  */
 
