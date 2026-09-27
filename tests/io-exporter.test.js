@@ -8,6 +8,7 @@ import {
   registerExporterListeners,
 } from '../src/io/exporter.js';
 import PapaReal from 'papaparse';
+import { captureCsvDialect } from '../src/utils/csv.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
@@ -947,12 +948,41 @@ describe('saveSingleFile — source-aware schema', () => {
     expect(emittedCsv().split('\n')[1]).toBe('1\tt1\thttps://a.com\tp\tnews');
   });
 
-  it('keeps an LF source LF, so a byte diff of the user own file still matches', async () => {
+  it('keeps an LF source LF, adding no CR the original never had', async () => {
     seedScraper({ csvDialect: { delimiter: ',', linebreak: '\n' } });
 
     await saveSingleFile('F1');
 
     expect(emittedCsv()).not.toContain('\r');
+  });
+
+  it('re-emits a classic-Mac CR source with CR, and with no LF besides', async () => {
+    // The third terminator the whitelist accepts, and until now the only one with
+    // no coverage past the config object: an unparse assertion on the emitted
+    // string is what a CR file actually needs.
+    seedScraper({ csvDialect: { delimiter: ',', linebreak: '\r' } });
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r')[1]).toBe('1,t1,https://a.com,p,news');
+    expect(emittedCsv()).not.toContain('\n');
+  });
+
+  it('reproduces a semicolon-delimited LF file byte for byte', async () => {
+    // The end-to-end claim, made literally instead of asserted piecemeal: a file
+    // the app can write back unchanged comes back unchanged. The dialect is taken
+    // from a REAL parse of those bytes rather than hand-seeded, so this one test
+    // covers both halves — what PapaParse detects on the way in and what
+    // save-back replays on the way out — which is the seam nothing else joined.
+    // A trailing newline is not preserved, so the fixture has none.
+    const original = 'id;title;url;preview;tags\n1;t1;https://a.com;p;news';
+    const dialect = captureCsvDialect(PapaReal.parse(original, { header: true }).meta);
+    seedScraper({ csvDialect: dialect });
+
+    await saveSingleFile('F1');
+
+    expect(dialect).toEqual({ delimiter: ';', linebreak: '\n' });
+    expect(emittedCsv()).toBe(original);
   });
 
   it('keeps a CRLF source CRLF', async () => {
@@ -971,7 +1001,6 @@ describe('saveSingleFile — source-aware schema', () => {
 
     await saveSingleFile('F1');
 
-    const [emitted] = globalThis.Papa.unparse.mock.calls.at(-1);
     expect(emittedCsv()).toBe(PapaReal.unparse(rows));
   });
 

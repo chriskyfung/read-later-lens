@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import PapaReal from 'papaparse';
 import {
   hardenCsvValue,
   hardenRecordForCsv,
@@ -173,6 +174,46 @@ describe('captureCsvDialect', () => {
     expect(captureCsvDialect({ delimiter: '\t', linebreak: '\n' })).toEqual({
       delimiter: '\t',
       linebreak: '\n',
+    });
+  });
+
+  it('records what the real parser reports, not a hand-written meta', () => {
+    // Every case above feeds `captureCsvDialect` a literal, which makes them a
+    // statement about our own validation and nothing more. At runtime the meta
+    // comes from Papa, so the field names this reads are a contract with the
+    // library: a build that stopped reporting `linebreak` would leave this suite
+    // green while an LF source silently came back CRLF in the browser.
+    //
+    // The options are the importer's own, and the fixture is two columns wide on
+    // purpose. Papa accepts a guessed delimiter only when its average field count
+    // clears 1.99, and `skipEmptyLines: true` is what lets a two-column `;` file
+    // that ends in a newline clear it: the empty row Papa sees there otherwise
+    // drags the average under the bar, every candidate is rejected, and Papa
+    // falls back to `,` in `meta.delimiter` as though it had detected one. The
+    // source would then come back comma-delimited, so the coupling between that
+    // flag and this result is pinned here rather than left to chance.
+    const meta = PapaReal.parse('id;title\n1;a\n2;b\n', {
+      header: true,
+      skipEmptyLines: true,
+    }).meta;
+
+    expect(captureCsvDialect(meta)).toEqual({ delimiter: ';', linebreak: '\n' });
+  });
+
+  it('takes the ending of the first line break when a file mixes them', () => {
+    // Papa returns LF whenever the first line break is LF, so the *minority*
+    // ending can win; only CR-vs-CRLF falls back to a majority. The README
+    // documents this rule, and this is what keeps the rule true of the library
+    // the app actually loads.
+    const options = { header: true, skipEmptyLines: true };
+
+    expect(captureCsvDialect(PapaReal.parse('id,title\n1,a\r\n2,b\r\n', options).meta)).toEqual({
+      delimiter: ',',
+      linebreak: '\n',
+    });
+    expect(captureCsvDialect(PapaReal.parse('id,title\r\n1,a\r\n2,b\r\n', options).meta)).toEqual({
+      delimiter: ',',
+      linebreak: '\r\n',
     });
   });
 });
