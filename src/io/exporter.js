@@ -345,7 +345,11 @@ export function exportAllUnifiedJson() {
  * Exports all current bookmarks to a unified CSV file (trash excluded).
  */
 export function exportAllUnifiedCsv() {
-  const csv = Papa.unparse(hardenRecordsForCsv(getActiveBookmarks()));
+  // RFC 4180, stated rather than omitted. This export spans every source, so
+  // there is no single dialect to reproduce — reproducing one source's delimiter
+  // would be wrong for all the others. `csvUnparseConfig(null)` is how that
+  // decision is expressed; see the architecture note in CONTRIBUTING.md.
+  const csv = Papa.unparse(hardenRecordsForCsv(getActiveBookmarks()), csvUnparseConfig(null));
   const blob = new Blob([csv], { type: 'text/csv' });
   downloadBlob(blob, 'all_bookmarks_export.csv');
 }

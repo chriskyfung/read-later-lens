@@ -573,14 +573,43 @@ describe('unified exports', () => {
     expect(parsed.sources.map((s) => s.id)).toEqual(['F1']);
   });
 
-  it('unparses all bookmarks as all_bookmarks_export.csv', () => {
+  it('unparses all bookmarks as all_bookmarks_export.csv, in RFC 4180', () => {
+    // The second argument is the dialect config. The unified export spans every
+    // source, so it states RFC 4180 explicitly instead of leaving the result to
+    // the library's own default.
     exportAllUnifiedCsv();
     expect(globalThis.Papa.unparse).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ id: '1' })]),
+      { delimiter: ',', newline: '\r\n' },
     );
     const [blob, filename] = downloadBlob.mock.calls[0];
     expect(filename).toBe('all_bookmarks_export.csv');
     expect(blob.type).toBe('text/csv');
+  });
+
+  it('does not adopt a source dialect for the unified export', () => {
+    // One `;`+LF source must not make the combined file European-locale for
+    // every other source's rows, and must not leave the terminator to chance.
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'eu.csv',
+            type: 'csv',
+            csvDialect: { delimiter: ';', linebreak: '\n' },
+          },
+        ],
+      ]),
+    );
+
+    exportAllUnifiedCsv();
+
+    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(expect.anything(), {
+      delimiter: ',',
+      newline: '\r\n',
+    });
   });
 
   it('keeps trashed bookmarks out of both unified exports', async () => {
