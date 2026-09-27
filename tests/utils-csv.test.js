@@ -80,6 +80,16 @@ describe('hardenRecordForCsv', () => {
     const record = { id: '1', title: 'Clean', url: 'https://a.com', tags: ['news', 'tech'] };
     expect(hardenRecordForCsv(record)).toEqual(record);
   });
+
+  it('carries a key named after an Object.prototype member through as a real key', () => {
+    // The clone must be a clone: a `__proto__` column assigned onto a plain {}
+    // hits the inherited accessor and is lost, so the header row the user still
+    // has would quietly lose a column at the last step before writing.
+    const hardened = hardenRecordForCsv(JSON.parse('{"id":"1","__proto__":"=1+1"}'));
+
+    expect(Object.keys(hardened)).toEqual(['id', '__proto__']);
+    expect(Object.getOwnPropertyDescriptor(hardened, '__proto__').value).toBe("'=1+1");
+  });
 });
 
 describe('hardenRecordsForCsv', () => {

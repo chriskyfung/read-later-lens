@@ -59,15 +59,18 @@ export function closeSaveModal() {
 }
 
 /**
- * Columns this app can fill when re-emitting a `.db` source, mapped from the
- * source column name to the bookmark field that supplies its value.
+ * Columns the app can fill when re-emitting a source, mapped from the source
+ * column name to the bookmark field that supplies its value.
  *
- * Anything not listed here is written as NULL and counted, so an unexpected
+ * Shared by the `.db`, CSV and JSON save-back paths, which all owe the user the
+ * same thing: the source's own layout rather than the app's internal schema.
+ *
+ * Anything not listed here is written empty and counted, so an unexpected
  * column is announced rather than silently dropped. `tags` is joined with a
  * comma because that is exactly what `normalizeTags` splits on, which makes the
  * round trip lossless.
  */
-const SQLITE_COLUMN_VALUES = {
+const SOURCE_COLUMN_VALUES = {
   id: (b) => b.id,
   title: (b) => b.title,
   url: (b) => b.url,
@@ -78,6 +81,95 @@ const SQLITE_COLUMN_VALUES = {
   instapaper_url: (b) => b.instapaper_url,
   provider: (b) => b.provider,
 };
+
+/**
+ * Columns a scraper source is re-emitted with when its own headers were never
+ * recorded (a JSON source, or one cached by a version that predates capture).
+ *
+ * These are exactly the fields the scraper adapter reads back
+ * (`normalizeFields` + `normalizeTags`), so nothing is lost. What is omitted is
+ * either app-internal (`source_file_id` / `source_file_name` /
+ * `deleted_at`) or re-derivable: `detected_language` is a pure function of
+ * title + preview, and `provider` / `instapaper_url` are rebuilt from the
+ * provider slug and id. Emitting them would make the user's own file look like
+ * a Read Later Lens export — which it is not.
+ */
+const SCRAPER_EXPORT_COLUMNS = ['id', 'title', 'url', 'article_preview', 'content', 'tags'];
+
+/**
+ * Choose the column list a source's own export must carry.
+ *
+ * @param {import('../core/state.js').SourceFileRecord} file
+ * @returns {string[]|null} Columns in the source's own order, or `null` to keep
+ *   the full internal (unified) schema.
+ */
+function exportColumnsFor(file) {
+  if (Array.isArray(file.csvColumns) && file.csvColumns.length > 0) return file.csvColumns;
+  if (file.profile === 'instapaper-scraper') return SCRAPER_EXPORT_COLUMNS;
+  // A unified source — or one with no recorded profile at all, where guessing a
+  // narrower layout could silently drop fields. The unified shape is lossless.
+  return null;
+}
+
+/**
+ * Reader for one source column name, or `undefined` when the app holds no value
+ * for it.
+ *
+ * Own-property lookup, deliberately: the column names come from an uploaded file
+ * and are therefore attacker-influenceable, and a plain index would resolve
+ * `SOURCE_COLUMN_VALUES['constructor']` (or `toString`, `valueOf`, …) to the
+ * matching `Object.prototype` member. That member is truthy, so the column would
+ * be reported as mapped while actually being written as `Object(record)` — a
+ * literal `{}` cell — and the unmapped-column count would silently under-report.
+ *
+ * @param {string} column Source column name, matched case-insensitively.
+ * @returns {((b: import('../model/BookmarkRecord.js').BookmarkRecord) => unknown)|undefined}
+ */
+function sourceColumnReader(column) {
+  const key = String(column).toLowerCase();
+  return Object.hasOwn(SOURCE_COLUMN_VALUES, key) ? SOURCE_COLUMN_VALUES[key] : undefined;
+}
+
+/**
+ * Reshape one record onto a source's own columns.
+ *
+ * Keys are inserted in `columns` order and every column is always present (empty
+ * when unfillable), so `Papa.unparse` derives the header row from the object's
+ * own insertion order. That keeps the emitted layout identical to the source's
+ * without depending on Papa's `columns` option, which the browser build and
+ * the test-time build do not share a version with.
+ *
+ * The accumulator has a null prototype because the column names come from the
+ * file: on a plain `{}` an assignment to a `__proto__` column would hit the
+ * accessor on `Object.prototype` instead of creating a key, and that column
+ * would vanish from the emitted header row.
+ *
+ * Lookup is case-insensitive for the same reason the `.db` path is: the import
+ * path lowercases keys (`lowerKeyed`), so a source declaring `Title` / `URL`
+ * must find its values rather than round-trip as blanks.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} record
+ * @param {string[]} columns
+ * @returns {Record<string, unknown>} A new object; the record is not mutated.
+ */
+function projectRecord(record, columns) {
+  const projected = Object.create(null);
+  for (const column of columns) {
+    const read = sourceColumnReader(column);
+    projected[column] = read ? (read(record) ?? null) : null;
+  }
+  return projected;
+}
+
+/**
+ * Columns of a source's own layout that the app holds no value for.
+ *
+ * @param {string[]} columns
+ * @returns {string[]}
+ */
+function unfillableColumns(columns) {
+  return columns.filter((column) => !sourceColumnReader(column));
+}
 
 /**
  * Escape an identifier for use inside a double-quoted SQLite name by doubling
@@ -119,15 +211,36 @@ export async function saveSingleFile(fileId) {
 
   const fileBookmarks = getActiveBookmarks().filter((b) => b.source_file_id === fileId);
 
-  if (file.type === 'csv') {
-    // Harden only the rows handed to Papa: a formula-prefixed cell in a title or
-    // tag would otherwise execute when the user reopens the file in a
-    // spreadsheet. The in-memory records stay untouched.
-    const csv = Papa.unparse(hardenRecordsForCsv(fileBookmarks));
-    await saveFileWithFallback(csv, file.name, 'text/csv');
-  } else if (file.type === 'json') {
-    const json = JSON.stringify(fileBookmarks, null, 2);
-    await saveFileWithFallback(json, file.name, 'application/json');
+  if (file.type === 'csv' || file.type === 'json') {
+    // Re-emit the SOURCE's own layout, not the app's internal schema: a scraper
+    // CSV saved back with `source_file_id` / `detected_language` no longer
+    // resembles the user's file, and re-importing it warns that it "looks more
+    // like a Read Later Lens export". `null` columns (unified, or no recorded
+    // profile) keeps the lossless internal shape, which is what that export is.
+    const columns = exportColumnsFor(file);
+    const rows = columns ? fileBookmarks.map((b) => projectRecord(b, columns)) : fileBookmarks;
+
+    if (file.type === 'csv') {
+      // Harden only the rows handed to Papa: a formula-prefixed cell in a title or
+      // tag would otherwise execute when the user reopens the file in a
+      // spreadsheet. Hardening runs AFTER the column selection, so a projected
+      // row is protected exactly like a raw one. The in-memory records stay
+      // untouched.
+      const csv = Papa.unparse(hardenRecordsForCsv(rows));
+      await saveFileWithFallback(csv, file.name, 'text/csv');
+    } else {
+      const json = JSON.stringify(rows, null, 2);
+      await saveFileWithFallback(json, file.name, 'application/json');
+    }
+
+    // The file is structurally faithful, but any column the app has no value for
+    // came back empty. Report that rather than implying a clean copy.
+    if (columns) {
+      const unmapped = unfillableColumns(columns);
+      if (unmapped.length > 0) {
+        showToast(`已匯出 ${file.name}，但有 ${unmapped.length} 個欄位無對應資料，已寫入空白`);
+      }
+    }
   } else if (file.type === 'sqlite' || file.type === 'db') {
     // Without the observed layout there is no honest way to rebuild the file:
     // emitting the app's own schema instead would hand back something that
@@ -155,7 +268,7 @@ export async function saveSingleFile(fileId) {
     // them (lowerKeyed) and SQLite's own identifier rules. A source declaring
     // `Title` / `URL` would otherwise find no mapping and be written back as
     // all-NULL while the app held every value.
-    const unmapped = schema.columns.filter((c) => !SQLITE_COLUMN_VALUES[c.toLowerCase()]);
+    const unmapped = schema.columns.filter((c) => !sourceColumnReader(c));
     const sqlEngine = await initSql();
     const db = new sqlEngine.Database();
     try {
@@ -166,7 +279,7 @@ export async function saveSingleFile(fileId) {
         db.run(
           `INSERT INTO ${table} VALUES (${placeholders});`,
           schema.columns.map((c) => {
-            const value = SQLITE_COLUMN_VALUES[c.toLowerCase()];
+            const value = sourceColumnReader(c);
             return value ? value(b) : null;
           }),
         );
@@ -198,14 +311,23 @@ export async function saveSingleFile(fileId) {
 /**
  * Exports all current bookmarks to a versioned unified JSON file (trash
  * excluded). The envelope (`format` + `version`) gives re-imports an exact
- * fingerprint instead of a column guess; the importer already unwraps the
- * `bookmarks` array, so plain pre-envelope files keep round-tripping.
+ * fingerprint instead of a column guess, and the `sources` manifest records
+ * which source owned each group of bookmarks — without it the per-source
+ * structure is unrecoverable and a re-import collapses every folder into one.
+ *
+ * Only sources that actually own an exported record are listed: a source whose
+ * bookmarks are all in the trash would otherwise restore as an empty folder.
  */
 export function exportAllUnifiedJson() {
+  const bookmarks = getActiveBookmarks();
+  const exportedSourceIds = new Set(bookmarks.map((b) => b.source_file_id));
   const envelope = {
     format: 'read-later-lens',
-    version: 1,
-    bookmarks: getActiveBookmarks(),
+    version: 2,
+    sources: [...state.sourceFiles.values()]
+      .filter((file) => exportedSourceIds.has(file.id))
+      .map((file) => ({ id: file.id, name: file.name, type: file.type, profile: file.profile })),
+    bookmarks,
   };
   const blob = new Blob([JSON.stringify(envelope, null, 2)], {
     type: 'application/json',

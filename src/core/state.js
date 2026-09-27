@@ -21,6 +21,12 @@
  *   the source's own layout. Persisted (it is small); `null` for other types,
  *   for a file with no table, and for sources cached by a version that predates
  *   this field — those are refused rather than re-emitted with a guessed shape.
+ * @property {string[]|null} [csvColumns] The header row a CSV source was read
+ *   from, in order, so save-back re-emits the source's own columns rather than
+ *   the app's internal schema. Persisted (it is tiny, unlike the payload);
+ *   `null` for non-CSV sources, for a file Papa reported no headers for, and
+ *   for sources cached by a version that predates this field — those fall back
+ *   to the profile default rather than a guessed layout.
  * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
  */
 
