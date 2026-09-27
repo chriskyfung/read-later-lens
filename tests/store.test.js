@@ -143,7 +143,12 @@ describe('store (IndexedDB)', () => {
     setSourceFiles(
       new Map([
         ['f1', { id: 'f1', name: 'a.csv', type: 'csv', originalData: 'x', csvDialect }],
-        // A source cached by a version that predates this field.
+        // A source cached by a version that predates this field. The assertion
+        // below covers the WRITE path, not the read: `saveState` is where the
+        // `?? null` normalisation happens, so a legacy row is repaired on its
+        // way out. `loadState` copies rows verbatim, and a cache read before any
+        // re-save leaves the key `undefined` — which `csvUnparseConfig` also
+        // falls back from. `csvColumns` behaves the same way, unchanged here.
         ['f2', { id: 'f2', name: 'b.csv', type: 'csv', originalData: 'x' }],
         ['f3', { id: 'f3', name: 'c.json', type: 'json', originalData: '{}', csvDialect: null }],
       ]),

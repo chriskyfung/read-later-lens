@@ -41,16 +41,17 @@ const KNOWN_LINEBREAKS = new Set(['\r\n', '\n', '\r']);
  * reproduced. Control characters are rejected alongside the structural ones:
  * `\x1e`/`\x1f` are Papa's own last-resort guesses, technically faithful to
  * nothing readable, and a NUL delimiter yields a file no consumer can parse.
- * TAB is the exception: a TSV's delimiter is a control character, so it is
- * allowed through before that guard runs.
+ * TAB is the exception: a tab-delimited file's delimiter is a control
+ * character, so it is allowed through before that guard runs.
  *
  * @param {unknown} value
  * @returns {string} A one-character delimiter, or `''`.
  */
 function usableDelimiter(value) {
   if (typeof value !== 'string' || value.length !== 1) return '';
-  // TAB first: it is a real delimiter (Papa detects it for a TSV), and the
-  // control-character guard below would otherwise reject every tab source.
+  // TAB first: it is a real delimiter (Papa detects it for tab-delimited
+  // input), and the control-character guard below would otherwise reject every
+  // tab source.
   if (value === '\t') return value;
   // eslint-disable-next-line no-control-regex -- rejecting them is the point
   if (/[\x00-\x1f\x7f]/.test(value)) return '';

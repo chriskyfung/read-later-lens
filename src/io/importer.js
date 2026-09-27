@@ -553,8 +553,9 @@ async function prepareSingleFile(file, finalName, profile) {
     fileRecord.csvColumns = Array.isArray(results.meta?.fields) ? [...results.meta.fields] : null;
     // Papa already reports the delimiter and line terminator it detected, so the
     // dialect is observed here rather than guessed at save time. A tab- or
-    // semicolon-delimited source (a TSV, or a European-locale Excel export) would
-    // otherwise come back comma-delimited, breaking the very pipeline it came from.
+    // semicolon-delimited source (a tab-delimited export, or a European-locale
+    // Excel file) would otherwise come back comma-delimited, breaking the very
+    // pipeline it came from.
     fileRecord.csvDialect = captureCsvDialect(results.meta);
     checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
     // The unified CSV has no envelope to hang a manifest on, but it writes
