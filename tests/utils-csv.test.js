@@ -260,3 +260,34 @@ describe('csvUnparseConfig', () => {
     expect(csvUnparseConfig(';')).toEqual({ delimiter: ',', newline: '\r\n' });
   });
 });
+
+describe('what PapaParse validates on the unparse side', () => {
+  // A guard, not a test of this repo: it pins the library behaviour the guards
+  // above are written against, so the JSDoc's claim cannot drift again. The
+  // comment this replaces asserted that Papa "checks nothing on the unparse
+  // side", which is false; the JSDoc in `csvUnparseConfig` was corrected to
+  // match, and these assertions are why that correction is safe to leave in
+  // place. Reverting any code in `src/` cannot fail them — only a PapaParse
+  // upgrade or downgrade can, which is exactly when they should be read.
+  const rows = [{ a: 'x', b: 'y' }];
+  const emit = (config) => PapaReal.unparse(rows, { newline: '\r\n', ...config });
+  const rfc4180 = emit({ delimiter: ',' });
+
+  it('re-checks the delimiter against BAD_DELIMITERS, so those four fall back to a comma', () => {
+    for (const delimiter of ['\r', '\n', '"', '\uFEFF']) {
+      expect(emit({ delimiter })).toBe(rfc4180);
+    }
+  });
+
+  it('checks neither the delimiter length, nor a control character, nor the newline', () => {
+    // Which is what makes the app's own guards load-bearing rather than
+    // redundant: each of these is written straight into the output.
+    for (const delimiter of ['\x00', '\x1e', ';;']) {
+      expect(emit({ delimiter })).not.toBe(rfc4180);
+    }
+    // The worst case, and the reason `KNOWN_LINEBREAKS` is the guard that
+    // matters: an unknown terminator is emitted verbatim, leaving a file whose
+    // records are no longer separated by a line break at all.
+    expect(emit({ newline: 'bogus' })).not.toContain('\r\n');
+  });
+});

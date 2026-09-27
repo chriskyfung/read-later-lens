@@ -924,18 +924,34 @@ describe('saveSingleFile — source-aware schema', () => {
     await saveSingleFile('F1');
 
     expect(parseEmitted().meta.delimiter).toBe(';');
-    // A cell containing a comma is the discriminator: Papa quotes only what
-    // contains the CONFIGURED delimiter, so a `,` stays bare and unquoted
-    // rather than splitting the cell.
     expect(emittedCsv().split('\r\n')[1]).toBe('1;t1;https://a.com;p;news');
   });
 
   it('re-emits a cell containing the configured delimiter without splitting it', async () => {
+    // The discriminator for why the dialect is a config rather than a string
+    // edit: Papa quotes a cell only when it contains the CONFIGURED delimiter,
+    // so a `;` inside a cell has to come back quoted. Emitted bare it would
+    // split into two fields and shift every column after it.
+    seedScraper({ csvDialect: { delimiter: ';', linebreak: '\r\n' } });
+    setBookmarks([{ ...bookmarks[0], title: 'a;b' }]);
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r\n')[1]).toBe('1;"a;b";https://a.com;p;news');
+    expect(parseEmitted().data[0].title).toBe('a;b');
+  });
+
+  it('leaves a cell holding the other delimiter bare, because it needs no quoting', async () => {
+    // The mirror of the test above, and what the misplaced comment above used to
+    // claim: a `,` is not the configured delimiter, so Papa must NOT quote it. An
+    // implementation that unparsed as comma and swapped afterwards would fail
+    // here — it would quote this cell and mangle the `;` in the row above.
     seedScraper({ csvDialect: { delimiter: ';', linebreak: '\r\n' } });
     setBookmarks([{ ...bookmarks[0], title: 'a,b' }]);
 
     await saveSingleFile('F1');
 
+    expect(emittedCsv().split('\r\n')[1]).toBe('1;a,b;https://a.com;p;news');
     expect(parseEmitted().data[0].title).toBe('a,b');
   });
 
