@@ -236,4 +236,25 @@ describe('csvUnparseConfig', () => {
       newline: '\r',
     });
   });
+
+  it('re-validates at the boundary, so a value that skipped capture cannot emit garbage', () => {
+    // Nothing produces such a record today, which is exactly why the check has
+    // to live here rather than in the one place that happens to validate now:
+    // Papa validates no delimiter on the unparse side, so an unrejected value
+    // would reach the file writer untouched. A dropped-to-RFC answer is a
+    // fidelity loss; a `\n` delimiter is a file no consumer can read.
+    for (const delimiter of ['\n', '\x1e', '"', ';;', 44]) {
+      expect(csvUnparseConfig({ delimiter, linebreak: '\r\n' })).toEqual({
+        delimiter: ',',
+        newline: '\r\n',
+      });
+    }
+    expect(csvUnparseConfig({ delimiter: ';', linebreak: '\n\n' })).toEqual({
+      delimiter: ';',
+      newline: '\r\n',
+    });
+    // Not an object at all — a shape no capture could produce, so the guard
+    // cannot be a property access that throws instead of a fallback.
+    expect(csvUnparseConfig(';')).toEqual({ delimiter: ',', newline: '\r\n' });
+  });
 });

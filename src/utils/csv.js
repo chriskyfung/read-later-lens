@@ -96,13 +96,22 @@ export function captureCsvDialect(meta) {
  * *configured* delimiter, so swapping `,` for `;` afterwards writes bare
  * semicolons into cells that were never quoted.
  *
+ * The same validation `captureCsvDialect` applies is applied again here, which
+ * is redundant for every value that reaches this function today and is the point:
+ * Papa checks nothing on the unparse side, so the guarantee has to hold at the
+ * boundary rather than depend on there being exactly one writer of the field. A
+ * dialect from a cache written by a future version, or a value that reached the
+ * record by some other route, degrades to RFC 4180 instead of emitting a file no
+ * consumer can parse.
+ *
  * @param {{delimiter?: string, linebreak?: string}|null|undefined} dialect
  * @returns {{delimiter: string, newline: string}} RFC 4180 for an unknown dialect.
  */
 export function csvUnparseConfig(dialect) {
+  const observed = dialect && typeof dialect === 'object' ? dialect : {};
   return {
-    delimiter: (dialect && dialect.delimiter) || ',',
-    newline: (dialect && dialect.linebreak) || '\r\n',
+    delimiter: usableDelimiter(observed.delimiter) || ',',
+    newline: KNOWN_LINEBREAKS.has(observed.linebreak) ? observed.linebreak : '\r\n',
   };
 }
 
