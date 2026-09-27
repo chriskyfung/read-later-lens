@@ -143,6 +143,10 @@ export async function saveState() {
       // strings, so persisting it keeps the source's own CSV layout knowable
       // after a reload instead of re-guessed from the app's internal schema.
       csvColumns: v.csvColumns ?? null,
+      // And the same for the dialect: two short strings, and without them a
+      // ;-delimited or LF source would silently return as comma + CRLF after a
+      // reload, re-parsed from the raw text only to guess the wrong shape.
+      csvDialect: v.csvDialect ?? null,
     }));
     await db.put(STORE_NAME, { key: 'bookmarks', data: bookmarks });
     await db.put(STORE_NAME, { key: 'sources', data: sourcesArray });

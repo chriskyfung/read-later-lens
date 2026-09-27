@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { hardenCsvValue, hardenRecordForCsv, hardenRecordsForCsv } from '../src/utils/csv.js';
+import {
+  hardenCsvValue,
+  hardenRecordForCsv,
+  hardenRecordsForCsv,
+  captureCsvDialect,
+  csvUnparseConfig,
+} from '../src/utils/csv.js';
 
 describe('hardenCsvValue', () => {
   it('prefixes every character a spreadsheet would evaluate', () => {
@@ -110,5 +116,83 @@ describe('hardenRecordsForCsv', () => {
 
   it('handles an empty export without throwing', () => {
     expect(hardenRecordsForCsv([])).toEqual([]);
+  });
+});
+
+describe('captureCsvDialect', () => {
+  it('records the delimiter and line terminator PapaParse observed', () => {
+    expect(captureCsvDialect({ delimiter: ';', linebreak: '\n' })).toEqual({
+      delimiter: ';',
+      linebreak: '\n',
+    });
+  });
+
+  it('reports nothing when the parse described no dialect', () => {
+    // `null` is the same "unknown, use the default" signal `csvColumns: null`
+    // carries, so an unreadable meta can never be mistaken for a real dialect.
+    expect(captureCsvDialect(undefined)).toBeNull();
+    expect(captureCsvDialect(null)).toBeNull();
+    expect(captureCsvDialect({})).toBeNull();
+  });
+
+  it('rejects a delimiter no consumer could read back', () => {
+    // Papa validates the delimiter on the *parse* side only, so an observed value
+    // handed straight back to unparse would be trusted by nothing at all.
+    for (const delimiter of ['\r', '\n', '"', '﻿', ';;', '', undefined, 44]) {
+      expect(captureCsvDialect({ delimiter, linebreak: '\n' })).toEqual({ linebreak: '\n' });
+    }
+  });
+
+  it('rejects the control characters Papa guesses as a last resort', () => {
+    // `\x1e`/`\x1f` are faithful to a file nothing can read, and Papa emits them
+    // when it cannot tell one field from the next.
+    expect(captureCsvDialect({ delimiter: '\x1e', linebreak: '\r\n' })).toEqual({
+      linebreak: '\r\n',
+    });
+    expect(captureCsvDialect({ delimiter: '\x00' })).toBeNull();
+  });
+
+  it('rejects a line terminator that is not one a consumer expects', () => {
+    for (const linebreak of ['\n\n', '\u2028', undefined, 10]) {
+      expect(captureCsvDialect({ delimiter: ';', linebreak })).toEqual({ delimiter: ';' });
+    }
+  });
+
+  it('keeps the half of a dialect that is usable', () => {
+    // Losing both would be a worse answer than losing one: a `;` file whose
+    // terminator was unreadable can still round-trip its separator.
+    expect(captureCsvDialect({ delimiter: ';', linebreak: 'bogus' })).toEqual({ delimiter: ';' });
+    expect(captureCsvDialect({ delimiter: 'bogus', linebreak: '\n' })).toEqual({ linebreak: '\n' });
+  });
+
+  it('accepts the RFC 4180 baseline and a tab source', () => {
+    expect(captureCsvDialect({ delimiter: ',', linebreak: '\r\n' })).toEqual({
+      delimiter: ',',
+      linebreak: '\r\n',
+    });
+    expect(captureCsvDialect({ delimiter: '\t', linebreak: '\n' })).toEqual({
+      delimiter: '\t',
+      linebreak: '\n',
+    });
+  });
+});
+
+describe('csvUnparseConfig', () => {
+  it('falls back to RFC 4180 for an unknown dialect', () => {
+    for (const dialect of [null, undefined, {}]) {
+      expect(csvUnparseConfig(dialect)).toEqual({ delimiter: ',', newline: '\r\n' });
+    }
+  });
+
+  it('completes a half-recorded dialect rather than leaving Papa to guess', () => {
+    expect(csvUnparseConfig({ delimiter: ';' })).toEqual({ delimiter: ';', newline: '\r\n' });
+    expect(csvUnparseConfig({ linebreak: '\n' })).toEqual({ delimiter: ',', newline: '\n' });
+  });
+
+  it('passes a full dialect through, renaming the terminator to the unparse option', () => {
+    expect(csvUnparseConfig({ delimiter: '\t', linebreak: '\r' })).toEqual({
+      delimiter: '\t',
+      newline: '\r',
+    });
   });
 });

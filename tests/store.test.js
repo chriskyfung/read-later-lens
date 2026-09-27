@@ -136,6 +136,26 @@ describe('store (IndexedDB)', () => {
     expect(sourceFiles.get('f3').csvColumns).toBeNull();
   });
 
+  it('persists the observed CSV dialect so a reload keeps it', async () => {
+    // Two short strings: without them a `;`-delimited or LF source silently
+    // returns as comma + CRLF after a reload, having to be re-parsed to guess.
+    const csvDialect = { delimiter: ';', linebreak: '\n' };
+    setSourceFiles(
+      new Map([
+        ['f1', { id: 'f1', name: 'a.csv', type: 'csv', originalData: 'x', csvDialect }],
+        // A source cached by a version that predates this field.
+        ['f2', { id: 'f2', name: 'b.csv', type: 'csv', originalData: 'x' }],
+        ['f3', { id: 'f3', name: 'c.json', type: 'json', originalData: '{}', csvDialect: null }],
+      ]),
+    );
+    await saveState();
+    setSourceFiles(new Map());
+    await loadState();
+
+    expect(sourceFiles.get('f1').csvDialect).toEqual(csvDialect);
+    expect(sourceFiles.get('f2').csvDialect).toBeNull();
+    expect(sourceFiles.get('f3').csvDialect).toBeNull();
+  });
   it('reports true once the working set is written', async () => {
     setBookmarks([bookmark(1)]);
 
