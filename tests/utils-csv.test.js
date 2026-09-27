@@ -240,9 +240,11 @@ describe('csvUnparseConfig', () => {
   it('re-validates at the boundary, so a value that skipped capture cannot emit garbage', () => {
     // Nothing produces such a record today, which is exactly why the check has
     // to live here rather than in the one place that happens to validate now:
-    // Papa validates no delimiter on the unparse side, so an unrejected value
-    // would reach the file writer untouched. A dropped-to-RFC answer is a
-    // fidelity loss; a `\n` delimiter is a file no consumer can read.
+    // Papa re-checks only `\r`, `\n`, `"` and the BOM on the unparse side, and
+    // copies an unknown `newline` into the file untouched, so a control
+    // character, a two-character delimiter or a bogus terminator would reach
+    // the file writer as given. A dropped-to-RFC answer is a fidelity loss; a
+    // terminator of `bogus` is a single line no consumer can read.
     for (const delimiter of ['\n', '\x1e', '"', ';;', 44]) {
       expect(csvUnparseConfig({ delimiter, linebreak: '\r\n' })).toEqual({
         delimiter: ',',

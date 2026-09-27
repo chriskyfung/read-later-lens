@@ -21,14 +21,15 @@
  * @see https://owasp.org/www-community/attacks/CSV_Injection
  */
 /**
- * Delimiters that cannot describe a file Papa can read back.
+ * The characters that cannot describe a file Papa can read back.
  *
- * Papa gates the *input* delimiter on its own `BAD_DELIMITERS` but does not
- * validate the unparse side, so a value taken from a parsed file and handed
- * straight back to `Papa.unparse` would be trusted on the strength of a check
- * that does not exist there. Spelled out here - rather than read off Papa - so
- * the guard cannot drift with the CDN version, for the same reason
- * `FORMULA_PREFIX` is written by hand.
+ * Papa does check this set on the unparse side as well - `unpackConfig` falls
+ * back to `,` for a delimiter containing any of them - so this list duplicates
+ * the library rather than extending it. What the library does *not* check is a
+ * delimiter's length, whether it is a control character (see
+ * `usableDelimiter`), or `config.newline` at all. Spelled out here - rather
+ * than read off Papa - so the set cannot drift with the CDN version, for the
+ * same reason `FORMULA_PREFIX` is written by hand.
  */
 const IMPOSSIBLE_DELIMITERS = /[\r\n"\uFEFF]/;
 
@@ -97,11 +98,14 @@ export function captureCsvDialect(meta) {
  * semicolons into cells that were never quoted.
  *
  * The same validation `captureCsvDialect` applies is applied again here, which
- * is redundant for every value that reaches this function today and is the point:
- * Papa checks nothing on the unparse side, so the guarantee has to hold at the
- * boundary rather than depend on there being exactly one writer of the field. A
- * dialect from a cache written by a future version, or a value that reached the
- * record by some other route, degrades to RFC 4180 instead of emitting a file no
+ * is redundant for every value that reaches this function today and is the
+ * point: Papa checks the delimiter against its own `BAD_DELIMITERS` but
+ * validates nothing else on the unparse side - not the delimiter's length, not
+ * a control character, and not `newline` at all, where an unknown value is
+ * copied into the file verbatim. So the guarantee has to hold at the boundary
+ * rather than depend on there being exactly one writer of the field. A dialect
+ * from a cache written by a future version, or a value that reached the record
+ * by some other route, degrades to RFC 4180 instead of emitting a file no
  * consumer can parse.
  *
  * @param {{delimiter?: string, linebreak?: string}|null|undefined} dialect
