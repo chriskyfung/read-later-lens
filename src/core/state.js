@@ -32,9 +32,8 @@
  *   PapaParse reported them, so save-back re-emits the file in its own dialect
  *   instead of always comma + CRLF. Each half is optional (a file with an
  *   unreadable terminator still keeps its delimiter). Persisted (two short
- *   strings); 
-ull for non-CSV sources, for a meta Papa could not describe, and
- *   for sources cached by a version that predates this field - those fall
+ *   strings); — null for non-CSV sources, for a meta Papa could not describe, and
+ *   for sources cached by a version that predates this field — those fall
  *   back to RFC 4180 rather than a guessed dialect.
  * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
  */
