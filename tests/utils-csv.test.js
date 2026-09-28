@@ -287,7 +287,12 @@ describe('what PapaParse validates on the unparse side', () => {
     }
     // The worst case, and the reason `KNOWN_LINEBREAKS` is the guard that
     // matters: an unknown terminator is emitted verbatim, leaving a file whose
-    // records are no longer separated by a line break at all.
-    expect(emit({ newline: 'bogus' })).not.toContain('\r\n');
+    // records are no longer separated by a line break at all. Asserted as exact
+    // bytes rather than as the absence of CRLF: a PapaParse that grew newline
+    // validation and fell back to `\n` would also satisfy
+    // `not.toContain('\r\n')`, and then the JSDoc's "copied into the file
+    // verbatim" would be false again with this test still green - the exact
+    // drift it exists to catch.
+    expect(emit({ newline: 'bogus' })).toBe('a,bbogusx,y');
   });
 });
