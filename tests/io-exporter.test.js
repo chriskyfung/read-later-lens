@@ -1014,12 +1014,13 @@ describe('saveSingleFile — source-aware schema', () => {
   });
 
   it('reproduces a semicolon-delimited LF file byte for byte', async () => {
-    // The end-to-end claim, made literally instead of asserted piecemeal: a file
-    // the app can write back unchanged comes back unchanged. The dialect is taken
-    // from a REAL parse of those bytes rather than hand-seeded, so this one test
-    // covers both halves — what PapaParse detects on the way in and what
-    // save-back replays on the way out — which is the seam nothing else joined.
-    // A trailing newline is not preserved, so the fixture has none.
+    // The end-to-end claim at the library level: a file the app can write back
+    // unchanged comes back unchanged, with the dialect taken from a REAL parse
+    // of those bytes rather than hand-seeded. It stops at the exporter's own
+    // boundary - the record is hand-seeded, and the parse options are not the
+    // importer's - so the importer-to-exporter seam is covered by
+    // `io-csv-round-trip.test.js` instead. A trailing newline is not preserved,
+    // so the fixture has none.
     const original = 'id;title;url;preview;tags\n1;t1;https://a.com;p;news';
     const dialect = captureCsvDialect(PapaReal.parse(original, { header: true }).meta);
     seedScraper({ csvDialect: dialect });

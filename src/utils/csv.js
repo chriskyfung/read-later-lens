@@ -114,6 +114,10 @@ export function captureCsvDialect(meta) {
  */
 export function csvUnparseConfig(dialect) {
   const observed = dialect && typeof dialect === 'object' ? dialect : {};
+  // Unlike `sourceColumnReader`, these two reads resolve through the prototype
+  // chain, and that is deliberate: both halves are whitelisted immediately
+  // below, so an inherited property can only ever select a valid delimiter or
+  // terminator, never one that reaches the file.
   return {
     delimiter: usableDelimiter(observed.delimiter) || ',',
     newline: KNOWN_LINEBREAKS.has(observed.linebreak) ? observed.linebreak : '\r\n',
