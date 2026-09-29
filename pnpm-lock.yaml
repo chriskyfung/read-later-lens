@@ -116,7 +116,7 @@ importers:
         specifier: ^8.0.3
         version: 8.0.3
       papaparse:
-        specifier: ^5.4.1
+        specifier: ^5.7.0
         version: 5.7.0
       sql.js:
         specifier: ^1.12.0
