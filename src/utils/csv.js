@@ -1,5 +1,5 @@
 /**
- * @fileoverview CSV export hardening — neutralizes spreadsheet formula injection.
+ * @fileoverview The CSV boundary — dialect fidelity and formula-injection hardening.
  *
  * A CSV cell that begins with `=`, `+`, `-`, `@`, TAB or CR is executed as a
  * formula (or, in older Excel, a DDE command) when the file is opened. Every
@@ -20,6 +20,109 @@
  *
  * @see https://owasp.org/www-community/attacks/CSV_Injection
  */
+/**
+ * The characters that cannot describe a file Papa can read back.
+ *
+ * Papa does check this set on the unparse side as well - `unpackConfig` falls
+ * back to `,` for a delimiter containing any of them - so this list duplicates
+ * the library rather than extending it. What the library does *not* check is a
+ * delimiter's length, whether it is a control character (see
+ * `usableDelimiter`), or `config.newline` at all. Spelled out here - rather
+ * than read off Papa - so the set cannot drift with the CDN version, for the
+ * same reason `FORMULA_PREFIX` is written by hand.
+ */
+const IMPOSSIBLE_DELIMITERS = /[\r\n"\uFEFF]/;
+
+/** Line terminators a consumer can be expected to read back. */
+const KNOWN_LINEBREAKS = new Set(['\r\n', '\n', '\r']);
+
+/**
+ * A single delimiter character, or `''` when the observed value cannot be
+ * reproduced. Control characters are rejected alongside the structural ones:
+ * `\x1e`/`\x1f` are Papa's own last-resort guesses, technically faithful to
+ * nothing readable, and a NUL delimiter yields a file no consumer can parse.
+ * TAB is the exception: a tab-delimited file's delimiter is a control
+ * character, so it is allowed through before that guard runs.
+ *
+ * @param {unknown} value
+ * @returns {string} A one-character delimiter, or `''`.
+ */
+function usableDelimiter(value) {
+  if (typeof value !== 'string' || value.length !== 1) return '';
+  // TAB first: it is a real delimiter (Papa detects it for tab-delimited
+  // input), and the control-character guard below would otherwise reject every
+  // tab source.
+  if (value === '\t') return value;
+  // eslint-disable-next-line no-control-regex -- rejecting them is the point
+  if (/[\x00-\x1f\x7f]/.test(value)) return '';
+  return IMPOSSIBLE_DELIMITERS.test(value) ? '' : value;
+}
+
+/**
+ * Read the delimiter and line terminator a CSV was actually written with.
+ *
+ * `Papa.parse` already reports both on `meta` (delimiter auto-detection is on
+ * by default), so the dialect is *observed* at import - this only records it and
+ * rejects what cannot be reproduced. A half-usable `meta` keeps the half that
+ * works: a `;`-delimited file with an unreadable terminator still round-trips
+ * with `;` and RFC 4180's CRLF, rather than losing both.
+ *
+ * @param {{delimiter?: unknown, linebreak?: unknown}} [meta] PapaParse's `results.meta`.
+ * @returns {{delimiter?: string, linebreak?: string}|null} The dialect to record,
+ *   or `null` when nothing observable was usable - which is the same "unknown,
+ *   use the default" signal `csvColumns: null` carries.
+ */
+export function captureCsvDialect(meta) {
+  if (!meta || typeof meta !== 'object') return null;
+
+  const dialect = {};
+  const delimiter = usableDelimiter(meta.delimiter);
+  if (delimiter) dialect.delimiter = delimiter;
+  if (typeof meta.linebreak === 'string' && KNOWN_LINEBREAKS.has(meta.linebreak)) {
+    dialect.linebreak = meta.linebreak;
+  }
+
+  return Object.keys(dialect).length > 0 ? dialect : null;
+}
+
+/**
+ * The `Papa.unparse` config that re-emits a file in its own dialect.
+ *
+ * Defaults are stated explicitly rather than omitted so the result is complete:
+ * a dialect recorded as `{delimiter: ';'}` (its terminator was unreadable) must
+ * still emit CRLF, and Papa's own default is not a documented part of the
+ * contract this app depends on.
+ *
+ * The config is the only correct place to express this. Post-processing the
+ * emitted string would corrupt it: Papa quotes a cell only when it contains the
+ * *configured* delimiter, so swapping `,` for `;` afterwards writes bare
+ * semicolons into cells that were never quoted.
+ *
+ * The same validation `captureCsvDialect` applies is applied again here, which
+ * is redundant for every value that reaches this function today and is the
+ * point: Papa checks the delimiter against its own `BAD_DELIMITERS` but
+ * validates nothing else on the unparse side - not the delimiter's length, not
+ * a control character, and not `newline` at all, where an unknown value is
+ * copied into the file verbatim. So the guarantee has to hold at the boundary
+ * rather than depend on there being exactly one writer of the field. A dialect
+ * from a cache written by a future version, or a value that reached the record
+ * by some other route, degrades to RFC 4180 instead of emitting a file no
+ * consumer can parse.
+ *
+ * @param {{delimiter?: string, linebreak?: string}|null|undefined} dialect
+ * @returns {{delimiter: string, newline: string}} RFC 4180 for an unknown dialect.
+ */
+export function csvUnparseConfig(dialect) {
+  const observed = dialect && typeof dialect === 'object' ? dialect : {};
+  // Unlike `sourceColumnReader`, these two reads resolve through the prototype
+  // chain, and that is deliberate: both halves are whitelisted immediately
+  // below, so an inherited property can only ever select a valid delimiter or
+  // terminator, never one that reaches the file.
+  return {
+    delimiter: usableDelimiter(observed.delimiter) || ',',
+    newline: KNOWN_LINEBREAKS.has(observed.linebreak) ? observed.linebreak : '\r\n',
+  };
+}
 
 /**
  * Leading characters that make spreadsheet software evaluate a cell.

@@ -8,9 +8,10 @@ import {
   registerExporterListeners,
 } from '../src/io/exporter.js';
 import PapaReal from 'papaparse';
+import { captureCsvDialect } from '../src/utils/csv.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
-import { setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
+import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
 import { resetLayers } from '../src/utils/dom.js';
 
 vi.mock('../src/utils/download.js', () => ({
@@ -153,9 +154,12 @@ describe('saveSingleFile', () => {
   it("unparses only the file's bookmarks for csv", async () => {
     seed('csv');
     await saveSingleFile('F1');
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith([
-      expect.objectContaining({ id: '1', source_file_id: 'F1' }),
-    ]);
+    // The second argument is the dialect config: RFC 4180 for a source with no
+    // recorded dialect, which is exactly what an unconfigured unparse emitted.
+    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: '1', source_file_id: 'F1' })],
+      { delimiter: ',', newline: '\r\n' },
+    );
     expect(saveFileWithFallback).toHaveBeenCalledWith('csv-content', 'a.csv', 'text/csv');
   });
 
@@ -496,7 +500,10 @@ describe('saveSingleFile', () => {
 
     await saveSingleFile('F1');
 
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith([expect.objectContaining({ id: '1' })]);
+    expect(globalThis.Papa.unparse).toHaveBeenCalledWith([expect.objectContaining({ id: '1' })], {
+      delimiter: ',',
+      newline: '\r\n',
+    });
   });
 });
 // END-PART2
@@ -566,14 +573,43 @@ describe('unified exports', () => {
     expect(parsed.sources.map((s) => s.id)).toEqual(['F1']);
   });
 
-  it('unparses all bookmarks as all_bookmarks_export.csv', () => {
+  it('unparses all bookmarks as all_bookmarks_export.csv, in RFC 4180', () => {
+    // The second argument is the dialect config. The unified export spans every
+    // source, so it states RFC 4180 explicitly instead of leaving the result to
+    // the library's own default.
     exportAllUnifiedCsv();
     expect(globalThis.Papa.unparse).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ id: '1' })]),
+      { delimiter: ',', newline: '\r\n' },
     );
     const [blob, filename] = downloadBlob.mock.calls[0];
     expect(filename).toBe('all_bookmarks_export.csv');
     expect(blob.type).toBe('text/csv');
+  });
+
+  it('does not adopt a source dialect for the unified export', () => {
+    // One `;`+LF source must not make the combined file European-locale for
+    // every other source's rows, and must not leave the terminator to chance.
+    setSourceFiles(
+      new Map([
+        [
+          'F1',
+          {
+            id: 'F1',
+            name: 'eu.csv',
+            type: 'csv',
+            csvDialect: { delimiter: ';', linebreak: '\n' },
+          },
+        ],
+      ]),
+    );
+
+    exportAllUnifiedCsv();
+
+    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(expect.anything(), {
+      delimiter: ',',
+      newline: '\r\n',
+    });
   });
 
   it('keeps trashed bookmarks out of both unified exports', async () => {
@@ -909,6 +945,130 @@ describe('saveSingleFile — source-aware schema', () => {
     expect(el('toastMsg').innerText).toContain('1 個欄位無對應資料');
   });
 
+  it('re-emits a semicolon-delimited source with semicolons', async () => {
+    // A European-locale Excel export comes back comma-delimited otherwise, so
+    // the file no longer opens in the tool that produced it.
+    seedScraper({ csvDialect: { delimiter: ';', linebreak: '\r\n' } });
+
+    await saveSingleFile('F1');
+
+    expect(parseEmitted().meta.delimiter).toBe(';');
+    expect(emittedCsv().split('\r\n')[1]).toBe('1;t1;https://a.com;p;news');
+  });
+
+  it('re-emits a cell containing the configured delimiter without splitting it', async () => {
+    // The discriminator for why the dialect is a config rather than a string
+    // edit: Papa quotes a cell only when it contains the CONFIGURED delimiter,
+    // so a `;` inside a cell has to come back quoted. Emitted bare it would
+    // split into two fields and shift every column after it.
+    seedScraper({ csvDialect: { delimiter: ';', linebreak: '\r\n' } });
+    setBookmarks([{ ...bookmarks[0], title: 'a;b' }]);
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r\n')[1]).toBe('1;"a;b";https://a.com;p;news');
+    expect(parseEmitted().data[0].title).toBe('a;b');
+  });
+
+  it('leaves a cell holding the other delimiter bare, because it needs no quoting', async () => {
+    // The mirror of the test above, and what the misplaced comment above used to
+    // claim: a `,` is not the configured delimiter, so Papa must NOT quote it. An
+    // implementation that unparsed as comma and swapped afterwards would fail
+    // here — it would quote this cell and mangle the `;` in the row above.
+    seedScraper({ csvDialect: { delimiter: ';', linebreak: '\r\n' } });
+    setBookmarks([{ ...bookmarks[0], title: 'a,b' }]);
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r\n')[1]).toBe('1;a,b;https://a.com;p;news');
+    expect(parseEmitted().data[0].title).toBe('a,b');
+  });
+
+  it('re-emits a tab-delimited source with tabs', async () => {
+    seedScraper({ csvDialect: { delimiter: '\t', linebreak: '\n' } });
+
+    await saveSingleFile('F1');
+
+    expect(parseEmitted().meta.delimiter).toBe('\t');
+    expect(emittedCsv().split('\n')[1]).toBe('1\tt1\thttps://a.com\tp\tnews');
+  });
+
+  it('keeps an LF source LF, adding no CR the original never had', async () => {
+    seedScraper({ csvDialect: { delimiter: ',', linebreak: '\n' } });
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv()).not.toContain('\r');
+  });
+
+  it('re-emits a classic-Mac CR source with CR, and with no LF besides', async () => {
+    // The third terminator the whitelist accepts, and until now the only one with
+    // no coverage past the config object: an unparse assertion on the emitted
+    // string is what a CR file actually needs.
+    seedScraper({ csvDialect: { delimiter: ',', linebreak: '\r' } });
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r')[1]).toBe('1,t1,https://a.com,p,news');
+    expect(emittedCsv()).not.toContain('\n');
+  });
+
+  it('reproduces a semicolon-delimited LF file byte for byte', async () => {
+    // The end-to-end claim at the library level: a file the app can write back
+    // unchanged comes back unchanged, with the dialect taken from a REAL parse
+    // of those bytes rather than hand-seeded. It stops at the exporter's own
+    // boundary - the record is hand-seeded, and the parse options are not the
+    // importer's - so the importer-to-exporter seam is covered by
+    // `io-csv-round-trip.test.js` instead. A trailing newline is not preserved,
+    // so the fixture has none.
+    const original = 'id;title;url;preview;tags\n1;t1;https://a.com;p;news';
+    const dialect = captureCsvDialect(PapaReal.parse(original, { header: true }).meta);
+    seedScraper({ csvDialect: dialect });
+
+    await saveSingleFile('F1');
+
+    expect(dialect).toEqual({ delimiter: ';', linebreak: '\n' });
+    expect(emittedCsv()).toBe(original);
+  });
+
+  it('keeps a CRLF source CRLF', async () => {
+    seedScraper({ csvDialect: { delimiter: ',', linebreak: '\r\n' } });
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv().split('\r\n')[1]).toBe('1,t1,https://a.com,p,news');
+  });
+
+  it('emits exactly what it did before for a source with no recorded dialect', async () => {
+    // A cache from a version that predates capture must not shift by a byte:
+    // RFC 4180 is what `Papa.unparse` already produced.
+    seedScraper();
+    const rows = [{ id: '1', title: 't1', url: 'https://a.com', preview: 'p', tags: 'news' }];
+
+    await saveSingleFile('F1');
+
+    expect(emittedCsv()).toBe(PapaReal.unparse(rows));
+  });
+
+  it('falls back to RFC 4180 when only the delimiter was recorded', async () => {
+    seedScraper({ csvDialect: { delimiter: ';' } });
+
+    await saveSingleFile('F1');
+
+    expect(parseEmitted().meta.delimiter).toBe(';');
+    expect(emittedCsv()).toContain('\r\n');
+  });
+
+  it('does not let a reconstructed folder inherit an envelope dialect', async () => {
+    // `csvDialect: null` is what a folder rebuilt from a unified export carries.
+    // Handing the envelope's dialect over would re-emit every restored source
+    // with the export's separator.
+    seedScraper({ csvDialect: null });
+
+    await saveSingleFile('F1');
+
+    expect(parseEmitted().meta.delimiter).toBe(',');
+  });
   it('keeps the full internal schema for a unified source', async () => {
     setSourceFiles(
       new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv', profile: 'rll-unified' }]]),

@@ -8,6 +8,7 @@ import { resolveImportAdapter } from '../providers/index.js';
 import { checkImport, defaultProfileId, selectableProfiles } from '../providers/profiles.js';
 import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io/importModal.js';
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
+import { captureCsvDialect } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
 
 /**
@@ -480,6 +481,10 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       // honest description available: a manifest records WHICH sources an export
       // came from, never what shape they had.
       csvColumns: null,
+      // Same reasoning: the envelope's dialect describes the uploaded export, not
+      // this source's own file, so a rebuilt folder falls back to RFC 4180 rather
+      // than inheriting whichever dialect the export happened to be written in.
+      csvDialect: null,
       sqliteSchema: null,
       // A restored folder has no file of its own behind it — the envelope was.
       // Referencing the same payload from every reconstructed source would also
@@ -546,6 +551,12 @@ async function prepareSingleFile(file, finalName, profile) {
     // raw text is persisted, but after a reload the exporter must not have to
     // re-parse the file to learn its shape.
     fileRecord.csvColumns = Array.isArray(results.meta?.fields) ? [...results.meta.fields] : null;
+    // Papa already reports the delimiter and line terminator it detected, so the
+    // dialect is observed here rather than guessed at save time. A tab- or
+    // semicolon-delimited source (a tab-delimited export, or a European-locale
+    // Excel file) would otherwise come back comma-delimited, breaking the very
+    // pipeline it came from.
+    fileRecord.csvDialect = captureCsvDialect(results.meta);
     checkNote = sanityCheckOrThrow(profile, 'csv', results, rows);
     // The unified CSV has no envelope to hang a manifest on, but it writes
     // `source_file_id` / `source_file_name` on every row, which carries the same

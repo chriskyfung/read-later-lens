@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { hardenCsvValue, hardenRecordForCsv, hardenRecordsForCsv } from '../src/utils/csv.js';
+import PapaReal from 'papaparse';
+import {
+  hardenCsvValue,
+  hardenRecordForCsv,
+  hardenRecordsForCsv,
+  captureCsvDialect,
+  csvUnparseConfig,
+} from '../src/utils/csv.js';
 
 describe('hardenCsvValue', () => {
   it('prefixes every character a spreadsheet would evaluate', () => {
@@ -110,5 +117,182 @@ describe('hardenRecordsForCsv', () => {
 
   it('handles an empty export without throwing', () => {
     expect(hardenRecordsForCsv([])).toEqual([]);
+  });
+});
+
+describe('captureCsvDialect', () => {
+  it('records the delimiter and line terminator PapaParse observed', () => {
+    expect(captureCsvDialect({ delimiter: ';', linebreak: '\n' })).toEqual({
+      delimiter: ';',
+      linebreak: '\n',
+    });
+  });
+
+  it('reports nothing when the parse described no dialect', () => {
+    // `null` is the same "unknown, use the default" signal `csvColumns: null`
+    // carries, so an unreadable meta can never be mistaken for a real dialect.
+    expect(captureCsvDialect(undefined)).toBeNull();
+    expect(captureCsvDialect(null)).toBeNull();
+    expect(captureCsvDialect({})).toBeNull();
+  });
+
+  it('rejects a delimiter no consumer could read back', () => {
+    // Papa validates the delimiter on the *parse* side only, so an observed value
+    // handed straight back to unparse would be trusted by nothing at all.
+    for (const delimiter of ['\r', '\n', '"', '﻿', ';;', '', undefined, 44]) {
+      expect(captureCsvDialect({ delimiter, linebreak: '\n' })).toEqual({ linebreak: '\n' });
+    }
+  });
+
+  it('rejects the control characters Papa guesses as a last resort', () => {
+    // `\x1e`/`\x1f` are faithful to a file nothing can read, and Papa emits them
+    // when it cannot tell one field from the next.
+    expect(captureCsvDialect({ delimiter: '\x1e', linebreak: '\r\n' })).toEqual({
+      linebreak: '\r\n',
+    });
+    expect(captureCsvDialect({ delimiter: '\x00' })).toBeNull();
+  });
+
+  it('rejects a line terminator that is not one a consumer expects', () => {
+    for (const linebreak of ['\n\n', '\u2028', undefined, 10]) {
+      expect(captureCsvDialect({ delimiter: ';', linebreak })).toEqual({ delimiter: ';' });
+    }
+  });
+
+  it('keeps the half of a dialect that is usable', () => {
+    // Losing both would be a worse answer than losing one: a `;` file whose
+    // terminator was unreadable can still round-trip its separator.
+    expect(captureCsvDialect({ delimiter: ';', linebreak: 'bogus' })).toEqual({ delimiter: ';' });
+    expect(captureCsvDialect({ delimiter: 'bogus', linebreak: '\n' })).toEqual({ linebreak: '\n' });
+  });
+
+  it('accepts the RFC 4180 baseline and a tab source', () => {
+    expect(captureCsvDialect({ delimiter: ',', linebreak: '\r\n' })).toEqual({
+      delimiter: ',',
+      linebreak: '\r\n',
+    });
+    expect(captureCsvDialect({ delimiter: '\t', linebreak: '\n' })).toEqual({
+      delimiter: '\t',
+      linebreak: '\n',
+    });
+  });
+
+  it('records what the real parser reports, not a hand-written meta', () => {
+    // Every case above feeds `captureCsvDialect` a literal, which makes them a
+    // statement about our own validation and nothing more. At runtime the meta
+    // comes from Papa, so the field names this reads are a contract with the
+    // library: a build that stopped reporting `linebreak` would leave this suite
+    // green while an LF source silently came back CRLF in the browser.
+    //
+    // The options are the importer's own, and the fixture is two columns wide on
+    // purpose. Papa accepts a guessed delimiter only when its average field count
+    // clears 1.99, and `skipEmptyLines: true` is what lets a two-column `;` file
+    // that ends in a newline clear it: the empty row Papa sees there otherwise
+    // drags the average under the bar, every candidate is rejected, and Papa
+    // falls back to `,` in `meta.delimiter` as though it had detected one. The
+    // source would then come back comma-delimited, so the coupling between that
+    // flag and this result is pinned here rather than left to chance.
+    const meta = PapaReal.parse('id;title\n1;a\n2;b\n', {
+      header: true,
+      skipEmptyLines: true,
+    }).meta;
+
+    expect(captureCsvDialect(meta)).toEqual({ delimiter: ';', linebreak: '\n' });
+  });
+
+  it('takes the ending of the first line break when a file mixes them', () => {
+    // Papa returns LF whenever the first line break is LF, so the *minority*
+    // ending can win; only CR-vs-CRLF falls back to a majority. The README
+    // documents this rule, and this is what keeps the rule true of the library
+    // the app actually loads.
+    const options = { header: true, skipEmptyLines: true };
+
+    expect(captureCsvDialect(PapaReal.parse('id,title\n1,a\r\n2,b\r\n', options).meta)).toEqual({
+      delimiter: ',',
+      linebreak: '\n',
+    });
+    expect(captureCsvDialect(PapaReal.parse('id,title\r\n1,a\r\n2,b\r\n', options).meta)).toEqual({
+      delimiter: ',',
+      linebreak: '\r\n',
+    });
+  });
+});
+
+describe('csvUnparseConfig', () => {
+  it('falls back to RFC 4180 for an unknown dialect', () => {
+    for (const dialect of [null, undefined, {}]) {
+      expect(csvUnparseConfig(dialect)).toEqual({ delimiter: ',', newline: '\r\n' });
+    }
+  });
+
+  it('completes a half-recorded dialect rather than leaving Papa to guess', () => {
+    expect(csvUnparseConfig({ delimiter: ';' })).toEqual({ delimiter: ';', newline: '\r\n' });
+    expect(csvUnparseConfig({ linebreak: '\n' })).toEqual({ delimiter: ',', newline: '\n' });
+  });
+
+  it('passes a full dialect through, renaming the terminator to the unparse option', () => {
+    expect(csvUnparseConfig({ delimiter: '\t', linebreak: '\r' })).toEqual({
+      delimiter: '\t',
+      newline: '\r',
+    });
+  });
+
+  it('re-validates at the boundary, so a value that skipped capture cannot emit garbage', () => {
+    // Nothing produces such a record today, which is exactly why the check has
+    // to live here rather than in the one place that happens to validate now:
+    // Papa re-checks only `\r`, `\n`, `"` and the BOM on the unparse side, and
+    // copies an unknown `newline` into the file untouched, so a control
+    // character, a two-character delimiter or a bogus terminator would reach
+    // the file writer as given. A dropped-to-RFC answer is a fidelity loss; a
+    // terminator of `bogus` is a single line no consumer can read.
+    for (const delimiter of ['\n', '\x1e', '"', ';;', 44]) {
+      expect(csvUnparseConfig({ delimiter, linebreak: '\r\n' })).toEqual({
+        delimiter: ',',
+        newline: '\r\n',
+      });
+    }
+    expect(csvUnparseConfig({ delimiter: ';', linebreak: '\n\n' })).toEqual({
+      delimiter: ';',
+      newline: '\r\n',
+    });
+    // Not an object at all — a shape no capture could produce, so the guard
+    // cannot be a property access that throws instead of a fallback.
+    expect(csvUnparseConfig(';')).toEqual({ delimiter: ',', newline: '\r\n' });
+  });
+});
+
+describe('what PapaParse validates on the unparse side', () => {
+  // A guard, not a test of this repo: it pins the library behaviour the guards
+  // above are written against, so the JSDoc's claim cannot drift again. The
+  // comment this replaces asserted that Papa "checks nothing on the unparse
+  // side", which is false; the JSDoc in `csvUnparseConfig` was corrected to
+  // match, and these assertions are why that correction is safe to leave in
+  // place. Reverting any code in `src/` cannot fail them — only a PapaParse
+  // upgrade or downgrade can, which is exactly when they should be read.
+  const rows = [{ a: 'x', b: 'y' }];
+  const emit = (config) => PapaReal.unparse(rows, { newline: '\r\n', ...config });
+  const rfc4180 = emit({ delimiter: ',' });
+
+  it('re-checks the delimiter against BAD_DELIMITERS, so those four fall back to a comma', () => {
+    for (const delimiter of ['\r', '\n', '"', '\uFEFF']) {
+      expect(emit({ delimiter })).toBe(rfc4180);
+    }
+  });
+
+  it('checks neither the delimiter length, nor a control character, nor the newline', () => {
+    // Which is what makes the app's own guards load-bearing rather than
+    // redundant: each of these is written straight into the output.
+    for (const delimiter of ['\x00', '\x1e', ';;']) {
+      expect(emit({ delimiter })).not.toBe(rfc4180);
+    }
+    // The worst case, and the reason `KNOWN_LINEBREAKS` is the guard that
+    // matters: an unknown terminator is emitted verbatim, leaving a file whose
+    // records are no longer separated by a line break at all. Asserted as exact
+    // bytes rather than as the absence of CRLF: a PapaParse that grew newline
+    // validation and fell back to `\n` would also satisfy
+    // `not.toContain('\r\n')`, and then the JSDoc's "copied into the file
+    // verbatim" would be false again with this test still green - the exact
+    // drift it exists to catch.
+    expect(emit({ newline: 'bogus' })).toBe('a,bbogusx,y');
   });
 });

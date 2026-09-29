@@ -289,6 +289,32 @@ describe('handleFileUploads — format dispatch', () => {
     expect(file.csvColumns).toBeNull();
   });
 
+  it('stamps the observed CSV dialect onto the source record', async () => {
+    // Papa reports the delimiter and terminator it detected, so the dialect is
+    // recorded rather than guessed at save time. Without it a `;`-delimited or
+    // LF source comes back comma + CRLF, breaking the pipeline it came from.
+    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({
+        data: [{ id: '1', title: 't', url: 'https://a.com' }],
+        errors: [],
+        meta: { fields: ['id', 'title', 'url', 'preview'], delimiter: ';', linebreak: '\n' },
+      }),
+    );
+
+    await handleFileUploads([fakeFile('a.csv', 'id;title;url;preview\n1;t;https://a.com;p')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.csvDialect).toEqual({ delimiter: ';', linebreak: '\n' });
+  });
+
+  it('records no dialect when Papa reports none, instead of guessing one', async () => {
+    // The default parse mock returns no `meta`. A guessed dialect would be worse
+    // than RFC 4180: a file written with one separator comes back with another.
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,t')]);
+
+    const [file] = [...sourceFiles.values()];
+    expect(file.csvDialect).toBeNull();
+  });
   it('records no header row for non-CSV sources', async () => {
     await handleFileUploads([fakeFile('a.json', '[]')]);
 
@@ -1404,6 +1430,11 @@ describe('handleFileUploads — unified source manifest', () => {
     // to prevent — so it is cleared and the profile default takes over.
     expect(sourceFiles.get('file_a').csvColumns).toBe(null);
     expect(sourceFiles.get('file_b').csvColumns).toBe(null);
+    // Same for the dialect: it describes the uploaded export's bytes, so handing
+    // it to a rebuilt folder would make a ;-delimited envelope re-emit every
+    // restored source with semicolons.
+    expect(sourceFiles.get('file_a').csvDialect).toBe(null);
+    expect(sourceFiles.get('file_b').csvDialect).toBe(null);
     // Likewise the envelope's extension: this file is a CSV, but `b.json` was
     // always a JSON source, and save-back would otherwise write CSV text under
     // that name for the user to discover on their filesystem.

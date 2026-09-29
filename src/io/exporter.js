@@ -7,7 +7,7 @@ import * as state from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
 import { saveSourceFileRowHtml } from '../components/io/saveModal.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
-import { hardenRecordsForCsv } from '../utils/csv.js';
+import { csvUnparseConfig, hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer, on, showToast } from '../utils/dom.js';
 
@@ -226,7 +226,13 @@ export async function saveSingleFile(fileId) {
       // spreadsheet. Hardening runs AFTER the column selection, so a projected
       // row is protected exactly like a raw one. The in-memory records stay
       // untouched.
-      const csv = Papa.unparse(hardenRecordsForCsv(rows));
+      // Re-emit in the dialect the source was read with, not a fixed comma +
+      // CRLF. The config is the only correct place for this: Papa quotes a cell
+      // only when it contains the *configured* delimiter, so post-processing the
+      // emitted string would write bare semicolons into cells that were never
+      // quoted. An unknown dialect (a folder rebuilt from a unified export, a
+      // cache from a version that predates capture) falls back to RFC 4180.
+      const csv = Papa.unparse(hardenRecordsForCsv(rows), csvUnparseConfig(file.csvDialect));
       await saveFileWithFallback(csv, file.name, 'text/csv');
     } else {
       const json = JSON.stringify(rows, null, 2);
@@ -339,7 +345,11 @@ export function exportAllUnifiedJson() {
  * Exports all current bookmarks to a unified CSV file (trash excluded).
  */
 export function exportAllUnifiedCsv() {
-  const csv = Papa.unparse(hardenRecordsForCsv(getActiveBookmarks()));
+  // RFC 4180, stated rather than omitted. This export spans every source, so
+  // there is no single dialect to reproduce — reproducing one source's delimiter
+  // would be wrong for all the others. `csvUnparseConfig(null)` is how that
+  // decision is expressed; see the architecture note in CONTRIBUTING.md.
+  const csv = Papa.unparse(hardenRecordsForCsv(getActiveBookmarks()), csvUnparseConfig(null));
   const blob = new Blob([csv], { type: 'text/csv' });
   downloadBlob(blob, 'all_bookmarks_export.csv');
 }
