@@ -277,6 +277,17 @@ it('loads one module entry without a global bridge or inline action handlers', (
   checkSources(new URL('src/', root));
 });
 
+it('compiles Tailwind at build time instead of loading a runtime CDN', () => {
+  const root = new URL('../', import.meta.url);
+  const html = readFileSync(new URL('index.html', root), 'utf8');
+  // The stylesheet is compiled by @tailwindcss/vite and ships in @layer
+  // blocks. The Play CDN injects an *unlayered* v3 stylesheet at runtime, and
+  // unlayered rules outrank layered ones, so keeping the tag would mean the
+  // bundled CSS is not what actually paints the app.
+  expect(html).not.toMatch(/cdn\.tailwindcss\.com/);
+  expect(html).not.toMatch(/tailwind\.config/);
+});
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 
