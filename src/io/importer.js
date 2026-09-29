@@ -266,7 +266,8 @@ export function createUniqueSourceName(originalName, existingNames) {
  * the same catch as every other format.
  *
  * Papa is imported from the `papaparse` dependency, so the browser runs the
- * same library build the test suite runs and the bundle ships.
+ * same library build the bundle ships - and the same one the round-trip test
+ * exercises end-to-end (a mock stands in for it in the call-assertion tests).
  * @param {string} text
  * @returns {Promise<{data: object[], errors: object[]}>}
  */

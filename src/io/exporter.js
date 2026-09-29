@@ -137,8 +137,8 @@ function sourceColumnReader(column) {
  * Keys are inserted in `columns` order and every column is always present (empty
  * when unfillable), so `Papa.unparse` derives the header row from the object's
  * own insertion order. That keeps the emitted layout identical to the source's
- * without depending on Papa's `columns` option, which the browser build and
- * the test-time build do not share a version with.
+ * without depending on Papa's `columns` option, which would only add a second
+ * place to keep the column list in sync for the same output.
  *
  * The accumulator has a null prototype because the column names come from the
  * file: on a plain `{}` an assignment to a `__proto__` column would hit the
