@@ -7,12 +7,24 @@ import {
   exportAllUnifiedCsv,
   registerExporterListeners,
 } from '../src/io/exporter.js';
-import PapaReal from 'papaparse';
 import { captureCsvDialect } from '../src/utils/csv.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
 import { resetLayers } from '../src/utils/dom.js';
+
+// Stands in for the `papaparse` dependency that `src/io/exporter.js` imports,
+// so these tests can assert on the arguments. The real library is still needed
+// for the re-serialization and re-parse in the assertions, hence `importActual`.
+const Papa = vi.hoisted(() => ({
+  parse: vi.fn(),
+  unparse: vi.fn(() => 'csv-content'),
+}));
+
+vi.mock('papaparse', () => ({ default: Papa }));
+
+const PapaActual = await vi.importActual('papaparse');
+const PapaReal = PapaActual.default ?? PapaActual;
 
 vi.mock('../src/utils/download.js', () => ({
   downloadBlob: vi.fn(),
@@ -99,10 +111,6 @@ beforeAll(() => {
       return e;
     },
   };
-  globalThis.Papa = {
-    parse: vi.fn(),
-    unparse: vi.fn(() => 'csv-content'),
-  };
 });
 
 beforeEach(() => {
@@ -115,7 +123,7 @@ beforeEach(() => {
   setSQL(null);
   vi.mocked(downloadBlob).mockClear();
   vi.mocked(saveFileWithFallback).mockClear();
-  globalThis.Papa.unparse.mockClear();
+  Papa.unparse.mockClear();
 });
 // END-PART1
 
@@ -156,7 +164,7 @@ describe('saveSingleFile', () => {
     await saveSingleFile('F1');
     // The second argument is the dialect config: RFC 4180 for a source with no
     // recorded dialect, which is exactly what an unconfigured unparse emitted.
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(
+    expect(Papa.unparse).toHaveBeenCalledWith(
       [expect.objectContaining({ id: '1', source_file_id: 'F1' })],
       { delimiter: ',', newline: '\r\n' },
     );
@@ -500,7 +508,7 @@ describe('saveSingleFile', () => {
 
     await saveSingleFile('F1');
 
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith([expect.objectContaining({ id: '1' })], {
+    expect(Papa.unparse).toHaveBeenCalledWith([expect.objectContaining({ id: '1' })], {
       delimiter: ',',
       newline: '\r\n',
     });
@@ -578,7 +586,7 @@ describe('unified exports', () => {
     // source, so it states RFC 4180 explicitly instead of leaving the result to
     // the library's own default.
     exportAllUnifiedCsv();
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(
+    expect(Papa.unparse).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ id: '1' })]),
       { delimiter: ',', newline: '\r\n' },
     );
@@ -606,7 +614,7 @@ describe('unified exports', () => {
 
     exportAllUnifiedCsv();
 
-    expect(globalThis.Papa.unparse).toHaveBeenCalledWith(expect.anything(), {
+    expect(Papa.unparse).toHaveBeenCalledWith(expect.anything(), {
       delimiter: ',',
       newline: '\r\n',
     });
@@ -623,7 +631,7 @@ describe('unified exports', () => {
     expect(JSON.parse(await blob.text()).bookmarks.map((b) => b.id)).toEqual(['1']);
 
     exportAllUnifiedCsv();
-    const [csvRows] = globalThis.Papa.unparse.mock.calls.at(-1);
+    const [csvRows] = Papa.unparse.mock.calls.at(-1);
     expect(csvRows.map((b) => b.id)).toEqual(['1']);
   });
 });
@@ -645,7 +653,7 @@ describe('CSV formula injection hardening', () => {
 
     await saveSingleFile('F1');
 
-    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    const [rows] = Papa.unparse.mock.calls[0];
     expect(rows[0].title).toBe('\'=HYPERLINK("http://evil.example","click")');
     // Inert fields keep their exact original value.
     expect(rows[0].url).toBe('https://a.com');
@@ -657,7 +665,7 @@ describe('CSV formula injection hardening', () => {
 
     exportAllUnifiedCsv();
 
-    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    const [rows] = Papa.unparse.mock.calls[0];
     expect(rows[0].tags).toBe("'=CMD|calc");
   });
 
@@ -668,7 +676,7 @@ describe('CSV formula injection hardening', () => {
 
     // The emitted cell is "news,=2+2", which starts with 'n' and is therefore
     // already inert. Prefixing here would turn the tag into "'=2+2" on re-import.
-    const [rows] = globalThis.Papa.unparse.mock.calls[0];
+    const [rows] = Papa.unparse.mock.calls[0];
     expect(rows[0].tags).toEqual(['news', '=2+2']);
   });
 
@@ -853,7 +861,7 @@ describe('saveSingleFile — source-aware schema', () => {
   };
 
   const emittedCsv = () => {
-    const [rows, config] = globalThis.Papa.unparse.mock.calls.at(-1);
+    const [rows, config] = Papa.unparse.mock.calls.at(-1);
     return PapaReal.unparse(rows, config);
   };
   const parseEmitted = () => PapaReal.parse(emittedCsv(), { header: true });

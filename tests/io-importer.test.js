@@ -13,7 +13,14 @@ import { resetLayers, stackDepth } from '../src/utils/dom.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
+// Stands in for the `papaparse` dependency that `src/io/importer.js` imports.
+// These tests assert on the call, so the call is mocked rather than executed.
+const Papa = vi.hoisted(() => ({
+  parse: vi.fn(),
+  unparse: vi.fn(() => 'csv-content'),
+}));
 
+vi.mock('papaparse', () => ({ default: Papa }));
 vi.mock('../src/io/sqlLoader.js', () => ({ initSql }));
 
 vi.mock('../src/providers/index.js', () => {
@@ -116,10 +123,6 @@ beforeAll(() => {
     getElementById: (id) => el(id),
     createElement: () => makeEl(),
   };
-  globalThis.Papa = {
-    parse: vi.fn(),
-    unparse: vi.fn(() => 'csv-content'),
-  };
 });
 
 beforeEach(() => {
@@ -135,12 +138,10 @@ beforeEach(() => {
   vi.mocked(importJsonOrCsv).mockClear();
   vi.mocked(importSqlite).mockClear();
   initSql.mockClear();
-  globalThis.Papa.parse.mockClear();
+  Papa.parse.mockClear();
   // Default: resolve the import immediately with an empty result. Individual
   // tests override with mockImplementationOnce for specific data/errors.
-  globalThis.Papa.parse.mockImplementation((_text, config) =>
-    config.complete({ data: [], errors: [] }),
-  );
+  Papa.parse.mockImplementation((_text, config) => config.complete({ data: [], errors: [] }));
 });
 
 // helper: run uploads; if the duplicate modal opens, resolve it with `action`
@@ -162,13 +163,13 @@ async function uploadResolving(files, action) {
 // ---- format dispatch ------------------------------------------------------
 describe('handleFileUploads — format dispatch', () => {
   it('parses CSV via Papa with monolith options and registers the source file', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
     });
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
 
-    expect(globalThis.Papa.parse).toHaveBeenCalledTimes(1);
-    const [text, config] = globalThis.Papa.parse.mock.calls[0];
+    expect(Papa.parse).toHaveBeenCalledTimes(1);
+    const [text, config] = Papa.parse.mock.calls[0];
     expect(text).toBe('id,title\n1,hello');
     expect(config.header).toBe(true);
     expect(config.skipEmptyLines).toBe(true);
@@ -185,7 +186,7 @@ describe('handleFileUploads — format dispatch', () => {
   });
 
   it('shows the success toast with the zh-TW message', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
     });
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
@@ -266,7 +267,7 @@ describe('handleFileUploads — format dispatch', () => {
   it('stamps the observed CSV header row onto the source record', async () => {
     // The header row is the only surviving description of the file's own column
     // layout, so save-back re-emits it instead of the app's internal schema.
-    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+    Papa.parse.mockImplementationOnce((_text, config) =>
       config.complete({
         data: [{ id: '1', title: 't', url: 'https://a.com' }],
         errors: [],
@@ -293,7 +294,7 @@ describe('handleFileUploads — format dispatch', () => {
     // Papa reports the delimiter and terminator it detected, so the dialect is
     // recorded rather than guessed at save time. Without it a `;`-delimited or
     // LF source comes back comma + CRLF, breaking the pipeline it came from.
-    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+    Papa.parse.mockImplementationOnce((_text, config) =>
       config.complete({
         data: [{ id: '1', title: 't', url: 'https://a.com' }],
         errors: [],
@@ -335,7 +336,7 @@ describe('handleFileUploads — format dispatch', () => {
     setBookmarks([{ id: 'dup', title: 'old', source_file_id: 'old-file' }]);
 
     // Drive Papa's completion synchronously, the way a real string parse does.
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: 'dup', title: 'new' }], errors: [] });
     });
 
@@ -357,7 +358,7 @@ describe('handleFileUploads — format dispatch', () => {
     setBookmarks([{ id: 'dup', title: 'deleted copy', deleted_at: '2026-01-01T00:00:00.000Z' }]);
     // Drive Papa's completion synchronously, the way a real string parse does
     // (the callback fires inside parse, before the success toast is composed).
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: 'dup', title: 'fresh' }] });
     });
 
@@ -376,7 +377,7 @@ describe('handleFileUploads — format dispatch', () => {
 
   it('keeps the plain success toast when the import displaces nothing', async () => {
     setBookmarks([{ id: 'dup', title: 'deleted copy', deleted_at: '2026-01-01T00:00:00.000Z' }]);
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: 'other', title: 'new' }] });
     });
 
@@ -400,7 +401,7 @@ describe('handleFileUploads — failure semantics (Option A)', () => {
   });
 
   it('fails the whole CSV when Papa yields no usable rows but errors', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [], errors: [{ code: 'UndetectableDelimiter' }] });
     });
     await handleFileUploads([fakeFile('broken.csv', 'not,a,parseable,file')]);
@@ -410,7 +411,7 @@ describe('handleFileUploads — failure semantics (Option A)', () => {
   });
 
   it('reports partially parseable CSVs with a skipped-row summary and keeps the source', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [{ id: '1', title: 'ok' }],
         errors: [{ row: 1, message: 'Too few fields' }],
@@ -433,7 +434,7 @@ describe('handleFileUploads — failure semantics (Option A)', () => {
   });
 
   it("surfaces Papa's error callback through the shared failure toast", async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.error(new Error('papa exploded'));
     });
     await handleFileUploads([fakeFile('boom.csv', 'id,title\n1,hello')]);
@@ -452,7 +453,7 @@ describe('processSingleFile — ordering invariant', () => {
         seen.push(sourceFiles.size);
       },
     });
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: '1', title: 'x' }], errors: [] });
     });
 
@@ -479,9 +480,7 @@ describe('processSingleFile — ordering invariant', () => {
 describe('processSingleFile — transaction boundary', () => {
   const csvFile = () => fakeFile('a.csv', 'id,title\n1,x');
   const completeWith = (data) =>
-    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
-      config.complete({ data, errors: [] }),
-    );
+    Papa.parse.mockImplementationOnce((_text, config) => config.complete({ data, errors: [] }));
 
   it('commits the merge once persist reports the state is saved', async () => {
     initImporter({ persistAndRender: vi.fn(async () => ({ persisted: true, rendered: true })) });
@@ -580,7 +579,7 @@ describe('handleFileUploads — duplicate name resolution', () => {
 
   it('overwrite: replaces the old source and its bookmarks in a single transaction', async () => {
     seedDuplicate();
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
     });
 
@@ -601,7 +600,7 @@ describe('handleFileUploads — duplicate name resolution', () => {
       { id: '1', source_file_id: 'F1', title: 'old-active' },
       { id: '2', source_file_id: 'F1', title: 'old-trash', deleted_at: '2026-01-01T00:00:00.000Z' },
     ]);
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [], errors: [{ code: 'UndetectableDelimiter' }] });
     });
 
@@ -615,7 +614,7 @@ describe('handleFileUploads — duplicate name resolution', () => {
 
   it('overwrite: preserves the old source and shows a toast when replacement yields zero valid bookmarks', async () => {
     seedDuplicate();
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [], errors: [] });
     });
 
@@ -629,7 +628,7 @@ describe('handleFileUploads — duplicate name resolution', () => {
 
   it('overwrite: restores the old source if cache write fails at the boundary', async () => {
     seedDuplicate();
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({ data: [{ id: '1', title: 'hello' }], errors: [] });
     });
     initImporter({ persistAndRender: vi.fn(async () => ({ persisted: false, rendered: true })) });
@@ -786,7 +785,7 @@ describe('import source modal', () => {
 
     expect(stackDepth()).toBe(0);
     expect(target.value).toBe(''); // same file can be re-selected later
-    expect(globalThis.Papa.parse).toHaveBeenCalledTimes(1);
+    expect(Papa.parse).toHaveBeenCalledTimes(1);
     const [rec] = [...sourceFiles.values()];
     expect(rec.profile).toBe('rll-unified');
   });
@@ -804,7 +803,7 @@ describe('import source modal', () => {
 // ---- header sanity check -----------------------------------------------------
 describe('handleFileUploads — header sanity check', () => {
   it('blocks the official Instapaper CSV with guidance and registers nothing', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [
           {
@@ -830,7 +829,7 @@ describe('handleFileUploads — header sanity check', () => {
   });
 
   it('appends a non-blocking warning when columns disagree with the chosen profile', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [{ id: '1', title: 'x', url: 'https://a.example.com', source_file_id: 'F9' }],
         errors: [],
@@ -848,7 +847,7 @@ describe('handleFileUploads — header sanity check', () => {
   });
 
   it('stays silent when the columns match the chosen profile', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [{ id: '1', title: 'x', url: 'https://a.example.com' }],
         errors: [],
@@ -864,7 +863,7 @@ describe('handleFileUploads — header sanity check', () => {
     const persist = vi.fn();
     initImporter({ persistAndRender: persist });
 
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [
           { URL: 'https://a.example.com', Title: 'A', Folder: 'F', Timestamp: '1', Tags: '[]' },
@@ -883,7 +882,7 @@ describe('handleFileUploads — header sanity check', () => {
 // ---- validation (URL-less rows dropped by the adapter) ----------------------
 describe('handleFileUploads — row validation reporting', () => {
   it('reports URL-less rows the adapter dropped and keeps the source', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [
           { id: '1', title: 'ok', url: 'https://a.example.com' },
@@ -905,7 +904,7 @@ describe('handleFileUploads — row validation reporting', () => {
   });
 
   it('combines parse failures and dropped rows in one summary', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [
           { id: '1', title: 'ok', url: 'https://a.example.com' },
@@ -926,7 +925,7 @@ describe('handleFileUploads — row validation reporting', () => {
   });
 
   it('reports an all-invalid file with zero imported bookmarks', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((text, config) => {
+    Papa.parse.mockImplementationOnce((text, config) => {
       config.complete({
         data: [
           { id: '1', title: 'a' },
@@ -975,7 +974,7 @@ describe('handleFileUploads — batch resilience', () => {
 
     // Refused before anything was parsed or staged: no partial import, and the
     // file queued ahead of the collision is not sacrificed either.
-    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(Papa.parse).not.toHaveBeenCalled();
     expect(sourceFiles.size).toBe(1);
     expect(sourceFiles.get('F1').name).toBe('a.csv');
     expect(bookmarks.map((b) => b.id)).toEqual(['1']);
@@ -993,7 +992,7 @@ describe('handleFileUploads — batch resilience', () => {
       prompt.restore();
     }
 
-    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(Papa.parse).not.toHaveBeenCalled();
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe(
       '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
@@ -1002,7 +1001,7 @@ describe('handleFileUploads — batch resilience', () => {
 
   it('imports a collision-free batch even when the duplicate prompt markup is missing', async () => {
     let rows = 0;
-    globalThis.Papa.parse.mockImplementation((_text, config) =>
+    Papa.parse.mockImplementation((_text, config) =>
       config.complete({ data: [{ id: String(++rows), title: 'x' }], errors: [] }),
     );
     const prompt = hideNodes(['duplicateFileText', 'dupBtnKeepBoth']);
@@ -1019,7 +1018,7 @@ describe('handleFileUploads — batch resilience', () => {
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
   });
   it('keeps importing the remaining files when one file fails to parse', async () => {
-    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+    Papa.parse.mockImplementationOnce((_text, config) =>
       config.complete({ data: [], errors: [{ message: 'broken row' }] }),
     );
 
@@ -1035,7 +1034,7 @@ describe('handleFileUploads — batch resilience', () => {
   it('rolls the whole batch back when a file fails unexpectedly after one committed', async () => {
     seedDuplicate();
     let parsed = 0;
-    globalThis.Papa.parse.mockImplementation((_text, config) =>
+    Papa.parse.mockImplementation((_text, config) =>
       config.complete({ data: [{ id: `p${++parsed}`, title: 'x' }], errors: [] }),
     );
 
@@ -1073,7 +1072,7 @@ describe('handleFileUploads — batch resilience', () => {
   it('reports honestly when the batch rollback itself cannot be cached', async () => {
     seedDuplicate();
     let parsed = 0;
-    globalThis.Papa.parse.mockImplementation((_text, config) =>
+    Papa.parse.mockImplementation((_text, config) =>
       config.complete({ data: [{ id: `q${++parsed}`, title: 'x' }], errors: [] }),
     );
 
@@ -1126,7 +1125,7 @@ describe('handleFileUploads — batch resilience', () => {
     }
 
     expect(persistAndRender).not.toHaveBeenCalled();
-    expect(globalThis.Papa.parse).not.toHaveBeenCalled();
+    expect(Papa.parse).not.toHaveBeenCalled();
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe(
       '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
@@ -1142,7 +1141,7 @@ describe('registerImporterListeners', () => {
     input.dispatch('change', { target: { files: [fakeFile('z.csv', 'id,title\n1,hi')] } });
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(globalThis.Papa.parse).toHaveBeenCalledTimes(1);
+    expect(Papa.parse).toHaveBeenCalledTimes(1);
   });
 
   it('awaits an unexpected import failure without leaking a rejection to the change event', async () => {
@@ -1406,7 +1405,7 @@ describe('handleFileUploads — unified source manifest', () => {
     // writes `source_file_id` / `source_file_name` on every row, which is the
     // same information — so the round trip is just as faithful.
     applyProfileSelection('rll-unified');
-    globalThis.Papa.parse.mockImplementationOnce((_text, config) =>
+    Papa.parse.mockImplementationOnce((_text, config) =>
       config.complete({
         data: [
           bookmark('1', 'file_a', 'a.csv'),

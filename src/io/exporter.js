@@ -10,6 +10,7 @@ import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer, on, showToast } from '../utils/dom.js';
+import Papa from 'papaparse';
 
 /**
  * Populate the source-file list of the save/export modal without touching

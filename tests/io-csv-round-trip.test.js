@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import PapaReal from 'papaparse';
 import { handleFileUploads, initImporter, applyProfileSelection } from '../src/io/importer.js';
 import { saveSingleFile } from '../src/io/exporter.js';
 import { defaultProfileId } from '../src/providers/profiles.js';
@@ -93,11 +92,12 @@ beforeAll(() => {
     getElementById: (id) => el(id),
     createElement: () => makeEl(),
   };
-  // Real PapaParse on BOTH sides. Every other importer and exporter test stubs
-  // this global, because it asserts on the call; here the call is not the
+  // Real PapaParse on BOTH sides — and now literally the same module object
+  // the app imports, since `src/io/` takes the library from the `papaparse`
+  // dependency instead of a global. The other importer and exporter tests mock
+  // that import because they assert on the call; here the call is not the
   // subject — the bytes the user gets back are — so a mock would only assert
   // that the mock round-trips.
-  globalThis.Papa = { parse: PapaReal.parse, unparse: PapaReal.unparse };
 });
 
 beforeEach(() => {
