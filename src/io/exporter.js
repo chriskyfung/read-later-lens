@@ -10,6 +10,7 @@ import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
 import { pushLayer, popLayer, on, showToast } from '../utils/dom.js';
+import Papa from 'papaparse';
 
 /**
  * Populate the source-file list of the save/export modal without touching
@@ -136,8 +137,8 @@ function sourceColumnReader(column) {
  * Keys are inserted in `columns` order and every column is always present (empty
  * when unfillable), so `Papa.unparse` derives the header row from the object's
  * own insertion order. That keeps the emitted layout identical to the source's
- * without depending on Papa's `columns` option, which the browser build and
- * the test-time build do not share a version with.
+ * without depending on Papa's `columns` option, which would only add a second
+ * place to keep the column list in sync for the same output.
  *
  * The accumulator has a null prototype because the column names come from the
  * file: on a plain `{}` an assignment to a `__proto__` column would hit the

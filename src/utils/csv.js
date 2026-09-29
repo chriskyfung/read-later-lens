@@ -11,25 +11,27 @@
  * (see the escaping note in CONTRIBUTING.md). Only the copy handed to
  * `Papa.unparse` is prefixed, so the app's in-memory data stays byte-faithful.
  *
- * Deliberately not delegated to Papa's own `escapeFormulae` option:
- *   1. The app loads PapaParse 5.4.1 from the CDN, where that option is absent
- *      — relying on it would be an unpinned no-op in the browser that ships.
- *   2. Even in 5.7.0 it only inspects `typeof str === 'string'`; array-valued
- *      fields such as `tags` are `String()`-joined afterwards and never
- *      checked, so `tags: ['=SUM(1)']` would still export as a live formula.
+ * Deliberately not delegated to Papa's own `escapeFormulae` option, which every
+ * version this app has shipped does implement: it only tests
+ * `typeof str === 'string'`, so an array-valued field such as `tags` skips the
+ * check entirely. `safe()` then does `str.toString()`, emitting
+ * `tags: ['=SUM(1)']` as a bare `=SUM(1)` cell — a live formula the option
+ * never saw. The character class is also pinned here, in `FORMULA_PREFIX`,
+ * rather than inherited from a dependency version that can change under us.
  *
  * @see https://owasp.org/www-community/attacks/CSV_Injection
  */
 /**
  * The characters that cannot describe a file Papa can read back.
  *
- * Papa does check this set on the unparse side as well - `unpackConfig` falls
- * back to `,` for a delimiter containing any of them - so this list duplicates
- * the library rather than extending it. What the library does *not* check is a
- * delimiter's length, whether it is a control character (see
- * `usableDelimiter`), or `config.newline` at all. Spelled out here - rather
- * than read off Papa - so the set cannot drift with the CDN version, for the
- * same reason `FORMULA_PREFIX` is written by hand.
+ * Papa checks this set on the unparse side too - `unpackConfig` falls back to
+ * `,` when the delimiter *is* one of them (an exact match, where the parse side
+ * tests for one contained in it) - so this list duplicates the library rather
+ * than extending it. What the library does *not* check is a delimiter's length,
+ * whether it is a control character (see `usableDelimiter`), or
+ * `config.newline` at all. Spelled out here - rather than read off Papa - so the
+ * set cannot drift with a library upgrade, for the same reason `FORMULA_PREFIX`
+ * is written by hand.
  */
 const IMPOSSIBLE_DELIMITERS = /[\r\n"\uFEFF]/;
 
@@ -128,7 +130,7 @@ export function csvUnparseConfig(dialect) {
  * Leading characters that make spreadsheet software evaluate a cell.
  *
  * Written as an explicit character class rather than a copy of Papa's regex so
- * the behavior is pinned here and cannot drift with the CDN/library version.
+ * the behavior is pinned here and cannot drift with a library upgrade.
  */
 const FORMULA_PREFIX = /^[=+\-@\t\r]/;
 

@@ -37,8 +37,6 @@ export default [
         NodeList: 'readonly',
         DOMParser: 'readonly',
         FileSystemFileHandle: 'readonly',
-        // CDN script globals (index.html <script> tags)
-        Papa: 'readonly',
         // Node (for scripts/ + server-side guards)
         process: 'readonly',
         __dirname: 'readonly',

@@ -10,6 +10,7 @@ import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { captureCsvDialect } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
+import Papa from 'papaparse';
 
 /**
  * Dependencies injected from the main application orchestrator.
@@ -264,13 +265,15 @@ export function createUniqueSourceName(originalName, existingNames) {
  * is emitted *after* parsing completes, and that parse errors surface through
  * the same catch as every other format.
  *
- * Papa is a global provided by the script tag in index.html.
+ * Papa is imported from the `papaparse` dependency, so the browser runs the
+ * same library build the bundle ships - and the same one the round-trip test
+ * exercises end-to-end (a mock stands in for it in the call-assertion tests).
  * @param {string} text
  * @returns {Promise<{data: object[], errors: object[]}>}
  */
 function parseCsvWithPapa(text) {
   return new Promise((resolve, reject) => {
-    globalThis.Papa.parse(text, {
+    Papa.parse(text, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => resolve(results),

@@ -171,12 +171,12 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 ## Technology Stack
 
-PapaParse and D3.js remain runtime CDN dependencies. SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling, styling, and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
+D3.js remains a runtime CDN dependency. PapaParse, Tailwind CSS, SQL.js, and the rest ship from npm: PapaParse is bundled so the browser runs the parser the round-trip test exercises end-to-end, Tailwind CSS is compiled at build time by `@tailwindcss/vite`, and SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
 
 | Library                                                          | Version | Loading            | Purpose                                           |
 | ---------------------------------------------------------------- | ------- | ------------------ | ------------------------------------------------- |
 | [Tailwind CSS](https://tailwindcss.com/)                         | 4.3.3   | npm (bundled)      | Utility-first styling and the dark slate UI       |
-| [PapaParse](https://github.com/mholt/PapaParse)                  | 5.4.1   | CDN (runtime)      | CSV parsing                                       |
+| [PapaParse](https://github.com/mholt/PapaParse)                  | 5.7.0   | npm (bundled)      | CSV parsing                                       |
 | [SQL.js](https://sql.js.org/)                                    | 1.14.2  | npm (lazy bundled) | WebAssembly SQLite — `.db` import/parse/re-export |
 | [D3.js](https://d3js.org/)                                       | 7.8.5   | CDN (runtime)      | Force-directed concept linkage graph              |
 | [idb](https://github.com/jakearchibald/idb)                      | 8.x     | npm (bundled)      | IndexedDB promise wrapper                         |
@@ -195,7 +195,7 @@ The whole app — interface, data processing, NLP/analytics, and visualizations 
 - The **concept graph is capped at the top 50** filtered bookmarks to keep the topology readable.
 - **The official Instapaper account CSV is not supported** (links-only schema, no previews or ids) — the picker's sanity check blocks it and suggests an InstapaperScraper export instead. Header fingerprinting covers CSV/JSON only; SQLite files are not header-checked.
 - **SQLite source re-export** reproduces the source's own table name and column list, which is recorded at import time and cached. Raw `.db` buffers are still **not** cached to IndexedDB (see [Storage & Privacy](#storage--privacy)), so a source imported by a version that predates schema recording cannot be re-emitted as a `.db` — the app refuses and points you at the unified export rather than writing a file with a different schema. Columns the app has no value for are re-emitted as `NULL` and the count is reported.
-- CDN-loaded libraries require an internet connection on first load; the app is not designed for fully offline operation.
+- **D3.js** still loads from a CDN, so the app needs an internet connection on first load; it is not designed for fully offline operation. PapaParse, Tailwind CSS, and the rest are bundled and do not need one. `index.html` also still carries the original Tailwind Play CDN and D3 `<script>` tags alongside their bundled copies; removing them needs a visual check and is left to a follow-up.
 - The project is a **single-page app with bundled dependencies** — there is a dev/build step (Vite + pnpm), not a self-contained single file.
 
 ## Contributing
