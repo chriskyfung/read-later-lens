@@ -9,7 +9,7 @@ import { activateTab } from '../src/views/tabs.js';
 import { activeTab } from '../src/core/state.js';
 
 const ACTIVE_CLASS =
-  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow';
+  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm';
 const INACTIVE_CLASS =
   'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200';
 
