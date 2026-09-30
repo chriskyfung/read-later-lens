@@ -83,7 +83,7 @@ describe('mountHeader — markup parity', () => {
   });
 
   it('uses the monolith header chrome classes', () => {
-    expect(html()).toContain('bg-slate-800/90 backdrop-blur border-b border-slate-700');
+    expect(html()).toContain('bg-slate-800/90 backdrop-blur-sm border-b border-slate-700');
     expect(html()).toContain('flex items-center justify-between z-20 shrink-0');
   });
 });

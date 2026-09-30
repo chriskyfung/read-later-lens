@@ -136,7 +136,7 @@ describe('renderSidebarFolders', () => {
       expect(rows[i].innerHTML).toContain(`>${file.name}</span>`);
       expect(rows[i].innerHTML).toContain(`bg-${colors[i]}-900/60 text-${colors[i]}-200`);
       expect(rows[i].innerHTML).toContain(`shrink-0">${file.type}</span>`);
-      expect(rows[i].innerHTML).toContain(`rounded">${counts[i]}</span>`);
+      expect(rows[i].innerHTML).toContain(`rounded-sm">${counts[i]}</span>`);
       expect(rows[i].dataset.selectFolder).toBe(file.id);
       expect(rows[i].querySelector('[data-delete-folder]').dataset.deleteFolder).toBe(file.id);
       expect(rows[i].innerHTML).toContain('title="刪除檔案與其書籤"');
@@ -155,7 +155,7 @@ describe('renderSidebarFolders', () => {
     expect(els.allCountBadge.innerText).toBe('1');
     expect(els.trashCountBadge.innerText).toBe('2');
     // The f1 badge counts live bookmarks only.
-    expect(els.folderList.children[0].innerHTML).toContain('rounded">1</span>');
+    expect(els.folderList.children[0].innerHTML).toContain('rounded-sm">1</span>');
     expect(els.trashFolderBtn.className).toBe(sidebarTrashBtnClass(false));
 
     state.setActiveFolder('TRASH');

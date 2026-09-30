@@ -27,7 +27,7 @@ export function sidebarHtml() {
   return `
     <!-- Left Sidebar -->
     <aside
-      class="w-72 bg-slate-800/50 border-r border-slate-700/80 flex flex-col shrink-0 overflow-y-auto p-4 space-y-6">
+      class="w-72 bg-slate-800/50 border-r border-slate-700/80 flex flex-col shrink-0 overflow-y-auto p-4 gap-6">
 
 ${sidebarFoldersSectionHtml()}
 

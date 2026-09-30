@@ -31,7 +31,7 @@ export function linkageTooltipTagsHtml(tags) {
   return (tags || [])
     .map(
       (t) =>
-        `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">${escapeHtml(t)}</span>`,
+        `<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded-sm text-[10px]">${escapeHtml(t)}</span>`,
     )
     .join('');
 }

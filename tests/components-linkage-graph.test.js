@@ -19,8 +19,8 @@ describe('linkage graph helpers', () => {
   it('renders tag pills joined together', () => {
     const html = linkageTooltipTagsHtml(['tech', 'fruit']);
     expect(html).toBe(
-      '<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">tech</span>' +
-        '<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded text-[10px]">fruit</span>',
+      '<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded-sm text-[10px]">tech</span>' +
+        '<span class="bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded-sm text-[10px]">fruit</span>',
     );
   });
 

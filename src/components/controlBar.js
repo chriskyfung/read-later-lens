@@ -15,9 +15,9 @@ export function controlBarHtml() {
       <!-- Control Bar: Sort, View Tabs & Batch Actions -->
       <div class="bg-slate-800/40 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0">
         <!-- View Mode Tabs -->
-        <div class="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+        <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
           <button data-tab="bookmarks"
-            class="main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow">
+            class="main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm">
             書籤列表 (<span id="filteredCount">0</span>)
           </button>
           <button data-tab="wordcloud"
@@ -35,12 +35,12 @@ export function controlBarHtml() {
         </div>
 
         <!-- Right Controls: Sort Dropdown & Batch Selection -->
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center gap-3">
           <!-- Sort Dropdown -->
-          <div class="flex items-center space-x-2 text-xs text-slate-400">
+          <div class="flex items-center gap-2 text-xs text-slate-400">
             <span>排序方式:</span>
             <select id="sortSelect"
-              class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+              class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-indigo-500">
               <option value="relevance">搜尋相關度 (Relevance)</option>
               <option value="newer">最新優先 (Newer First)</option>
               <option value="older">最舊優先 (Older First)</option>
@@ -51,10 +51,10 @@ export function controlBarHtml() {
 
           <!-- Batch Action Toggle Bar -->
           <div id="batchActionBar"
-            class="hidden items-center space-x-2 bg-indigo-900/40 border border-indigo-500/40 px-3 py-1 rounded-lg text-xs text-indigo-200">
+            class="hidden items-center gap-2 bg-indigo-900/40 border border-indigo-500/40 px-3 py-1 rounded-lg text-xs text-indigo-200">
             <span>已選擇 <strong id="selectedCount">0</strong> 項</span>
             <button id="batchDeleteBtn"
-              class="bg-rose-600 hover:bg-rose-500 px-2 py-0.5 rounded text-white font-medium">批量刪除</button>
+              class="bg-rose-600 hover:bg-rose-500 px-2 py-0.5 rounded-sm text-white font-medium">批量刪除</button>
             <button id="batchCancelBtn" class="text-slate-400 hover:text-slate-200 underline">取消</button>
           </div>
         </div>
