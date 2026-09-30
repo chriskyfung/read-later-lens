@@ -27,8 +27,9 @@ both; this file adds the working practices that guide does not cover.
 - Separate schema, API, UI, test, CI, and documentation changes when they are independently
   deployable; keep them together only when splitting creates an invalid or unsafe intermediate
   state.
-- Every commit must pass its lint and test checks. Formatting for the files a commit touches is
-  applied by `lint-staged` at commit time, not by a repository-wide pass.
+- Every commit must leave the tree lint-clean and test-green. Formatting for the files a commit
+  touches is applied by `lint-staged` at commit time, not by a repository-wide pass, and the suite
+  runs once per change set at push rather than once per commit — see _What runs when_.
 - Treat schema migrations, access control, security logic, environment configuration, and
   deployment changes as high-risk, and require explicit review.
 
@@ -91,21 +92,68 @@ git --no-pager log -1 --format='%G? %s'   # G = good signature
   for the expected reason, then restore the change. A test that passes without the fix is not
   evidence that the fix works. Record it in one line — `Fail-first: <test> fails without the
 change (<observed failure>)`, or `Fail-first: N/A — no test covers this path` — and keep the
-  narrative in the report.
+  narrative in the report. Gather that observation with the focused file (`-t '<test name>'` if
+  needed), not by running the suite twice.
 - **Verify the premise before fixing it.** When a change comes from a reported defect, confirm the
   defect is real and still reproducible on current versions. If you cannot reproduce it, say so
   and frame the work as hardening.
 - **Pin behaviour, not incidental values.** Assert ordering, counts, and observable effects rather
   than a constant's current value, so tuning the constant does not break the test.
 
-Run the local gate before committing:
+### What runs when
+
+Verification is tiered so each expensive check runs once per change set, not once per edit. Do not
+run a tier whose work the next tier is about to do anyway.
+
+| When         | Runs                                                              | How                        |
+| ------------ | ----------------------------------------------------------------- | -------------------------- |
+| Every edit   | the test file(s) that cover the change; lint of the files touched | `pnpm test:quiet <file>`   |
+| `git commit` | ESLint `--fix` and Prettier on staged files                       | the `pre-commit` hook      |
+| `git push`   | the full suite                                                    | the `pre-push` hook        |
+| Pull request | lint, the full suite, and the build on Node 24                    | `.github/workflows/ci.yml` |
+
+Iterate with the focused pair alone — the whole-repo suite is the expensive step, and it is about
+to run at push anyway:
 
 ```
-pnpm lint && pnpm test && pnpm build
+pnpm test:quiet tests/io-importer.test.js
+pnpm exec eslint src/io/importer.js tests/io-importer.test.js
 ```
+
+`pnpm test:quiet` is `pnpm test` with `--silent=passed-only`: it drops the passing tests' console
+output and keeps the summary and every failure. Narrow it further with `-t '<test name>'`, and drop
+the quiet flag when a passing test's log is what you need to explain a failure.
+
+Run the full local gate **once per change set**, and only when the change can move the build or the
+check configuration itself:
+
+```
+pnpm lint && pnpm test:quiet && pnpm build
+```
+
+- `vite.config.js`, `index.html`, `eslint.config.mjs`, `.prettierrc`, `.prettierignore`
+- `package.json` or `pnpm-lock.yaml` (dependency or script changes)
+- a new entry point, barrel module, or dynamic import that no test loads
+- the CSS/Tailwind entry or asset handling
+- `.github/workflows/**`
+
+Otherwise do not build. A Markdown-only change cannot affect the linter (`eslint src/ tests/`
+never reads it), the suite (`vitest` imports only `src/`), or the bundle — say that instead of
+running the gate. For source changes the suite usually settles it, because Vitest resolves the
+same imports the bundler does: a missing module or a syntax error fails a test first. What the
+suite cannot see is the CSS pipeline, the asset graph, and the build config — which is what the
+list above is for, and why CI builds every PR on a clean machine. The build is the cheap step; the
+suite is the expensive one, and delegating the suite is the point of this policy.
 
 Also run `git diff --check` for whitespace errors. Note that CI runs the linter, the suite, and the
 build but no formatting check, so a stale format only surfaces from the pre-commit hook.
+
+### Do not duplicate the hooks
+
+Do not re-run by hand what a hook is about to run. `git push` runs the full suite through
+`pre-push`, so a manual `pnpm test:quiet` immediately before pushing is the same CPU twice. Never
+use `--no-verify` to skip a hook: fix the cause, and report a broken hook instead of routing around
+it.
 
 Never format the repository as a side effect of a change: `pnpm format:fix` and a bare
 `prettier --write` rewrite every file they disagree with. Format only the files you changed, by
@@ -118,10 +166,28 @@ git add <changed files> && pnpm lint-staged
 If a file you never touched shows up as reformatted, drop it from the change instead of
 committing the rewrite.
 
+### Keep the transcript cheap
+
+- Run one heavy command at a time. A full suite run alongside another `vitest` or ESLint process
+  produced two failures in `tests/main-startup.test.js` — a 5000ms test timeout and a failed
+  rollback assertion — that did not reproduce when the suite ran alone. Re-run the file alone
+  before reporting it as a regression.
+- Read the changed region, not the whole file, and never re-read a file that has not changed since
+  you read it. `git --no-pager diff` is the cheaper source.
+- Do not re-run a check whose result cannot have changed since the last green run; cite that run
+  instead of repeating it.
+- Capture the summary line and the failing cases, not the full log. Counts are the evidence.
+
 ## Reporting
 
 Report changed files, rationale, risks, tests run, and follow-up work before finishing, and
 propose commit slices rather than committing a mixed change set.
+
+State which tier of verification ran and what is deferred to CI, so a report never implies more
+verification than happened — the reduced local gate is only as safe as this claim:
+
+    Checks: focused (tests/io-importer.test.js, 56/56); no build-affecting files, so the full
+    suite and the build are deferred to CI.
 
 PRs must state: intent, changed contracts, security implications, validation performed, and known
 limitations. Report any defect you found and did not fix as follow-up work.
