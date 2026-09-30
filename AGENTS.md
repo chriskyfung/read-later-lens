@@ -18,10 +18,16 @@ both; this file adds the working practices that guide does not cover.
 - Keep each commit focused on one coherent and reversible concern.
 - Do not mix feature behavior, unrelated refactors, dependency updates, generated output, CI
   changes, and formatting churn.
+- Keep formatting out of the diff. Do not commit LF normalization, trailing-newline repairs, or
+  repository-wide Prettier output alongside a behavioral change; give that work its own
+  `chore`/`style` branch. `.gitattributes` and `.editorconfig` already declare the intended line
+  endings, so a file's line endings are not a review concern: when reviewing, do not ask for LF
+  normalization or end-of-file newline fixes on a change that did not touch those lines.
 - Separate schema, API, UI, test, CI, and documentation changes when they are independently
   deployable; keep them together only when splitting creates an invalid or unsafe intermediate
   state.
-- Every commit must pass its relevant formatter, lint, and test checks.
+- Every commit must pass its lint and test checks. Formatting for the files a commit touches is
+  applied by `lint-staged` at commit time, not by a repository-wide pass.
 - Treat schema migrations, access control, security logic, environment configuration, and
   deployment changes as high-risk, and require explicit review.
 
@@ -69,14 +75,26 @@ git --no-pager log -1 --format='%G? %s'   # G = good signature
 - **Pin behaviour, not incidental values.** Assert ordering, counts, and observable effects rather
   than a constant's current value, so tuning the constant does not break the test.
 
-Run the local gate before committing, per [CONTRIBUTING.md](CONTRIBUTING.md):
+Run the local gate before committing:
 
 ```
-pnpm lint:fix && pnpm format:fix && pnpm test && pnpm build
+pnpm lint && pnpm test && pnpm build
 ```
 
 Also run `git diff --check` for whitespace errors. Note that CI runs the linter, the suite, and the
 build but no formatting check, so a stale format only surfaces from the pre-commit hook.
+
+Never format the repository as a side effect of a change. `pnpm format:fix` and a bare
+`prettier --write` rewrite every file they disagree with, so a one-line fix becomes a twenty-file
+diff that no reviewer can read. Format only the files you changed, by staging them and running
+exactly what the pre-commit hook runs:
+
+```
+git add <changed files> && pnpm lint-staged
+```
+
+`lint-staged` applies `eslint --fix` and `prettier --write` to staged files only. If a file you
+never touched shows up as reformatted, drop it from the change instead of committing the rewrite.
 
 ## Reporting
 
