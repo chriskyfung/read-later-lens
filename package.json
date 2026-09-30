@@ -15,6 +15,7 @@
     "format:fix": "prettier --write --ignore-unknown .",
     "lint-staged": "lint-staged",
     "test": "vitest run --passWithNoTests",
+    "test:quiet": "vitest run --passWithNoTests --silent=passed-only",
     "test:watch": "vitest"
   },
   "lint-staged": {

@@ -57,6 +57,7 @@ Then open the URL the dev server prints (usually `http://localhost:5173`).
 | `pnpm format`      | Check formatting with Prettier (read-only)                                |
 | `pnpm format:fix`  | Auto-format the whole repository with Prettier                            |
 | `pnpm test`        | Run the Vitest suite once (`--passWithNoTests`)                           |
+| `pnpm test:quiet`  | Same as `pnpm test`, but suppress the console output of passing tests     |
 | `pnpm test:watch`  | Run Vitest in watch mode                                                  |
 | `pnpm lint-staged` | Run lint-staged manually (normally invoked by the pre-commit hook)        |
 | `pnpm prepare`     | Install/update the Husky Git hooks                                        |
