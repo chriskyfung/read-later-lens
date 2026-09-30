@@ -18,7 +18,7 @@ export function saveModalHtml() {
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
         <h3 id="saveTitle" class="font-bold text-base text-white">💾 儲存與匯出變更</h3>
         <button id="closeSaveBtn" class="text-slate-400 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
@@ -32,7 +32,7 @@ export function saveModalHtml() {
         <!-- List of files ready to be exported -->
       </div>
 
-      <div class="pt-3 border-t border-slate-700 flex justify-end space-x-2">
+      <div class="pt-3 border-t border-slate-700 flex justify-end gap-2">
         <button id="exportAllUnifiedJsonBtn"
           class="bg-slate-700 hover:bg-slate-600 text-xs text-white px-3 py-2 rounded-lg">匯出成統一 JSON</button>
         <button id="exportAllUnifiedCsvBtn"
