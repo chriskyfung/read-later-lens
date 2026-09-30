@@ -40,7 +40,7 @@ export function controlBarHtml() {
           <div class="flex items-center space-x-2 text-xs text-slate-400">
             <span>排序方式:</span>
             <select id="sortSelect"
-              class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+              class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-indigo-500">
               <option value="relevance">搜尋相關度 (Relevance)</option>
               <option value="newer">最新優先 (Newer First)</option>
               <option value="older">最舊優先 (Older First)</option>
