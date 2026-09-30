@@ -128,6 +128,17 @@ chore(deps): upgrade vite to 8.3.0
 docs(readme): document IndexedDB cache caveat
 ```
 
+### Body
+
+Write a body only when it says something the diff cannot, and keep it to **at most eight wrapped
+lines at 72 columns**: a few sentences of `why`, then one line of verification. Anything longer
+belongs in the PR description, where a reader can skim it, rather than in `git log`, where it has
+to be read. Include a line only when it is non-obvious — the `why`, any external evidence, and a
+cost only when the change actually has one. A series that shares one reason states it once, in the
+first commit or the PR.
+
+`AGENTS.md` extends this with the working practices an agent follows.
+
 ## Pull Request Workflow
 
 1. Create a topic branch from `main`:
