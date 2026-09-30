@@ -57,7 +57,7 @@ export function renderSimilarityModal(bookmarkId) {
           <p class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(doc.title)}</p>
           <p class="text-[10px] text-slate-400 line-clamp-1">${escapeHtml(doc.article_preview)}</p>
         </div>
-        <span class="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">${pct}% 相似</span>
+        <span class="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-sm border border-emerald-800">${pct}% 相似</span>
       `;
       resultsList.appendChild(item);
     });
