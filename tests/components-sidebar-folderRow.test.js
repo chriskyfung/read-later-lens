@@ -56,7 +56,7 @@ describe('sidebar folder helpers', () => {
     expect(html).toContain('>Export.csv</span>');
     expect(html).toContain('bg-amber-900/60 text-amber-200');
     expect(html).toContain('shrink-0">csv</span>');
-    expect(html).toContain('rounded">2</span>');
+    expect(html).toContain('rounded-sm">2</span>');
     expect(html).toContain('data-delete-folder');
     expect(html).toContain('title="刪除檔案與其書籤"');
   });
