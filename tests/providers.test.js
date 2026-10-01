@@ -71,7 +71,9 @@ describe('resolveImportAdapter', () => {
 
   it('instapaper-scraper forces Instapaper metadata even on unified rows', () => {
     const adapter = resolveImportAdapter('instapaper-scraper');
-    const [rec] = adapter.importJsonOrCsv(
+    const {
+      records: [rec],
+    } = adapter.importJsonOrCsv(
       [
         {
           id: '5',
@@ -90,7 +92,9 @@ describe('resolveImportAdapter', () => {
 
   it('rll-unified round-trips provider and instapaper_url from the source row', () => {
     const adapter = resolveImportAdapter('rll-unified');
-    const [rec] = adapter.importJsonOrCsv(
+    const {
+      records: [rec],
+    } = adapter.importJsonOrCsv(
       [
         {
           id: '5',
@@ -109,7 +113,9 @@ describe('resolveImportAdapter', () => {
 
   it('rll-unified still generates a reader URL when the row has none', () => {
     const adapter = resolveImportAdapter('rll-unified');
-    const [rec] = adapter.importJsonOrCsv(
+    const {
+      records: [rec],
+    } = adapter.importJsonOrCsv(
       [{ id: '7', title: 'T', url: 'https://y.example.com' }],
       'f',
       'f.json',
@@ -121,7 +127,9 @@ describe('resolveImportAdapter', () => {
 
 describe('importJsonOrCsv', () => {
   it('normalizes fields, tags, language and the reader URL', () => {
-    const [rec] = importJsonOrCsv(
+    const {
+      records: [rec],
+    } = importJsonOrCsv(
       [
         {
           id: 7,
@@ -150,7 +158,9 @@ describe('importJsonOrCsv', () => {
   });
 
   it('detects CJK titles', () => {
-    const [rec] = importJsonOrCsv(
+    const {
+      records: [rec],
+    } = importJsonOrCsv(
       [{ id: 1, title: '你好世界測試內容', url: 'https://zh.example.com' }],
       'f',
       'f.json',
@@ -159,7 +169,7 @@ describe('importJsonOrCsv', () => {
   });
 
   it('drops rows without a usable URL instead of storing # placeholders', () => {
-    const records = importJsonOrCsv(
+    const { records, stats } = importJsonOrCsv(
       [
         { id: '1', title: 'Kept', url: 'https://keep.example.com' },
         { id: '2', title: 'No url at all' },
@@ -170,12 +180,29 @@ describe('importJsonOrCsv', () => {
     );
     expect(records).toHaveLength(1);
     expect(records[0].id).toBe('1');
+    // The adapter names the drop reason itself, so the importer reports
+    // 缺少網址 without inferring it from a length delta.
+    expect(stats.droppedNoUrl).toBe(2);
+  });
+
+  it('reports zero URL-less drops when every row has a usable URL', () => {
+    const { records, stats } = importJsonOrCsv(
+      [{ id: '1', title: 'Kept', url: 'https://keep.example.com' }],
+      'f',
+      'f.csv',
+    );
+    expect(records).toHaveLength(1);
+    expect(stats.droppedNoUrl).toBe(0);
   });
 
   it('generates the same stable id when the same id-less file is re-imported', () => {
     const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
-    const [first] = importJsonOrCsv(rows, 'f1', 'a.csv');
-    const [second] = importJsonOrCsv(rows, 'f2', 'b.csv');
+    const {
+      records: [first],
+    } = importJsonOrCsv(rows, 'f1', 'a.csv');
+    const {
+      records: [second],
+    } = importJsonOrCsv(rows, 'f2', 'b.csv');
     expect(first.id).toMatch(/^gen_/);
     expect(first.id).toBe(second.id); // merges on re-import instead of duplicating
   });
@@ -198,6 +225,21 @@ describe('importSqlite', () => {
     });
     expect(records[0].instapaper_url).toBe('https://www.instapaper.com/read/1');
     expect(records[1].detected_language).toBe('zh');
+  });
+
+  it('reports the URL-less rows it drops alongside the records', async () => {
+    const db = new SQL.Database();
+    db.run('CREATE TABLE bookmarks (id TEXT, title TEXT, url TEXT);');
+    db.run('INSERT INTO bookmarks VALUES (?, ?, ?);', ['1', 'Kept', 'https://a.example.com']);
+    db.run('INSERT INTO bookmarks VALUES (?, ?, ?);', ['2', 'No url', null]);
+    const buffer = db.export();
+    db.close();
+
+    // Without the adapter's own count, SQLite drops were invisible to the
+    // summary — the one format the importer never reported.
+    const { records, stats } = await importSqlite(buffer, 'file_db', 'export.db', SQL);
+    expect(records.map((record) => record.id)).toEqual(['1']);
+    expect(stats.droppedNoUrl).toBe(1);
   });
 
   it('releases the SQLite database after a successful import', async () => {

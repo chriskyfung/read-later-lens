@@ -24,14 +24,15 @@ vi.mock('papaparse', () => ({ default: Papa }));
 vi.mock('../src/io/sqlLoader.js', () => ({ initSql }));
 
 vi.mock('../src/providers/index.js', () => {
-  const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) =>
-    rows.map((r, i) => ({
+  const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) => ({
+    records: rows.map((r, i) => ({
       id: r.id ?? 'n' + i,
       source_file_id: sourceFileId,
       source_file_name: sourceFileName,
       title: r.title ?? '',
     })),
-  );
+    stats: { droppedNoUrl: 0 },
+  }));
   const importSqlite = vi.fn(async (bytes, sourceFileId, sourceFileName) => ({
     records: [
       {
@@ -42,6 +43,7 @@ vi.mock('../src/providers/index.js', () => {
       },
     ],
     schema: { table: 'bookmarks', columns: ['id', 'title', 'url', 'article_preview', 'tags'] },
+    stats: { droppedNoUrl: 0 },
   }));
   return {
     importJsonOrCsv,
@@ -892,10 +894,13 @@ describe('handleFileUploads — row validation reporting', () => {
         errors: [],
       });
     });
-    // The real adapter drops URL-less rows; simulate its output here.
-    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) =>
-      rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
-    );
+    // The real adapter drops URL-less rows and reports its own count; simulate
+    // its output here so the summary proves it reports that count, not a
+    // length delta the importer infers.
+    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) => ({
+      records: rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
+      stats: { droppedNoUrl: 2 },
+    }));
 
     await handleFileUploads([fakeFile('mixed.csv', 'id,title,url\n…')]);
 
@@ -913,9 +918,10 @@ describe('handleFileUploads — row validation reporting', () => {
         errors: [{ row: 5, message: 'Too few fields' }],
       });
     });
-    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) =>
-      rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
-    );
+    vi.mocked(importJsonOrCsv).mockImplementationOnce((rows) => ({
+      records: rows.filter((r) => r.url).map((r) => ({ id: r.id, title: r.title })),
+      stats: { droppedNoUrl: 1 },
+    }));
 
     await handleFileUploads([fakeFile('both.csv', 'id,title,url\n…')]);
 
@@ -934,12 +940,56 @@ describe('handleFileUploads — row validation reporting', () => {
         errors: [],
       });
     });
-    vi.mocked(importJsonOrCsv).mockImplementationOnce(() => []);
+    // An all-URL-less file reports the adapter's count verbatim, not the
+    // largest number a length delta can describe.
+    vi.mocked(importJsonOrCsv).mockImplementationOnce(() => ({
+      records: [],
+      stats: { droppedNoUrl: 2 },
+    }));
 
     await handleFileUploads([fakeFile('nourl.csv', 'id,title\n…')]);
 
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe('已載入檔案: nourl.csv（0 筆書籤，2 筆缺少網址已略過）');
+  });
+
+  it('does not report 缺少網址 when the adapter drops rows for another reason', async () => {
+    Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({
+        data: [
+          { id: '1', title: 'kept', url: 'https://a.example.com' },
+          { id: '2', title: 'deduped duplicate' },
+          { id: '3', title: 'rejected row' },
+        ],
+        errors: [],
+      });
+    });
+    // A length delta would see 3 rows -> 1 record and mislabel the other two
+    // as URL-less. The adapter reports its own zero count, so no reason is
+    // claimed instead of the wrong one.
+    vi.mocked(importJsonOrCsv).mockImplementationOnce(() => ({
+      records: [{ id: '1', title: 'kept' }],
+      stats: { droppedNoUrl: 0 },
+    }));
+
+    await handleFileUploads([fakeFile('dedup.csv', 'id,title,url\n…')]);
+
+    expect(el('toastMsg').innerText).toBe('已成功載入檔案: dedup.csv');
+  });
+
+  it('reports the URL-less rows the SQLite adapter drops, like every other format', async () => {
+    // SQLite previously reported nothing at all: its drops were the only ones
+    // the summary never saw. The same content now gets the same feedback.
+    vi.mocked(importSqlite).mockImplementationOnce(async () => ({
+      records: [{ id: 'sq1', title: 'kept' }],
+      schema: { table: 'bookmarks', columns: ['id', 'title', 'url'] },
+      stats: { droppedNoUrl: 2 },
+    }));
+
+    await handleFileUploads([fakeFile('export.db', 'binary')]);
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('已載入檔案: export.db（1 筆書籤，2 筆缺少網址已略過）');
   });
 });
 

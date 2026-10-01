@@ -30,10 +30,14 @@ const ADAPTER_OPTIONS = {
  *
  * @param {string} profileId
  * @returns {{
- *   importJsonOrCsv: (rows: object[], sourceFileId: string, sourceFileName: string) => import('../model/BookmarkRecord.js').BookmarkRecord[],
+ *   importJsonOrCsv: (rows: object[], sourceFileId: string, sourceFileName: string) => {
+ *     records: import('../model/BookmarkRecord.js').BookmarkRecord[],
+ *     stats: { droppedNoUrl: number },
+ *   },
  *   importSqlite: (wasmBuffer: Uint8Array, sourceFileId: string, sourceFileName: string, SQL: import('sql.js').initSqlJs.SqlJsStatic) => Promise<{
  *     records: import('../model/BookmarkRecord.js').BookmarkRecord[],
  *     schema: { table: string, columns: string[] } | null,
+ *     stats: { droppedNoUrl: number },
  *   }>,
  * }}
  */

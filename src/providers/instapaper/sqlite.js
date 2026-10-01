@@ -7,8 +7,8 @@
  * read the first table, map columns by name, and normalize each row.
  */
 
-import { normalizeFields, normalizeTags } from '../../model/normalize.js';
-import { makeReaderUrl, UNKNOWN_URL } from '../../model/BookmarkRecord.js';
+import { dropUrlLess, normalizeFields, normalizeTags } from '../../model/normalize.js';
+import { makeReaderUrl } from '../../model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics/detectLanguage.js';
 
 /**
@@ -23,9 +23,11 @@ import { detectLanguage } from '../../analytics/detectLanguage.js';
  * @returns {Promise<{
  *   records: import('../../model/BookmarkRecord.js').BookmarkRecord[],
  *   schema: { table: string, columns: string[] } | null,
- * }>} The normalized rows plus the table layout that was actually read, so
- *   the exporter can re-emit the source's own shape instead of a guessed one.
- *   `schema` is null when the file holds no table at all.
+ *   stats: { droppedNoUrl: number },
+ * }>} The normalized rows, the table layout that was actually read (so the
+ *   exporter can re-emit the source's own shape instead of a guessed one),
+ *   and the count of URL-less rows dropped. `schema` is null when the file
+ *   holds no table at all.
  */
 export async function processSqliteAsBookmarks(
   wasmBuffer,
@@ -66,8 +68,11 @@ export async function processSqliteAsBookmarks(
     }
 
     return {
-      records: rows
-        .map((rec, index) => {
+      // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
+      // never inject '#' placeholder bookmarks. The count is the adapter's
+      // own, counted at the URL check, so the importer reports it verbatim.
+      ...dropUrlLess(
+        rows.map((rec, index) => {
           const { id, title, url, preview, content } = normalizeFields(rec, index);
           const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
           const readerUrl =
@@ -87,10 +92,8 @@ export async function processSqliteAsBookmarks(
             instapaper_url: readerUrl,
             provider: rowProvider,
           };
-        })
-        // Drop URL-less rows (see importFromJsonOrCsv) so a broken table can
-        // never inject '#' placeholder bookmarks.
-        .filter((record) => record.url !== UNKNOWN_URL),
+        }),
+      ),
       schema,
     };
   } finally {
