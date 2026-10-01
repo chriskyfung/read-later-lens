@@ -326,6 +326,58 @@ function buildImportedMessage(finalName, displaced, count, skipped, droppedNoUrl
   return note ? `${message}；${note}` : message;
 }
 
+/**
+ * Maximum failed files named before the summary collapses to a count.
+ * Successful files are always counts; only failures are actionable, and only
+ * the first few fit a 2.5s single-line toast.
+ */
+const MAX_NAMED_BATCH_FAILURES = 3;
+
+/**
+ * Compose one toast for a multi-file batch whose per-file outcomes were
+ * collected by handleFileUploads. Successes aggregate into counts; failures
+ * are named with their short reason so no file's result vanishes behind the
+ * single `#toastMsg` element.
+ *
+ * @param {Array<object>} outcomes Per-file results, excluding user-cancelled
+ *   duplicates.
+ * @returns {string}
+ */
+function buildBatchSummary(outcomes) {
+  const imported = outcomes.filter((outcome) => outcome.status === 'imported');
+  const failed = outcomes.filter((outcome) => outcome.status === 'failed');
+  const totalBookmarks = imported.reduce((sum, outcome) => sum + outcome.count, 0);
+  const skippedParseRows = imported.reduce((sum, outcome) => sum + outcome.skipped, 0);
+  const droppedNoUrl = imported.reduce((sum, outcome) => sum + outcome.droppedNoUrl, 0);
+  const displaced = imported.reduce((sum, outcome) => sum + outcome.displaced, 0);
+
+  const gaps = [];
+  if (skippedParseRows > 0) gaps.push(`共 ${skippedParseRows} 列解析失敗`);
+  if (droppedNoUrl > 0) gaps.push(`共 ${droppedNoUrl} 筆缺少網址`);
+
+  const failedNames = failed
+    .slice(0, MAX_NAMED_BATCH_FAILURES)
+    .map((outcome) => `${outcome.finalName}（${outcome.reason}）`)
+    .join('、');
+  const failedClause =
+    failed.length > MAX_NAMED_BATCH_FAILURES
+      ? `${failed.length} 個檔案失敗：${failedNames}、等 ${failed.length} 個檔案`
+      : `${failed.length} 個檔案失敗：${failedNames}`;
+
+  if (imported.length === 0) {
+    return `${failed.length} 個檔案均匯入失敗：${failedNames}${
+      failed.length > MAX_NAMED_BATCH_FAILURES ? `、等 ${failed.length} 個檔案` : ''
+    }`;
+  }
+
+  let message = `已成功載入 ${imported.length} 個檔案（共 ${totalBookmarks} 筆書籤`;
+  if (gaps.length > 0) message += `，${gaps.join('、')}已略過`;
+  if (displaced > 0) message += `，${displaced} 筆已存在於回收桶的書籤已被新匯入資料取代`;
+  message += '）';
+  if (failed.length > 0) message += `；${failedClause}`;
+  return message;
+}
+
 /** Marker property on the unsupported-extension error, read by the catch. */
 const UNSUPPORTED_TYPE_FLAG = 'unsupportedFileType';
 
@@ -692,9 +744,13 @@ function restoreImportSnapshot(snapshot) {
  * @param {string} profile Import profile id chosen in the source picker.
  * @param {object} [options]
  * @param {string|null} [options.replaceSourceId] Replaced source id when overwriting.
- * @returns {Promise<boolean>} Whether this file's transaction committed. A
- *   handled failure (parse error, empty overwrite, cache-write failure) rolls
- *   itself back and resolves false — it never throws past this function.
+ * @returns {Promise<object>} The per-file outcome for the batch summary:
+ *   `{ status: 'imported', ... }` (message + counts) or
+ *   `{ status: 'failed', finalName, message, reason }`. A handled failure
+ *   (parse error, empty overwrite, cache-write failure) rolls itself back and
+ *   resolves a failure outcome — it never throws past this function. Outcomes
+ *   are reported, never toasted, because the caller's single toast element
+ *   keeps only the last message a batch emits.
  */
 async function processSingleFile(file, finalName, profile, options = {}) {
   const { replaceSourceId = null } = options;
@@ -750,17 +806,23 @@ async function processSingleFile(file, finalName, profile, options = {}) {
       throw err;
     }
 
-    showToast(
-      buildImportedMessage(
-        finalName,
-        merge.displaced,
-        prepared.count,
-        prepared.skipped,
-        prepared.droppedNoUrl,
-        prepared.checkNote,
-      ),
+    const message = buildImportedMessage(
+      finalName,
+      merge.displaced,
+      prepared.count,
+      prepared.skipped,
+      prepared.droppedNoUrl,
+      prepared.checkNote,
     );
-    return true;
+    return {
+      status: 'imported',
+      finalName,
+      message,
+      count: prepared.count,
+      skipped: prepared.skipped,
+      droppedNoUrl: prepared.droppedNoUrl,
+      displaced: merge.displaced,
+    };
   } catch (err) {
     restoreImportSnapshot(snapshot);
     try {
@@ -770,21 +832,35 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     }
 
     if (err[EMPTY_OVERWRITE_FLAG]) {
-      showToast(err.message);
-      return false;
+      return { status: 'failed', finalName, message: err.message, reason: '未匯入任何有效書籤' };
     }
 
     console.error(`解析檔案 ${finalName} 失敗:`, err);
-    showToast(
-      err[PERSIST_FAILED_FLAG]
-        ? `已還原匯入 ${finalName}：無法寫入本機快取，資料不會保留`
-        : err[UNSUPPORTED_TYPE_FLAG]
-          ? `不支援的檔案格式「.${ext}」，請上傳 CSV、JSON 或 SQLite 檔案`
-          : err[UNSUPPORTED_SOURCE_FLAG]
-            ? err.message
-            : `解析檔案 ${finalName} 失敗，請確認格式`,
-    );
-    return false;
+    if (err[PERSIST_FAILED_FLAG]) {
+      return {
+        status: 'failed',
+        finalName,
+        message: `已還原匯入 ${finalName}：無法寫入本機快取，資料不會保留`,
+        reason: '無法寫入本機快取',
+      };
+    }
+    if (err[UNSUPPORTED_TYPE_FLAG]) {
+      return {
+        status: 'failed',
+        finalName,
+        message: `不支援的檔案格式「.${ext}」，請上傳 CSV、JSON 或 SQLite 檔案`,
+        reason: '格式不支援',
+      };
+    }
+    if (err[UNSUPPORTED_SOURCE_FLAG]) {
+      return { status: 'failed', finalName, message: err.message, reason: '來源檔案不受支援' };
+    }
+    return {
+      status: 'failed',
+      finalName,
+      message: `解析檔案 ${finalName} 失敗，請確認格式`,
+      reason: '解析失敗',
+    };
   }
 }
 
@@ -908,15 +984,21 @@ export async function handleFileUploads(files, options = {}) {
     // reported per file and the batch carries on.
     const batchSnapshot = captureImportSnapshot();
     let committed = 0;
+    // Per-file outcomes for the one toast this batch emits. processSingleFile
+    // reports rather than toasts: the single `#toastMsg` element is
+    // last-write-wins, so toasting per file would leave only the last file's
+    // result visible. Deferred outcomes are discarded on rollback, so the
+    // batch never claims a success it then rewound.
+    const outcomes = [];
 
     for (const file of pending) {
       const fileName = file.name;
       try {
         const duplicateId = findDuplicateSourceId(fileName);
-        let imported = false;
+        let outcome = null;
 
         if (!duplicateId) {
-          imported = await processSingleFile(file, fileName, profile);
+          outcome = await processSingleFile(file, fileName, profile);
         } else {
           // Ask only with the body text in place: without it the user would pick
           // an action without seeing which file it affects.
@@ -927,18 +1009,21 @@ export async function handleFileUploads(files, options = {}) {
           }
           const action = await waitForDuplicateResolution();
           if (action === 'overwrite') {
-            imported = await processSingleFile(file, fileName, profile, {
+            outcome = await processSingleFile(file, fileName, profile, {
               replaceSourceId: duplicateId,
             });
           } else if (action === 'keep') {
             const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
             const newName = createUniqueSourceName(fileName, existingNames);
-            imported = await processSingleFile(file, newName, profile);
+            outcome = await processSingleFile(file, newName, profile);
           }
           // 'cancel' imports nothing and reports nothing: that is the user's call.
         }
 
-        if (imported) committed += 1;
+        if (outcome) {
+          outcomes.push(outcome);
+          if (outcome.status === 'imported') committed += 1;
+        }
       } catch (err) {
         console.error(`檔案匯入失敗 (${fileName}):`, err);
         if (committed > 0) {
@@ -951,6 +1036,15 @@ export async function handleFileUploads(files, options = {}) {
         return;
       }
     }
+
+    if (outcomes.length === 1) {
+      // Single-file imports keep the verbatim per-file message; the summary
+      // only exists for batches.
+      showToast(outcomes[0].message);
+    } else if (outcomes.length > 1) {
+      showToast(buildBatchSummary(outcomes));
+    }
+    // Zero outcomes means every file was user-cancelled: report nothing.
   } catch (err) {
     console.error('檔案匯入失敗:', err);
     showToast(err[DUPLICATE_PROMPT_FLAG] ? err.message : '檔案匯入失敗，請稍後再試');
