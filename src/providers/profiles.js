@@ -68,6 +68,31 @@ export function profileLabel(profileId) {
   return IMPORT_PROFILES.find((profile) => profile.id === profileId)?.label ?? profileId;
 }
 
+/**
+ * Coerce a profile id to one this build actually offers. The picker, the
+ * importer's session selection and a unified envelope's manifest can each
+ * carry an id this build does not know (a renamed profile, a hand-edited
+ * file, a future caller); persisting it would mislabel the source and diverge
+ * from the adapter registry, which already falls back to InstapaperScraper.
+ * Disabled roadmap ids are not selectable, so they coerce too.
+ *
+ * @param {string} profileId
+ * @param {string} [fallback] Preferred substitute when `profileId` is not
+ *   offered; defaults to the default profile id. A caller with a better
+ *   contextual guess — a unified envelope knows the profile the user chose for
+ *   the import — passes it so an unrecognized manifest label does not narrow
+ *   the restored source. The fallback is validated too, so an unoffered one
+ *   still lands on the default.
+ * @returns {string} `profileId` when selectable, otherwise `fallback` when
+ *   selectable, otherwise the default profile id.
+ */
+export function normalizeProfileId(profileId, fallback = defaultProfileId()) {
+  const offered = selectableProfiles();
+  const isOffered = (id) => offered.some((profile) => profile.id === id);
+  if (isOffered(profileId)) return profileId;
+  return isOffered(fallback) ? fallback : defaultProfileId();
+}
+
 /** zh-TW guidance shown when the official Instapaper account CSV is imported. */
 export const OFFICIAL_CSV_UNSUPPORTED_MESSAGE =
   '此為 Instapaper 官方 CSV 匯出（URL/Title/…，僅含連結無預覽），不支援匯入；建議改用 InstapaperScraper 匯出完整資料';
