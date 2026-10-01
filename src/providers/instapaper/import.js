@@ -6,9 +6,9 @@
  * (alias-based) so it round-trips the original monolith's `processRawRecords`.
  */
 
-import { normalizeFields, normalizeTags } from '../../model/normalize.js';
+import { dropUrlLess, normalizeFields, normalizeTags } from '../../model/normalize.js';
 import { processSqliteAsBookmarks } from './sqlite.js';
-import { makeReaderUrl, UNKNOWN_URL } from '../../model/BookmarkRecord.js';
+import { makeReaderUrl } from '../../model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics/detectLanguage.js';
 
 /**
@@ -19,37 +19,37 @@ import { detectLanguage } from '../../analytics/detectLanguage.js';
  * @param {boolean} [options.preserveMeta] Round-trip `provider` /
  *   `instapaper_url` from the source record (Read Later Lens unified profile)
  *   instead of forcing Instapaper values.
- * @returns {import('../../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {{ records: import('../../model/BookmarkRecord.js').BookmarkRecord[], stats: { droppedNoUrl: number } }}
+ *   The kept bookmarks, plus the count of URL-less rows dropped (reported by
+ *   the adapter that applied the URL check, so the importer never infers it).
  */
 export function importFromJsonOrCsv(rawRows, sourceFileId, sourceFileName, options = {}) {
   const { preserveMeta = false } = options;
-  return (
-    rawRows
-      .map((rec, index) => {
-        const { id, title, url, preview, content } = normalizeFields(rec, index);
-        const provider = preserveMeta && rec.provider ? String(rec.provider) : 'instapaper';
-        const readerUrl =
-          preserveMeta && rec.instapaper_url != null
-            ? String(rec.instapaper_url)
-            : makeReaderUrl(provider, id);
-        return {
-          id,
-          title,
-          url,
-          article_preview: preview,
-          content,
-          source_file_id: sourceFileId,
-          source_file_name: sourceFileName,
-          detected_language: detectLanguage(title + ' ' + preview),
-          tags: normalizeTags(rec.tags),
-          instapaper_url: readerUrl,
-          provider,
-        };
-      })
-      // A bookmark without a usable URL cannot be opened, resolved to a
-      // domain, or compared — drop it here so the importer can report the
-      // gap instead of storing a '#' placeholder row.
-      .filter((record) => record.url !== UNKNOWN_URL)
+  // A bookmark without a usable URL cannot be opened, resolved to a
+  // domain, or compared — drop it here so the importer can report the
+  // gap instead of storing a '#' placeholder row.
+  return dropUrlLess(
+    rawRows.map((rec, index) => {
+      const { id, title, url, preview, content } = normalizeFields(rec, index);
+      const provider = preserveMeta && rec.provider ? String(rec.provider) : 'instapaper';
+      const readerUrl =
+        preserveMeta && rec.instapaper_url != null
+          ? String(rec.instapaper_url)
+          : makeReaderUrl(provider, id);
+      return {
+        id,
+        title,
+        url,
+        article_preview: preview,
+        content,
+        source_file_id: sourceFileId,
+        source_file_name: sourceFileName,
+        detected_language: detectLanguage(title + ' ' + preview),
+        tags: normalizeTags(rec.tags),
+        instapaper_url: readerUrl,
+        provider,
+      };
+    }),
   );
 }
 

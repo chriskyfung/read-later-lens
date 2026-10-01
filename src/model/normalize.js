@@ -102,6 +102,28 @@ export function normalizeFields(rec, index, fallbackId) {
 }
 
 /**
+ * Drop records with no usable URL. Such rows are not bookmarks — they cannot
+ * be opened, resolved to a domain, or compared — so the adapters count them
+ * here instead of letting the importer infer the number from a length delta.
+ *
+ * @param {object[]} records Normalized records.
+ * @returns {{ records: object[], stats: { droppedNoUrl: number } }} The kept
+ *   records plus the count of URL-less rows dropped. The count is derived
+ *   from the URL predicate itself, so a future filter (dedup, malformed-row
+ *   rejection) can never inflate it, and the importer reports it as 缺少網址
+ *   without guessing the reason.
+ */
+export function dropUrlLess(records) {
+  const kept = [];
+  let droppedNoUrl = 0;
+  for (const record of records) {
+    if (record.url === UNKNOWN_URL) droppedNoUrl += 1;
+    else kept.push(record);
+  }
+  return { records: kept, stats: { droppedNoUrl } };
+}
+
+/**
  * Normalize a tag field into a string[], matching the original monolith:
  *
  *   tags = rec.tags

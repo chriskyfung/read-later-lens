@@ -295,14 +295,15 @@ function parseCsvWithPapa(text) {
  * @param {number} displaced  Trashed records the fresh import replaced.
  * @param {number} count      Imported bookmark count (adapter output).
  * @param {number} skipped    CSV rows Papa could not parse.
- * @param {number} [dropped]  Rows the adapter dropped (no usable URL).
+ * @param {number} [droppedNoUrl] URL-less rows the adapter dropped (its own
+ *   count, not a length delta, so the reason is intrinsic to the number).
  * @param {string} [note]     Optional sanity-check warning to append.
  * @returns {string}
  */
-function buildImportedMessage(finalName, displaced, count, skipped, dropped = 0, note = '') {
+function buildImportedMessage(finalName, displaced, count, skipped, droppedNoUrl = 0, note = '') {
   const parts = [];
   if (skipped > 0) parts.push(`${skipped} 列解析失敗`);
-  if (dropped > 0) parts.push(`${dropped} 筆缺少網址`);
+  if (droppedNoUrl > 0) parts.push(`${droppedNoUrl} 筆缺少網址`);
 
   let message;
   if (parts.length > 0) {
@@ -400,7 +401,9 @@ function typeFromSourceName(name) {
  * @returns {{
  *   fileRecords: import('../core/state.js').SourceFileRecord[],
  *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
- * }|null}
+ *   stats: { droppedNoUrl: number },
+ * }|null} Rebuilt sources and records, plus the URL-less-row count summed
+ *   across the per-group adapter calls.
  */
 function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
   // Grouping is a unified-format semantic. Under any other profile the user has
@@ -425,12 +428,15 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
 
   const fileRecords = [];
   const records = [];
+  let droppedNoUrl = 0;
   for (const [originalId, groupRows] of groups) {
     // Rows that name no source belong to the uploaded file itself, which is
     // exactly what a single-source import would have done with them.
     if (!originalId) {
       fileRecords.push(baseRecord);
-      records.push(...adapter.importJsonOrCsv(groupRows, baseRecord.id, baseRecord.name));
+      const adapted = adapter.importJsonOrCsv(groupRows, baseRecord.id, baseRecord.name);
+      records.push(...adapted.records);
+      droppedNoUrl += adapted.stats.droppedNoUrl;
       continue;
     }
 
@@ -454,7 +460,9 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       // stale or hand-edited manifest cannot relabel records underneath a source
       // the user still sees under a different name. A record loaded without a
       // usable name falls back rather than stamping the rows with undefined.
-      records.push(...adapter.importJsonOrCsv(groupRows, originalId, existing.name || name));
+      const inherited = adapter.importJsonOrCsv(groupRows, originalId, existing.name || name);
+      records.push(...inherited.records);
+      droppedNoUrl += inherited.stats.droppedNoUrl;
       continue;
     }
 
@@ -495,10 +503,12 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       originalData: null,
       fileHandle: null,
     });
-    records.push(...adapter.importJsonOrCsv(groupRows, originalId, name));
+    const adapted = adapter.importJsonOrCsv(groupRows, originalId, name);
+    records.push(...adapted.records);
+    droppedNoUrl += adapted.stats.droppedNoUrl;
   }
 
-  return { fileRecords, records };
+  return { fileRecords, records, stats: { droppedNoUrl } };
 }
 
 /**
@@ -513,7 +523,7 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
  *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
  *   count: number,
  *   skipped: number,
- *   dropped: number,
+ *   droppedNoUrl: number,
  *   checkNote: string,
  * }>}
  */
@@ -534,7 +544,7 @@ async function prepareSingleFile(file, finalName, profile) {
   let checkNote = '';
   let count = 0;
   let skipped = 0;
-  let dropped = 0;
+  let droppedNoUrl = 0;
   let records = [];
   // One entry per source this file resolves to. A unified export naming several
   // sources expands into several; every other import stays at exactly one.
@@ -568,12 +578,14 @@ async function prepareSingleFile(file, finalName, profile) {
     if (expanded) {
       fileRecords = expanded.fileRecords;
       records = expanded.records;
+      droppedNoUrl = expanded.stats.droppedNoUrl;
     } else {
-      records = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+      const adapted = adapter.importJsonOrCsv(rows, fileRecord.id, fileRecord.name);
+      records = adapted.records;
+      droppedNoUrl = adapted.stats.droppedNoUrl;
     }
     count = records.length;
     skipped = parseErrors.length;
-    dropped = rows.length - records.length;
   } else if (ext === 'json') {
     const text = await file.text();
     fileRecord.originalData = text;
@@ -593,35 +605,39 @@ async function prepareSingleFile(file, finalName, profile) {
     if (expanded) {
       fileRecords = expanded.fileRecords;
       records = expanded.records;
+      droppedNoUrl = expanded.stats.droppedNoUrl;
     } else {
-      records = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+      const adapted = adapter.importJsonOrCsv(arrayData, fileRecord.id, fileRecord.name);
+      records = adapted.records;
+      droppedNoUrl = adapted.stats.droppedNoUrl;
     }
     count = records.length;
-    dropped = arrayData.length - records.length;
   } else if (ext === 'db' || ext === 'sqlite') {
     const arrayBuffer = await file.arrayBuffer();
     const uInt8Array = new Uint8Array(arrayBuffer);
     fileRecord.originalData = uInt8Array;
     const sqlEngine = await initSql();
-    const { records: parsed, schema } = await adapter.importSqlite(
-      uInt8Array,
-      fileRecord.id,
-      fileRecord.name,
-      sqlEngine,
-    );
+    const {
+      records: parsed,
+      schema,
+      stats,
+    } = await adapter.importSqlite(uInt8Array, fileRecord.id, fileRecord.name, sqlEngine);
     records = parsed;
     // Remember the table layout this file actually had. The raw buffer is
     // memory-only, so without this a reload would leave the exporter with no
     // honest description of the source's own shape.
     fileRecord.sqliteSchema = schema;
+    // SQLite drops are the adapter's own count, so the same file reports the
+    // same gap whatever the format — nothing to infer from a delta.
     count = records.length;
+    droppedNoUrl = stats.droppedNoUrl;
   } else {
     const err = new Error(`不支援的檔案格式「.${ext}」`);
     err[UNSUPPORTED_TYPE_FLAG] = true;
     throw err;
   }
 
-  return { fileRecords, records, count, skipped, dropped, checkNote };
+  return { fileRecords, records, count, skipped, droppedNoUrl, checkNote };
 }
 
 /**
@@ -726,7 +742,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
         merge.displaced,
         prepared.count,
         prepared.skipped,
-        prepared.dropped,
+        prepared.droppedNoUrl,
         prepared.checkNote,
       ),
     );
