@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   checkImport,
   defaultProfileId,
+  normalizeProfileId,
   profileLabel,
   selectableProfiles,
   OFFICIAL_CSV_UNSUPPORTED_MESSAGE,
@@ -16,6 +17,19 @@ describe('profile descriptors', () => {
   it('exposes zh-TW labels for messages', () => {
     expect(profileLabel('rll-unified')).toBe('Read Later Lens 統一匯出');
     expect(profileLabel('missing-id')).toBe('missing-id');
+  });
+});
+
+describe('normalizeProfileId', () => {
+  it('keeps an offered profile id unchanged', () => {
+    expect(normalizeProfileId('instapaper-scraper')).toBe('instapaper-scraper');
+    expect(normalizeProfileId('rll-unified')).toBe('rll-unified');
+  });
+
+  it('coerces anything this build does not offer to the default', () => {
+    for (const unknown of ['bogus', 'more-sources', '', undefined, null, 42]) {
+      expect(normalizeProfileId(unknown)).toBe(defaultProfileId());
+    }
   });
 });
 

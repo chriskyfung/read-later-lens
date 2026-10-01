@@ -800,6 +800,45 @@ describe('import source modal', () => {
     const [rec] = [...sourceFiles.values()];
     expect(rec.profile).toBe('instapaper-scraper');
   });
+
+  it('keeps exactly one card checked when the requested profile is unknown', () => {
+    registerImporterListeners();
+
+    applyProfileSelection('bogus');
+
+    const checked = ['importProfile-instapaper-scraper', 'importProfile-rll-unified'].filter(
+      (id) => el(id).getAttribute('aria-checked') === 'true',
+    );
+    expect(checked).toEqual(['importProfile-instapaper-scraper']);
+  });
+
+  it('treats the disabled roadmap card as unknown and keeps the default selected', () => {
+    registerImporterListeners();
+
+    applyProfileSelection('more-sources');
+
+    expect(el('importProfile-instapaper-scraper').getAttribute('aria-checked')).toBe('true');
+    expect(el('importProfile-rll-unified').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('stamps the default profile when the session selection was unknown', async () => {
+    registerImporterListeners();
+    applyProfileSelection('bogus');
+
+    await handleFileUploads([fakeFile('a.csv', 'id,title\\n1,x')]);
+
+    const [rec] = [...sourceFiles.values()];
+    expect(rec.profile).toBe(defaultProfileId());
+  });
+
+  it('stamps the default profile when a direct import names an unknown profile', async () => {
+    registerImporterListeners();
+
+    await handleFileUploads([fakeFile('a.csv', 'id,title\\n1,x')], { profile: 'bogus' });
+
+    const [rec] = [...sourceFiles.values()];
+    expect(rec.profile).toBe(defaultProfileId());
+  });
 });
 
 // ---- header sanity check -----------------------------------------------------
@@ -1279,6 +1318,17 @@ describe('handleFileUploads — unified source manifest', () => {
     }
     expect(byFolder.get('file_a')).toBe(2);
     expect(byFolder.get('file_b')).toBe(1);
+  });
+
+  it('coerces a manifest profile this build does not offer to the default', async () => {
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'instapaper.csv', type: 'csv', profile: 'from-the-future' }],
+        [bookmark('1', 'file_a', 'instapaper.csv')],
+      ),
+    );
+
+    expect([...sourceFiles.values()].map((f) => f.profile)).toEqual([defaultProfileId()]);
   });
 
   it('leaves no active record pointing at a source that does not exist', async () => {

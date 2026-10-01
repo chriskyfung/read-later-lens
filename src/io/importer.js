@@ -5,7 +5,12 @@
 
 import * as state from '../core/state.js';
 import { resolveImportAdapter } from '../providers/index.js';
-import { checkImport, defaultProfileId, selectableProfiles } from '../providers/profiles.js';
+import {
+  checkImport,
+  defaultProfileId,
+  normalizeProfileId,
+  selectableProfiles,
+} from '../providers/profiles.js';
 import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io/importModal.js';
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { captureCsvDialect } from '../utils/csv.js';
@@ -59,17 +64,20 @@ function cardEl(profileId) {
 /**
  * Select a source profile: remember it and sync the radio cards' aria state
  * and selected/unselected border classes. Exported so tests (and the modal
- * opener) can reset the session default deterministically.
+ * opener) can reset the session default deterministically. Unknown ids
+ * coerce to the default, so the radiogroup keeps exactly one checked card.
  *
  * @param {string} profileId
  */
 export function applyProfileSelection(profileId) {
-  selectedProfileId = profileId;
+  selectedProfileId = normalizeProfileId(profileId);
   for (const { id } of selectableProfiles()) {
     const card = cardEl(id);
     if (!card || !card.classList) continue;
-    card.setAttribute?.('aria-checked', String(id === profileId));
-    const checked = id === profileId;
+    // Compare against the coerced selection, not the raw input: an unknown
+    // id must still leave exactly one card checked instead of zero.
+    card.setAttribute?.('aria-checked', String(id === selectedProfileId));
+    const checked = id === selectedProfileId;
     for (const name of checked ? UNSELECTED_CARD_CLASSES : SELECTED_CARD_CLASSES) {
       card.classList.remove(name);
     }
@@ -482,7 +490,7 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
         (entry && SOURCE_FILE_TYPES.has(entry.type) && entry.type) ||
         typeFromSourceName(name) ||
         baseRecord.type,
-      profile: (entry && entry.profile) || baseRecord.profile,
+      profile: normalizeProfileId((entry && entry.profile) || baseRecord.profile),
       // `csvColumns` / `sqliteSchema` describe the UPLOADED file's layout, not
       // this source's own, so the spread must not carry them over. Inherited,
       // every restored folder would re-emit the unified export's header row —
@@ -866,10 +874,11 @@ async function rollbackBatch(snapshot, fileName) {
  * @param {object} [options]
  * @param {string} [options.profile] Source profile chosen in the picker
  *   (defaults to the session selection — InstapaperScraper unless changed).
+ *   Unknown ids coerce to the default before anything is stamped or checked.
  */
 export async function handleFileUploads(files, options = {}) {
   try {
-    const { profile = selectedProfileId } = options;
+    const profile = normalizeProfileId(options.profile ?? selectedProfileId);
     const pending = [...files];
 
     // Fail-closed preflight: the duplicate prompt is the only interaction a
