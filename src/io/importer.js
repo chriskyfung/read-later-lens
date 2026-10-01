@@ -490,7 +490,13 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
         (entry && SOURCE_FILE_TYPES.has(entry.type) && entry.type) ||
         typeFromSourceName(name) ||
         baseRecord.type,
-      profile: normalizeProfileId((entry && entry.profile) || baseRecord.profile),
+      // An unrecognized manifest label falls back to the profile the user chose
+      // for this import, not the global default: the restored source's export
+      // columns key off the profile, and 'rll-unified' keeps them lossless.
+      profile: normalizeProfileId(
+        (entry && entry.profile) || baseRecord.profile,
+        baseRecord.profile,
+      ),
       // `csvColumns` / `sqliteSchema` describe the UPLOADED file's layout, not
       // this source's own, so the spread must not carry them over. Inherited,
       // every restored folder would re-emit the unified export's header row —

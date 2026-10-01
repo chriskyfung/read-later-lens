@@ -77,12 +77,20 @@ export function profileLabel(profileId) {
  * Disabled roadmap ids are not selectable, so they coerce too.
  *
  * @param {string} profileId
- * @returns {string} `profileId` when selectable, otherwise the default profile id.
+ * @param {string} [fallback] Preferred substitute when `profileId` is not
+ *   offered; defaults to the default profile id. A caller with a better
+ *   contextual guess — a unified envelope knows the profile the user chose for
+ *   the import — passes it so an unrecognized manifest label does not narrow
+ *   the restored source. The fallback is validated too, so an unoffered one
+ *   still lands on the default.
+ * @returns {string} `profileId` when selectable, otherwise `fallback` when
+ *   selectable, otherwise the default profile id.
  */
-export function normalizeProfileId(profileId) {
-  return selectableProfiles().some((profile) => profile.id === profileId)
-    ? profileId
-    : defaultProfileId();
+export function normalizeProfileId(profileId, fallback = defaultProfileId()) {
+  const offered = selectableProfiles();
+  const isOffered = (id) => offered.some((profile) => profile.id === id);
+  if (isOffered(profileId)) return profileId;
+  return isOffered(fallback) ? fallback : defaultProfileId();
 }
 
 /** zh-TW guidance shown when the official Instapaper account CSV is imported. */

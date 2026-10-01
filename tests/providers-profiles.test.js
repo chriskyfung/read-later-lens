@@ -31,6 +31,18 @@ describe('normalizeProfileId', () => {
       expect(normalizeProfileId(unknown)).toBe(defaultProfileId());
     }
   });
+
+  it('prefers a valid contextual fallback over the global default', () => {
+    expect(normalizeProfileId('bogus', 'rll-unified')).toBe('rll-unified');
+  });
+
+  it('keeps a valid id even when a fallback is supplied', () => {
+    expect(normalizeProfileId('rll-unified', 'instapaper-scraper')).toBe('rll-unified');
+  });
+
+  it('ignores a fallback this build does not offer', () => {
+    expect(normalizeProfileId('bogus', 'also-bogus')).toBe(defaultProfileId());
+  });
 });
 
 describe('checkImport — official Instapaper CSV (blocked)', () => {

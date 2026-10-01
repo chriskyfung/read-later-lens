@@ -1320,7 +1320,7 @@ describe('handleFileUploads — unified source manifest', () => {
     expect(byFolder.get('file_b')).toBe(1);
   });
 
-  it('coerces a manifest profile this build does not offer to the default', async () => {
+  it("falls back to the envelope's own profile when a manifest profile is unknown", async () => {
     await importUnified(
       envelope(
         [{ id: 'file_a', name: 'instapaper.csv', type: 'csv', profile: 'from-the-future' }],
@@ -1328,7 +1328,20 @@ describe('handleFileUploads — unified source manifest', () => {
       ),
     );
 
-    expect([...sourceFiles.values()].map((f) => f.profile)).toEqual([defaultProfileId()]);
+    // The user's own choice for this import is the honest label: a global
+    // default would narrow this source's export to the scraper's columns.
+    expect([...sourceFiles.values()].map((f) => f.profile)).toEqual(['rll-unified']);
+  });
+
+  it('honours a manifest profile that this build does offer', async () => {
+    await importUnified(
+      envelope(
+        [{ id: 'file_a', name: 'instapaper.csv', type: 'csv', profile: 'instapaper-scraper' }],
+        [bookmark('1', 'file_a', 'instapaper.csv')],
+      ),
+    );
+
+    expect([...sourceFiles.values()].map((f) => f.profile)).toEqual(['instapaper-scraper']);
   });
 
   it('leaves no active record pointing at a source that does not exist', async () => {
