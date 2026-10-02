@@ -1117,7 +1117,82 @@ describe('handleFileUploads — batch resilience', () => {
     ]);
 
     expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['ok.csv']);
-    expect(el('toastMsg').innerText).toBe('已載入檔案: ok.csv，但未偵測到任何書籤');
+    // The batch owns the one toast: the failure is named, not overwritten by
+    // the later success. ok.csv parses to a URL-less record, so the batch
+    // reports it the same way a single import would.
+    expect(el('toastMsg').innerText).toBe(
+      '已成功載入 1 個檔案（共 0 筆書籤）；1 個檔案失敗：bad.csv（解析失敗）',
+    );
+  });
+
+  it('summarizes an all-success batch without hiding any file', async () => {
+    Papa.parse.mockImplementation((_text, config) =>
+      config.complete({ data: [{ id: '1', title: 'x' }], errors: [] }),
+    );
+
+    await handleFileUploads([
+      fakeFile('a.csv', 'id,title\n1,x'),
+      fakeFile('b.csv', 'id,title\n1,y'),
+    ]);
+
+    expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['a.csv', 'b.csv']);
+    expect(el('toastMsg').innerText).toBe('已成功載入 2 個檔案（共 2 筆書籤）');
+  });
+
+  it('sums per-file gaps into the batch summary', async () => {
+    let calls = 0;
+    Papa.parse.mockImplementation((_text, config) => {
+      calls += 1;
+      return config.complete({
+        // One row, with a URL so the adapter keeps it; the first file's
+        // parse error lands in the skipped count, not the dropped count.
+        data:
+          calls === 1
+            ? [{ id: '1', title: 'x', url: 'https://x.example.com' }]
+            : [{ id: '2', title: 'y', url: 'https://y.example.com' }],
+        errors: calls === 1 ? [{ message: 'broken row' }] : [],
+      });
+    });
+
+    await handleFileUploads([
+      fakeFile('partial.csv', 'id,title,url\n1,x,https://x.example.com'),
+      fakeFile('ok.csv', 'id,title,url\n2,y,https://y.example.com'),
+    ]);
+
+    expect(el('toastMsg').innerText).toBe(
+      '已成功載入 2 個檔案（共 2 筆書籤，共 1 列解析失敗已略過）',
+    );
+  });
+
+  it('names the failing files when every file in the batch fails', async () => {
+    await handleFileUploads([fakeFile('a.txt', 'nope'), fakeFile('b.txt', 'nope')]);
+
+    expect(sourceFiles.size).toBe(0);
+    expect(el('toastMsg').innerText).toBe(
+      '2 個檔案均匯入失敗：a.txt（格式不支援）、b.txt（格式不支援）',
+    );
+  });
+
+  it('collapses a long failure list to a count', async () => {
+    await handleFileUploads([
+      fakeFile('a.txt', 'nope'),
+      fakeFile('b.txt', 'nope'),
+      fakeFile('c.txt', 'nope'),
+      fakeFile('d.txt', 'nope'),
+    ]);
+
+    expect(el('toastMsg').innerText).toBe(
+      '4 個檔案均匯入失敗：a.txt（格式不支援）、b.txt（格式不支援）、c.txt（格式不支援）、等 4 個檔案',
+    );
+  });
+
+  it('reports nothing when the only file is user-cancelled', async () => {
+    seedDuplicate();
+
+    await uploadResolving([fakeFile('a.csv', 'id,title\n2,y')], 'cancel');
+
+    expect(sourceFiles.size).toBe(1);
+    expect(el('toastMsg').innerText).toBe('');
   });
 
   it('rolls the whole batch back when a file fails unexpectedly after one committed', async () => {
