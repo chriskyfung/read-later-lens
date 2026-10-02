@@ -38,6 +38,7 @@ export default [
         DOMParser: 'readonly',
         FileSystemFileHandle: 'readonly',
         // Node (for scripts/ + server-side guards)
+        globalThis: 'readonly',
         process: 'readonly',
         __dirname: 'readonly',
         Buffer: 'readonly',

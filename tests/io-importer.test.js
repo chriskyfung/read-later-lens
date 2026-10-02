@@ -177,7 +177,9 @@ describe('handleFileUploads — format dispatch', () => {
     expect(config.skipEmptyLines).toBe(true);
 
     const [id] = [...sourceFiles.keys()];
-    expect(id).toMatch(/^file_\d+_[0-9a-z]{5}$/);
+    expect(id).toMatch(
+      /^file_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     const rec = sourceFiles.get(id);
     expect(rec.name).toBe('a.csv');
     expect(rec.type).toBe('csv');
@@ -241,7 +243,9 @@ describe('handleFileUploads — format dispatch', () => {
     expect(importSqlite).toHaveBeenCalledTimes(1);
     const [bytes, id, name, usedEngine] = importSqlite.mock.calls[0];
     expect(bytes).toBeInstanceOf(Uint8Array);
-    expect(id).toMatch(/^file_\d+_[0-9a-z]{5}$/);
+    expect(id).toMatch(
+      /^file_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(name).toBe('instapaper.db');
     expect(usedEngine).toBe(engine);
     expect([...sourceFiles.values()][0].type).toBe('db');
