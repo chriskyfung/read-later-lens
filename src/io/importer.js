@@ -14,6 +14,7 @@ import {
 import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io/importModal.js';
 import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
 import { captureCsvDialect } from '../utils/csv.js';
+import { newFileId } from '../utils/id.js';
 import { initSql } from './sqlLoader.js';
 import Papa from 'papaparse';
 
@@ -594,7 +595,7 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
  * }>}
  */
 async function prepareSingleFile(file, finalName, profile) {
-  const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+  const fileId = newFileId();
   const ext = finalName.split('.').pop().toLowerCase();
 
   const fileRecord = {
