@@ -9,15 +9,50 @@ describe('normalizeFields', () => {
   });
 
   it('generates a stable URL-based id when no id alias is present', () => {
-    const a = normalizeFields({ title: 'T', url: 'https://a.example.com/x' }, 0);
-    const b = normalizeFields({ title: 'Other', url: 'https://a.example.com/x' }, 7);
+    const a = normalizeFields({ title: 'T', url: 'https://a.example.com/x' }, 0, undefined, 's1');
+    const b = normalizeFields(
+      { title: 'Other', url: 'https://a.example.com/x' },
+      7,
+      undefined,
+      's1',
+    );
     expect(a.id).toMatch(/^gen_[0-9a-f]{16}$/);
-    // Same URL => same id regardless of title, index, or call time, so a
-    // re-import of an id-less file merges instead of duplicating rows.
+    // Same URL under the same source => same id regardless of title, index, or
+    // call time, so re-importing an id-less file merges instead of duplicating.
     expect(a.id).toBe(b.id);
 
-    const different = normalizeFields({ title: 'T', url: 'https://b.example.com/y' }, 0);
+    const different = normalizeFields(
+      { title: 'T', url: 'https://b.example.com/y' },
+      0,
+      undefined,
+      's1',
+    );
     expect(different.id).not.toBe(a.id);
+  });
+
+  it('scopes the URL hash to the source so two sources never collide', () => {
+    const inF1 = normalizeFields(
+      { title: 'T', url: 'https://a.example.com/x' },
+      0,
+      undefined,
+      'f1',
+    );
+    const inF2 = normalizeFields(
+      { title: 'T', url: 'https://a.example.com/x' },
+      0,
+      undefined,
+      'f2',
+    );
+    // The unsalted collision made mergeBookmarks move the older record to the
+    // newest source, silently decrementing the older folder's count.
+    expect(inF1.id).not.toBe(inF2.id);
+  });
+
+  it('reproduces the legacy unsalted id when no source is given', () => {
+    const withSource = normalizeFields({ url: 'https://a.example.com/x' }, 0, undefined, 'f1');
+    const unsalted = normalizeFields({ url: 'https://a.example.com/x' }, 0);
+    expect(unsalted.id).toMatch(/^gen_[0-9a-f]{16}$/);
+    expect(unsalted.id).not.toBe(withSource.id);
   });
 
   it('falls back to Date.now() + index only when there is neither id nor url', () => {

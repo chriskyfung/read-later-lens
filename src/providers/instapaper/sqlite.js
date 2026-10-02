@@ -73,7 +73,12 @@ export async function processSqliteAsBookmarks(
       // own, counted at the URL check, so the importer reports it verbatim.
       ...dropUrlLess(
         rows.map((rec, index) => {
-          const { id, title, url, preview, content } = normalizeFields(rec, index);
+          const { id, title, url, preview, content } = normalizeFields(
+            rec,
+            index,
+            undefined,
+            sourceFileId,
+          );
           const rowProvider = preserveMeta && rec.provider ? String(rec.provider) : provider;
           const readerUrl =
             preserveMeta && rec.instapaper_url != null

@@ -30,7 +30,12 @@ export function importFromJsonOrCsv(rawRows, sourceFileId, sourceFileName, optio
   // gap instead of storing a '#' placeholder row.
   return dropUrlLess(
     rawRows.map((rec, index) => {
-      const { id, title, url, preview, content } = normalizeFields(rec, index);
+      const { id, title, url, preview, content } = normalizeFields(
+        rec,
+        index,
+        undefined,
+        sourceFileId,
+      );
       const provider = preserveMeta && rec.provider ? String(rec.provider) : 'instapaper';
       const readerUrl =
         preserveMeta && rec.instapaper_url != null
