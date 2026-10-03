@@ -137,6 +137,13 @@ export async function closeDb() {
   // Forgetting the connection forgets the revision we last verified against it.
   // Keeping a stale baseline would let a later save skip the rev check against
   // a database that no longer holds what it describes.
+  //
+  // Test-only contract: `closeDb()` swaps the underlying database (see
+  // store.test.js, which deletes and re-creates it between cases), so the next
+  // `saveState()` must refuse until `loadState()` re-reads a baseline against
+  // the new database — never compare the OLD baseline against the NEW rows.
+  // Production code never calls this: IndexedDB connections stay open for the
+  // tab's lifetime, so `knownRev` always describes the database it came from.
   knownRev = undefined;
 }
 

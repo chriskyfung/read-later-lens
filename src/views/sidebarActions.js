@@ -69,7 +69,8 @@ export async function confirmDeleteFolder(e, fileId) {
  *
  * @param {string} fileId
  * @param {boolean} [triggerRender=true]
- * @returns {Promise<boolean>} `false` when refused because another tab wrote.
+ * @returns {Promise<boolean>} `true` when the file and its bookmarks were deleted;
+ *   `false` when nothing was deleted, or when refused because another tab wrote.
  */
 export async function deleteFolder(fileId, triggerRender = true) {
   // Gate before the first mutation: deleting on top of a working set this tab

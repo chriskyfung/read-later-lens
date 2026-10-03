@@ -93,6 +93,9 @@ export async function confirmDeleteBookmark(id) {
  *
  * Mirrors deleteBookmark()'s side-effect order (persist, render, batch bar,
  * toast). Selected ids that are already trashed keep their original stamp.
+ *
+ * @returns {Promise<boolean>} True when the batch delete ran; false when
+ *   nothing was selected, or when refused because another tab wrote.
  */
 export async function deleteSelectedBookmarks() {
   const ids = Array.from(state.selectedIds);
