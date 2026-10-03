@@ -28,13 +28,18 @@ export const STALE_STATE_MESSAGE = '另一個分頁已更新資料，請重新�
  *
  * @returns {Promise<boolean>} `true` when this tab may proceed; `false` when
  *   another tab has written since this tab last read or wrote the cache.
+ *
+ * The "probe failed" warning is intentionally worded in guard terms (`gate`),
+ * not storage terms (`probe`): both layers log the same underlying failure,
+ * and the wording tells a log reader at a glance which layer admitted the
+ * action anyway (this gate) versus which simply reported no divergence.
  */
 export async function stateStillFresh() {
   let fresh;
   try {
     fresh = await isStateFresh();
   } catch (err) {
-    console.warn('Stale-state probe failed:', err);
+    console.warn('Stale-state gate failed open:', err);
     return true;
   }
   if (fresh) return true;
