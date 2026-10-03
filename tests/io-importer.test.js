@@ -519,6 +519,25 @@ describe('processSingleFile — transaction boundary', () => {
     expect(el('toastMsg').innerText).toBe('已還原匯入 a.csv：無法寫入本機快取，資料不會保留');
   });
 
+  it('names the cross-tab conflict instead of a generic cache failure', async () => {
+    initImporter({
+      persistAndRender: vi.fn(async () => ({ persisted: false, conflict: true, rendered: true })),
+    });
+    setBookmarks([{ id: 'keep', title: 'kept', source_file_id: 'F0' }]);
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    // Same rollback as any failed write: the overtaken tab keeps what it had.
+    expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
+    expect(sourceFiles.size).toBe(0);
+    // The difference is what the user is told: the write was not slow, it lost.
+    expect(el('toastMsg').innerText).toBe(
+      '已還原匯入 a.csv：另一個分頁已更新資料，資料不會保留，請重新載入後再試',
+    );
+  });
+
   it('undoes a merge that a failing write left behind (orphan regression)', async () => {
     initImporter({
       persistAndRender: () => {
