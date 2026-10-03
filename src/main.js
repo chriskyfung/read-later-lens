@@ -25,6 +25,14 @@ import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';
 
 /**
+ * Toast text when a post-action persist write fails for a reason OTHER than a
+ * cross-tab conflict (e.g. quota, transaction abort): before this feature the
+ * view's success toast stood alone, so a failed cache write quietly disagreed
+ * with what the user saw. The conflict case keeps its own message.
+ */
+export const PERSIST_WRITE_FAILED_MESSAGE = '無法寫入本機快取，剛才的變更可能不會保留';
+
+/**
  * Helper for I/O modules to trigger persistence and UI updates.
  *
  * Never rejects and never short-circuits: each step is guarded on its own so a
@@ -73,15 +81,22 @@ async function persistAndRender() {
 /**
  * Persist on behalf of an action that has already mutated `state` in memory.
  *
- * Each such action probes `isStateFresh()` first, so a conflict here means
- * another tab won the race in that gap. The in-memory change and its render
- * have already happened, so the only honest response left is to say so and ask
- * for a reload — never to report quiet success.
+ * Each such action probes `isStateFresh()` first, so a *refused* save (`{…
+ * conflict: true }`) means another tab won the race in that gap. The
+ * in-memory change and its render have already happened, so the only honest
+ * response left is to say so and ask for a reload — never to report quiet
+ * success. A genuine storage failure is *also* reported: the base `saveState`
+ * result (`persisted: false` without `conflict`) means this session is no
+ * longer cached, and a reload would resurrect what the user just deleted.
  */
 async function persistAfterAction() {
   try {
     const saved = await saveState();
-    if (saved && saved.conflict) {
+    if (saved && saved.persisted === false && saved.conflict !== true) {
+      showToast(PERSIST_WRITE_FAILED_MESSAGE);
+      return;
+    }
+    if (saved && saved.conflict === true) {
       showToast(STALE_STATE_MESSAGE);
     }
   } catch (err) {
