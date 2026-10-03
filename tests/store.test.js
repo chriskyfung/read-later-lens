@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { openDB, deleteDB } from 'idb';
-import { saveState, loadState, getStorageUsage, closeDb } from '../src/core/store.js';
+import { saveState, loadState, isStateFresh, getStorageUsage, closeDb } from '../src/core/store.js';
 import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '../src/core/state.js';
 
 const DB_NAME = 'ReadLaterLensDB';
@@ -164,7 +164,7 @@ describe('store (IndexedDB)', () => {
   it('reports true once the working set is written', async () => {
     setBookmarks([bookmark(1)]);
 
-    expect(await saveState()).toBe(true);
+    expect(await saveState()).toEqual({ persisted: true, conflict: false });
   });
 
   it('reports false (and never rejects) when the write fails', async () => {
@@ -178,7 +178,7 @@ describe('store (IndexedDB)', () => {
       globalThis.indexedDB = undefined;
       setBookmarks([bookmark(1)]);
 
-      await expect(saveState()).resolves.toBe(false);
+      await expect(saveState()).resolves.toEqual({ persisted: false, conflict: false });
       expect(warn).toHaveBeenCalledWith('IndexedDB save failed:', expect.anything());
     } finally {
       globalThis.indexedDB = realIndexedDB;
@@ -253,5 +253,112 @@ describe('legacy DB migration (InstapaperBookmarkManagerDB → ReadLaterLensDB)'
     expect(await loadState()).toBe(false);
     const names = (await indexedDB.databases()).map((d) => d.name);
     expect(names).not.toContain(LEGACY_DB_NAME);
+  });
+});
+
+describe('cross-tab conflict detection', () => {
+  beforeEach(async () => {
+    await closeDb();
+    await deleteDB(DB_NAME);
+    setBookmarks([]);
+    setSourceFiles(new Map());
+  });
+
+  /**
+   * Touch the shared rows without going through this tab's module state.
+   *
+   * IndexedDB is per-origin, so a real second tab would have its own
+   * `knownRev`; the only way to reproduce that here is to write the storage
+   * behind `saveState()`'s back — which is exactly what the other tab does.
+   */
+  async function asOtherTab(rows) {
+    const db = await openDB(DB_NAME, 1, {
+      upgrade(d) {
+        if (!d.objectStoreNames.contains('app_state')) {
+          d.createObjectStore('app_state', { keyPath: 'key' });
+        }
+      },
+    });
+    for (const row of rows) await db.put('app_state', row);
+    db.close();
+  }
+
+  async function readRow(key) {
+    const db = await openDB(DB_NAME, 1, {
+      upgrade(d) {
+        if (!d.objectStoreNames.contains('app_state')) {
+          d.createObjectStore('app_state', { keyPath: 'key' });
+        }
+      },
+    });
+    const row = await db.get('app_state', key);
+    db.close();
+    return row;
+  }
+
+  it('refuses to overwrite a cache another tab has written', async () => {
+    setBookmarks([bookmark(1)]);
+    await expect(saveState()).resolves.toEqual({ persisted: true, conflict: false });
+
+    // The other tab lands a wholly different working set plus a fresh revision
+    // — the same three rows saveState() writes on this tab's behalf.
+    await asOtherTab([
+      { key: 'bookmarks', data: [bookmark(9)] },
+      { key: 'rev', data: globalThis.crypto.randomUUID() },
+    ]);
+
+    setBookmarks([bookmark(2)]); // this tab's now-stale view
+    await expect(saveState()).resolves.toEqual({ persisted: false, conflict: true });
+
+    // The other tab's import survives — nothing was clobbered.
+    expect((await readRow('bookmarks')).data.map((b) => b.id)).toEqual(['9']);
+  });
+
+  it('keeps writing while it holds the only baseline', async () => {
+    setBookmarks([bookmark(1)]);
+    await expect(saveState()).resolves.toEqual({ persisted: true, conflict: false });
+
+    setBookmarks([bookmark(1), bookmark(2)]);
+    await expect(saveState()).resolves.toEqual({ persisted: true, conflict: false });
+
+    expect((await readRow('bookmarks')).data).toHaveLength(2);
+  });
+
+  it('writes a first revision for a cache saved before revisions existed', async () => {
+    await asOtherTab([
+      { key: 'bookmarks', data: [bookmark(1)] },
+      { key: 'sources', data: [] },
+      // deliberately no `rev` row — a pre-revision install
+    ]);
+
+    expect(await loadState()).toBe(true);
+    setBookmarks([bookmark(1), bookmark(2)]);
+    await expect(saveState()).resolves.toEqual({ persisted: true, conflict: false });
+    expect((await readRow('rev')).data).toEqual(expect.any(String));
+  });
+
+  it('reports the view stale the moment another tab writes', async () => {
+    setBookmarks([bookmark(1)]);
+    await saveState();
+    expect(await isStateFresh()).toBe(true);
+
+    await asOtherTab([{ key: 'rev', data: globalThis.crypto.randomUUID() }]);
+    expect(await isStateFresh()).toBe(false);
+  });
+
+  it('leaves every row untouched when a later row cannot be written', async () => {
+    setBookmarks([bookmark(1)]);
+    setSourceFiles(new Map([['f1', { id: 'f1', name: 'f.csv', type: 'csv', originalData: 'a' }]]));
+    await saveState();
+
+    // `name` is a function, so the `sources` row cannot be structured-cloned.
+    // It is queued AFTER `bookmarks`: without one aborting transaction the
+    // first row commits anyway and the cache ends up describing folders that
+    // are no longer in it.
+    setBookmarks([bookmark(2)]);
+    setSourceFiles(new Map([['f1', { id: 'f1', name: () => {}, type: 'csv', originalData: 'a' }]]));
+
+    await expect(saveState()).resolves.toEqual({ persisted: false, conflict: false });
+    expect((await readRow('bookmarks')).data.map((b) => b.id)).toEqual(['1']);
   });
 });

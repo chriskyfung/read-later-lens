@@ -2,6 +2,7 @@ import './styles/main.css';
 
 import * as state from './core/state.js';
 import { saveState, loadState } from './core/store.js';
+import { STALE_STATE_MESSAGE } from './core/guard.js';
 import { showToast } from './utils/dom.js';
 import { initDomains } from './views/domains.js';
 import { initWordCloud } from './views/wordcloud.js';
@@ -38,10 +39,15 @@ import { initTrash, registerTrashListeners } from './views/trash.js';
  */
 async function persistAndRender() {
   let persisted = false;
+  let conflict = false;
   try {
     // saveState() now reports failure instead of swallowing it; a throwing
-    // stub (or a future implementation) must be just as survivable.
-    persisted = (await saveState()) !== false;
+    // stub (or a future implementation) must be just as survivable. Both the
+    // `{persisted, conflict}` object and the legacy `false`/void forms read as
+    // "not persisted", so a stub that says nothing still counts as committed.
+    const saved = await saveState();
+    persisted = saved !== false && saved?.persisted !== false;
+    conflict = saved?.conflict === true;
   } catch (err) {
     console.warn('IndexedDB save failed:', err);
   }
@@ -61,7 +67,32 @@ async function persistAndRender() {
     console.warn('Render failed:', err);
   }
 
-  return { persisted, rendered };
+  return { persisted, rendered, conflict };
+}
+
+/**
+ * Persist on behalf of an action that has already mutated `state` in memory.
+ *
+ * Each such action probes `isStateFresh()` first, so a conflict here means
+ * another tab won the race in that gap. The in-memory change and its render
+ * have already happened, so the only honest response left is to say so and ask
+ * for a reload — never to report quiet success.
+ */
+async function persistAfterAction() {
+  try {
+    const saved = await saveState();
+    if (saved && saved.conflict) {
+      showToast(STALE_STATE_MESSAGE);
+    }
+  } catch (err) {
+    console.warn('IndexedDB save failed:', err);
+  }
+
+  try {
+    await updateStorageUsageUI();
+  } catch (err) {
+    console.warn('Storage usage update failed:', err);
+  }
 }
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
@@ -72,27 +103,18 @@ async function boot() {
   mountModals();
   initHeader({ render: renderAll, persistAndRender });
   initSidebarActions({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
   initImporter({ persistAndRender, render: renderAll });
   initWorkspaceActions({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   initTrash({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   registerHeaderListeners();
