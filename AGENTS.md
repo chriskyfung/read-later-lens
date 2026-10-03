@@ -80,11 +80,75 @@ Fail-first: N/A — views.test.js pins only bg-emerald-950; suite 607/607
 unchanged. Dead .rounded emission reported in the PR, not fixed here.
 ```
 
-Commits must be GPG-signed, which this repository enforces. Confirm before finishing:
+Commits must be signed — see _Signing_ for the format your environment needs, how to confirm
+one, and what to do when signing fails.
+
+## Signing
+
+This repository accepts **both** formats, and which one applies follows the development
+environment:
+
+| Environment       | `gpg.format` | `user.signingkey`      | Signed through       |
+| ----------------- | ------------ | ---------------------- | -------------------- |
+| Windows           | `openpgp`    | GPG key id/fingerprint | `gpg` + `gpg-agent`  |
+| Linux (and macOS) | `ssh`        | SSH signing key path   | `ssh-keygen -Y sign` |
+
+`commit.gpgsign` and `tag.gpgsign` are on, so `git commit` and `git tag` sign automatically —
+but that config lives in each clone's `.git/config`, so it is local rather than something the
+repository enforces, and no CI job checks it. Read it before assuming a format
+(`git config --get gpg.format`) and match it to the platform (`uname -s`; `MINGW*`, `MSYS*`
+and `CYGWIN*` mean Windows). An unset `gpg.format` is the platform default: `openpgp` on
+Windows, `ssh` on Linux.
+
+Set the config only where it is unset, and report what you set — environment configuration is
+high-risk. If it is already set to the other platform's format, report that instead of
+flipping it.
+
+### Confirming a signature
+
+`%G?` is not a usable check. It needs a verifier that may be absent — a `gpg` keyring for PGP,
+and `gpg.ssh.allowedSignersFile` for SSH — so it reports `N` for a _correctly signed_ commit,
+and a good signature is indistinguishable from a missing one:
 
 ```
-git --no-pager log -1 --format='%G? %s'   # G = good signature
+git --no-pager log -1 --format='%G? %s'   # N even when the signature is good
 ```
+
+Confirm from the commit object instead. It needs no verifier and names the format:
+
+```
+git cat-file commit HEAD | grep -A1 '^gpgsig'
+# -----BEGIN SSH SIGNATURE-----   SSH
+# -----BEGIN PGP SIGNATURE-----   GPG
+```
+
+Pass condition: a signature is attached, in the format the platform calls for.
+
+### When signing fails
+
+Never bypass signing — `--no-gpg-sign` and `-c commit.gpgsign=false` are the signing analogue
+of `--no-verify`. The usual causes are `gpg` or `gpg-agent` not running (Windows), a
+`user.signingkey` that does not match `gpg.format`, or a passphrase-protected key that no
+agent holds. On Linux that last one reads:
+
+```
+error: Enter passphrase for "…": incorrect passphrase supplied to decrypt private key
+fatal: failed to write commit object
+```
+
+It lands _after_ the `pre-commit` hook, so nothing is lost — the files are still staged.
+Recover in this order:
+
+1. Load the key once. Ask the user to run `ssh-add <private-key>` in their own terminal — or
+   start `gpg-agent` for them on Windows — and to export the resulting `SSH_AUTH_SOCK` for the
+   shell that runs `git`. Note `user.signingkey` may name the `.pub` file while `ssh-add`
+   wants the private key beside it. Loading the key once makes every later commit sign
+   without a prompt. Never ask for the passphrase: it must stay out of this conversation.
+2. Retry the commit — `ssh-keygen -Y sign` picks the key up from the agent.
+3. If no agent can be loaded, hand the commits back. Stage one slice at a time, write each
+   message to a file, and give the user the exact `git commit -F <file>` command to run
+   themselves so they enter the passphrase. Report which slice each command covers, and that
+   signing is the only blocker.
 
 ## Verification discipline
 
@@ -205,5 +269,7 @@ message, and treat an over-budget body as a review defect rather than a sign of 
 - Never commit secrets, unreviewed generated code, or broad permission changes.
 - Do not send secrets, private configuration, customer data, or production logs to an external
   model provider.
+- Never bypass commit signing (`--no-gpg-sign`, `-c commit.gpgsign=false`) or ask the user for
+  their signing passphrase; load the key or hand the commit back instead — see _Signing_.
 
 AI-generated changes must be reviewed as untrusted input.
