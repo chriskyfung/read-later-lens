@@ -42,9 +42,12 @@ function lowerKeyed(rec) {
  * preimage, each source keeps its own record. A NUL separator keeps the salt
  * and url unambiguous (`('ab','c')` vs `('a','bc')`).
  *
- * An omitted salt reproduces the legacy unsalted id — the shape records
- * persisted by earlier versions carry — which is exactly what a caller that
- * must match those ids needs.
+ * The salt is optional only so a bare URL can still be hashed; an empty salt
+ * does NOT reproduce the legacy id. The NUL separator is part of the preimage,
+ * so `stableIdFromUrl(url, '')` already differs from the pre-salt `gen_…` that
+ * records written by earlier versions carry — those ids are not reproduced
+ * here. That is why the first id-less re-import after this change does not
+ * merge with them; the README documents the resulting duplicate.
  *
  * @param {string} url
  * @param {string} [salt] Source scope, normally the `sourceFileId`.

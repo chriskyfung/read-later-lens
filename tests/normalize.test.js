@@ -48,11 +48,16 @@ describe('normalizeFields', () => {
     expect(inF1.id).not.toBe(inF2.id);
   });
 
-  it('reproduces the legacy unsalted id when no source is given', () => {
+  it('does not reproduce the legacy unsalted id when the source is omitted', () => {
     const withSource = normalizeFields({ url: 'https://a.example.com/x' }, 0, undefined, 'f1');
     const unsalted = normalizeFields({ url: 'https://a.example.com/x' }, 0);
     expect(unsalted.id).toMatch(/^gen_[0-9a-f]{16}$/);
     expect(unsalted.id).not.toBe(withSource.id);
+    // The NUL separator is in the preimage even for an empty salt, so the
+    // no-source path is not the legacy id either. Pinned literally so nobody
+    // restores "legacy compatibility" by accident: pre-salt rows do not merge
+    // on re-import, and the README documents that duplicate.
+    expect(unsalted.id).not.toBe('gen_a30158530b5be715'); // legacy hash of this URL
   });
 
   it('falls back to Date.now() + index only when there is neither id nor url', () => {
