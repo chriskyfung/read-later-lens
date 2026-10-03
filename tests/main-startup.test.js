@@ -99,7 +99,7 @@ describe('entry-point feature wiring', () => {
     const button = card.querySelector('[data-delete-bookmark]');
     expect(button.dataset.deleteBookmark).toBe(id);
     expect(card.innerHTML).not.toContain(id);
-    els.bookmarkCardsGrid.dispatch('click', {
+    await els.bookmarkCardsGrid.dispatch('click', {
       target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
     });
     // Soft delete: the record stays in state (with a stamp) for the trash view,
@@ -122,7 +122,7 @@ describe('entry-point feature wiring', () => {
     renderAll();
     const card = els.bookmarkCardsGrid.children[0];
     const button = card.querySelector('[data-delete-bookmark]');
-    els.bookmarkCardsGrid.dispatch('click', {
+    await els.bookmarkCardsGrid.dispatch('click', {
       target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
     });
     expect(state.bookmarks).toHaveLength(1);
@@ -132,7 +132,7 @@ describe('entry-point feature wiring', () => {
 
     // Clicking the (now stale) card button again must not touch the record: it
     // is already in the trash, so there is nothing left to soft delete.
-    els.bookmarkCardsGrid.dispatch('click', {
+    await els.bookmarkCardsGrid.dispatch('click', {
       target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
     });
     expect(saveState).toHaveBeenCalledTimes(1);
@@ -148,7 +148,7 @@ describe('entry-point feature wiring', () => {
 
     openReaderModal('r1');
     expect(els.readerModal.classList.contains('hidden')).toBe(false);
-    els.readerDeleteBtn.dispatch('click');
+    await els.readerDeleteBtn.dispatch('click');
 
     expect(state.bookmarks).toHaveLength(1);
     expect(state.bookmarks[0].deleted_at).toBeTruthy();
@@ -190,7 +190,7 @@ describe('entry-point feature wiring', () => {
     let row = els.folderList.children[0];
     expect(row.dataset.selectFolder).toBe(id);
     expect(row.innerHTML).not.toContain(id);
-    els.folderList.dispatch('click', {
+    await els.folderList.dispatch('click', {
       target: { closest: (selector) => (selector === '[data-select-folder]' ? row : null) },
     });
     expect(state.activeFolder).toBe(id);
@@ -203,10 +203,10 @@ describe('entry-point feature wiring', () => {
       stopPropagation: vi.fn(),
       target: { closest: (selector) => (selector === '[data-delete-folder]' ? button : row) },
     };
-    els.folderList.dispatch('click', event);
+    await els.folderList.dispatch('click', event);
     expect(state.sourceFiles.has(id)).toBe(true);
     confirm.mockReturnValue(true);
-    els.folderList.dispatch('click', event);
+    await els.folderList.dispatch('click', event);
     expect(state.sourceFiles.size).toBe(0);
     expect(state.activeFolder).toBe('ALL');
     expect(state.bookmarks).toEqual([]);
@@ -374,7 +374,9 @@ function makeEl() {
       this.listeners[type] = (this.listeners[type] || []).filter((cb) => cb !== fn);
     },
     dispatch(type, event = {}) {
-      (this.listeners[type] || []).forEach((fn) => fn(event));
+      // Returns a promise so an async handler can be awaited by the test; a
+      // synchronous handler still runs to completion before dispatch returns.
+      return Promise.all((this.listeners[type] || []).map((fn) => fn(event)));
     },
     insertAdjacentHTML(_position, html) {
       mounts.push(html);

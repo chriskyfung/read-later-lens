@@ -12,6 +12,7 @@
 
 import * as state from '../core/state.js';
 import { getFilteredBookmarks } from '../core/filters.js';
+import { stateStillFresh } from '../core/guard.js';
 import { renderBookmarkCards, updateBatchActionBar } from './bookmarks.js';
 import { activateTab } from './tabs.js';
 import { renderWordCloud } from './wordcloud.js';
@@ -53,11 +54,16 @@ export function switchTab(tabId) {
  * actions (src/views/trash.js) and folder deletion remove records for real.
  *
  * @param {string} id
- * @returns {boolean} True when a live bookmark was trashed.
+ * @returns {Promise<boolean>} True when a live bookmark was trashed; false when
+ *   it was not, or when the action was refused because another tab wrote.
  */
-export function deleteBookmark(id) {
+export async function deleteBookmark(id) {
   const bookmark = state.bookmarks.find((b) => b.id === id && !b.deleted_at);
   if (!bookmark) return false;
+
+  // Gate before the mutation: trashing over a working set this tab has not
+  // seen would keep rows the other tab just wrote from ever landing.
+  if (!(await stateStillFresh())) return false;
 
   state.trashBookmarks([id]);
   state.selectedIds.delete(id);
@@ -76,9 +82,9 @@ export function deleteBookmark(id) {
  * exported wrapper for the reader modal and the delegated grid listener.
  *
  * @param {string} id
- * @returns {boolean} True when the bookmark was trashed.
+ * @returns {Promise<boolean>} True when the bookmark was trashed.
  */
-export function confirmDeleteBookmark(id) {
+export async function confirmDeleteBookmark(id) {
   return deleteBookmark(id);
 }
 
@@ -88,9 +94,12 @@ export function confirmDeleteBookmark(id) {
  * Mirrors deleteBookmark()'s side-effect order (persist, render, batch bar,
  * toast). Selected ids that are already trashed keep their original stamp.
  */
-export function deleteSelectedBookmarks() {
+export async function deleteSelectedBookmarks() {
   const ids = Array.from(state.selectedIds);
   if (ids.length === 0) return false;
+
+  // Gate before the mutation — see deleteBookmark().
+  if (!(await stateStillFresh())) return false;
 
   state.trashBookmarks(ids);
   state.selectedIds.clear();
@@ -107,9 +116,9 @@ export function deleteSelectedBookmarks() {
  * Reversible, so no `confirm()`; 取消 in the batch bar still clears selection
  * without touching the bookmarks.
  *
- * @returns {boolean} True when the batch delete ran.
+ * @returns {Promise<boolean>} True when the batch delete ran.
  */
-export function confirmDeleteSelectedBookmarks() {
+export async function confirmDeleteSelectedBookmarks() {
   return deleteSelectedBookmarks();
 }
 
@@ -153,9 +162,9 @@ export function registerWorkspaceListeners() {
   });
 
   // Bookmark delete — delegated from bookmark grid (confirm first).
-  document.getElementById('bookmarkCardsGrid')?.addEventListener('click', (e) => {
+  document.getElementById('bookmarkCardsGrid')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-delete-bookmark]');
-    if (btn) confirmDeleteBookmark(btn.dataset.deleteBookmark);
+    if (btn) await confirmDeleteBookmark(btn.dataset.deleteBookmark);
   });
 
   // D3 Zoom Controls (zoom/pan state lives in src/views/linkage.js)

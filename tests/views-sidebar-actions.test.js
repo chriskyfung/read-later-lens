@@ -16,6 +16,15 @@ import {
   activeLang,
   sourceFiles,
 } from '../src/core/state.js';
+import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
+
+// The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
+// must be transparent everywhere else, so it defaults to "fresh".
+const gate = vi.hoisted(() => ({ fresh: true }));
+vi.mock('../src/core/store.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isStateFresh: async () => gate.fresh,
+}));
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -34,7 +43,9 @@ function makeEl() {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
     dispatch(type, ev) {
-      (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
+      // Returns a promise so an async handler can be awaited by the test; a
+      // synchronous handler still runs to completion before dispatch returns.
+      return Promise.all((this._l[type] || []).map((fn) => fn(ev || { stopPropagation() {} })));
     },
     classList: {
       _s: new Set(),
@@ -73,6 +84,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
+  gate.fresh = true;
   vi.stubGlobal(
     'confirm',
     vi.fn(() => true),
@@ -111,8 +123,7 @@ describe('confirmDeleteFolder', () => {
     const persistFn = vi.fn(async () => {});
     initSidebarActions({ persist: persistFn, render: renderFn });
 
-    confirmDeleteFolder({ stopPropagation }, 'F1');
-    await new Promise((r) => setTimeout(r, 0));
+    await confirmDeleteFolder({ stopPropagation }, 'F1');
 
     expect(stopPropagation).toHaveBeenCalledTimes(1);
     expect(sourceFiles.has('F1')).toBe(false);
@@ -121,21 +132,22 @@ describe('confirmDeleteFolder', () => {
     expect(el('toastMsg').innerText).toBe('已刪除檔案及其所有書籤（含回收桶）');
   });
 
-  it('cancel path keeps the file', () => {
+  it('cancel path keeps the file', async () => {
     globalThis.confirm = vi.fn(() => false);
     setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
 
     const stopPropagation = vi.fn();
-    confirmDeleteFolder({ stopPropagation }, 'F1');
+    expect(await confirmDeleteFolder({ stopPropagation }, 'F1')).toBe(false);
 
     expect(stopPropagation).toHaveBeenCalledTimes(1);
     expect(sourceFiles.has('F1')).toBe(true);
   });
 
-  it('tolerates unknown file ids in the confirm message', () => {
+  it('tolerates unknown file ids in the confirm message', async () => {
     const stopPropagation = vi.fn();
     globalThis.confirm = vi.fn(() => false);
-    expect(() => confirmDeleteFolder({ stopPropagation }, 'missing')).not.toThrow();
+    // Awaiting is what proves tolerance: a throw or a rejection fails the test.
+    expect(await confirmDeleteFolder({ stopPropagation }, 'missing')).toBe(false);
   });
 });
 // END-PART1
@@ -153,8 +165,7 @@ describe('deleteFolder', () => {
     const persistFn = vi.fn(async () => {});
     initSidebarActions({ persist: persistFn, render: renderFn });
 
-    deleteFolder('F1');
-    await new Promise((r) => setTimeout(r, 0));
+    await deleteFolder('F1');
 
     expect(sourceFiles.has('F1')).toBe(false);
     const { bookmarks } = await import('../src/core/state.js');
@@ -174,7 +185,7 @@ describe('deleteFolder', () => {
       { id: '3', source_file_id: 'OTHER', deleted_at: '2026-01-01T00:00:00.000Z' },
     ]);
 
-    deleteFolder('F1', false);
+    await deleteFolder('F1', false);
 
     const { bookmarks } = await import('../src/core/state.js');
     expect(bookmarks.map((b) => b.id)).toEqual(['3']);
@@ -186,18 +197,17 @@ describe('deleteFolder', () => {
     const persistFn = vi.fn(async () => {});
     initSidebarActions({ persist: persistFn, render: renderFn });
 
-    deleteFolder('F1', false);
-    await new Promise((r) => setTimeout(r, 0));
+    await deleteFolder('F1', false);
 
     expect(persistFn).toHaveBeenCalledTimes(1);
     expect(renderFn).not.toHaveBeenCalled();
     expect(el('toastMsg').innerText).toBe(''); // no toast
   });
 
-  it('does not touch activeFolder when another folder is selected', () => {
+  it('does not touch activeFolder when another folder is selected', async () => {
     setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
     setActiveFolder('OTHER');
-    deleteFolder('F1', false);
+    await deleteFolder('F1', false);
     expect(activeFolder).toBe('OTHER');
   });
 });
@@ -271,5 +281,41 @@ describe('updateStorageUsageUI', () => {
     expect(el('storageProgressBar').style.width).toBe(
       `${Math.min(100, (512 / (50 * 1024)) * 100)}%`,
     );
+  });
+});
+
+describe('cross-tab stale gate', () => {
+  it('refuses to delete a folder, keeping it, its bookmarks and the active folder', async () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    setBookmarks([{ id: '1', source_file_id: 'F1' }]);
+    setActiveFolder('F1');
+    const persistFn = vi.fn(async () => {});
+    initSidebarActions({ persist: persistFn, render: vi.fn() });
+    gate.fresh = false;
+
+    expect(await deleteFolder('F1')).toBe(false);
+
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(activeFolder).toBe('F1');
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
+  });
+
+  it('refuses the folder-list delete click without touching the folder', async () => {
+    registerSidebarListeners();
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv' }]]));
+    const persistFn = vi.fn(async () => {});
+    initSidebarActions({ persist: persistFn, render: vi.fn() });
+    gate.fresh = false;
+    const button = { dataset: { deleteFolder: 'F1' } };
+
+    await el('folderList').dispatch('click', {
+      stopPropagation: vi.fn(),
+      target: { closest: (s) => (s === '[data-delete-folder]' ? button : null) },
+    });
+
+    expect(sourceFiles.has('F1')).toBe(true);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
   });
 });

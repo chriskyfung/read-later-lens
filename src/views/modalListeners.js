@@ -62,9 +62,9 @@ export function registerModalListeners() {
   // trashed before closing the modal. The similarity button stacks the
   // drawer on top of the reader instead of replacing it, so closing the drawer
   // reveals the article again.
-  document.getElementById('readerDeleteBtn')?.addEventListener('click', () => {
+  document.getElementById('readerDeleteBtn')?.addEventListener('click', async () => {
     const id = getReaderBookmarkId();
-    if (id && confirmDeleteBookmark(id)) closeReaderModal();
+    if (id && (await confirmDeleteBookmark(id))) closeReaderModal();
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();
