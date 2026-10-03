@@ -533,8 +533,11 @@ describe('processSingleFile — transaction boundary', () => {
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
     // The difference is what the user is told: the write was not slow, it lost.
+    // The short reason is single-sourced from the guard's canonical wording by
+    // the importer, so assert the composition instead of a frozen copy.
+    const { STALE_STATE_MESSAGE } = await import('../src/core/guard.js');
     expect(el('toastMsg').innerText).toBe(
-      '已還原匯入 a.csv：另一個分頁已更新資料，資料不會保留，請重新載入後再試',
+      `已還原匯入 a.csv：${STALE_STATE_MESSAGE.replace(/，請重新載入後再試$/, '')}，資料不會保留，請重新載入後再試`,
     );
   });
 

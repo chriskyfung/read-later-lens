@@ -392,8 +392,23 @@ const PERSIST_FAILED_FLAG = 'persistFailed';
  * Marker property narrowing {@link PERSIST_FAILED_FLAG} to "another tab wrote
  * to the shared cache first". The import is rolled back either way, but the
  * user needs the real reason: re-importing keeps failing until they reload.
+ *
+ * The user-facing reason comes from the guard (`staleConflictReason()`), so a
+ * wording change in one place updates every conflict surface together.
  */
 const CONFLICT_FLAG = 'cacheConflict';
+
+/**
+ * The short "why" reused in every conflict message (per-file outcomes and the
+ * batch summary) — identical to the guard's canonical wording by test, so a
+ * drift between "the import failed because X" and "the action was refused
+ * because Y" fails loudly. Imported lazily so the conflict string lives in
+ * exactly one place (`src/core/guard.js`).
+ */
+async function staleConflictReason() {
+  const { STALE_STATE_MESSAGE } = await import('../core/guard.js');
+  return STALE_STATE_MESSAGE.replace(/，請重新載入後再試$/, '');
+}
 
 /** Marker property when an overwrite file contains zero valid bookmark records. */
 const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
@@ -810,7 +825,11 @@ async function processSingleFile(file, finalName, profile, options = {}) {
 
     const saved = await persistWorkingSet();
     if (!saved.persisted) {
-      const err = new Error(saved.conflict ? '另一個分頁已更新資料' : '無法寫入本機快取');
+      // Single-source the short reason: the throw path below names the
+      // conflict, and `staleConflictReason()` keeps it identical to the
+      // guard's canonical wording by test.
+      const reason = saved.conflict ? await staleConflictReason() : '無法寫入本機快取';
+      const err = new Error(reason);
       err[PERSIST_FAILED_FLAG] = true;
       if (saved.conflict) err[CONFLICT_FLAG] = true;
       throw err;
@@ -848,11 +867,12 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     if (err[PERSIST_FAILED_FLAG]) {
       if (err[CONFLICT_FLAG]) {
+        const reason = await staleConflictReason();
         return {
           status: 'failed',
           finalName,
-          message: `已還原匯入 ${finalName}：另一個分頁已更新資料，資料不會保留，請重新載入後再試`,
-          reason: '另一個分頁已更新資料',
+          message: `已還原匯入 ${finalName}：${reason}，資料不會保留，請重新載入後再試`,
+          reason,
         };
       }
       return {
