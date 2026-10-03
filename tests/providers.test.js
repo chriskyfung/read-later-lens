@@ -195,7 +195,7 @@ describe('importJsonOrCsv', () => {
     expect(stats.droppedNoUrl).toBe(0);
   });
 
-  it('generates the same stable id when the same id-less file is re-imported', () => {
+  it('gives the same URL distinct ids across sources so folders do not steal rows', () => {
     const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
     const {
       records: [first],
@@ -203,8 +203,37 @@ describe('importJsonOrCsv', () => {
     const {
       records: [second],
     } = importJsonOrCsv(rows, 'f2', 'b.csv');
-    expect(first.id).toMatch(/^gen_/);
+    expect(first.id).toMatch(/^gen_[0-9a-f]{16}$/);
+    // The source id salts the hash: an unsalted collision made mergeBookmarks
+    // replace the older record wholesale, moving its source_file_id to the
+    // newest import and decrementing the older folder's count.
+    expect(first.id).not.toBe(second.id);
+    expect(first.source_file_id).toBe('f1');
+    expect(second.source_file_id).toBe('f2');
+  });
+
+  it('merges when the same id-less file is re-imported under the same source id', () => {
+    const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
+    const {
+      records: [first],
+    } = importJsonOrCsv(rows, 'f1', 'a.csv');
+    const {
+      records: [second],
+    } = importJsonOrCsv(rows, 'f1', 'a.csv');
     expect(first.id).toBe(second.id); // merges on re-import instead of duplicating
+  });
+
+  it('still deduplicates two identical URLs within one source', () => {
+    const { records } = importJsonOrCsv(
+      [
+        { title: 'First', url: 'https://dup.example.com/post' },
+        { title: 'Second', url: 'https://dup.example.com/post' },
+      ],
+      'f1',
+      'a.csv',
+    );
+    // Same salt, same id: mergeBookmarks collapses them at the state layer.
+    expect(new Set(records.map((r) => r.id)).size).toBe(1);
   });
 });
 

@@ -31,18 +31,34 @@ function lowerKeyed(rec) {
 /**
  * Deterministic FNV-1a 64-bit hash of a URL, formatted as 16 hex chars.
  * Sync, dependency-free, and collision-safe at personal-library scale — the
- * same URL always yields the same `gen_…` id across sessions and re-imports,
- * so re-importing an id-less file merges instead of duplicating every row.
+ * same URL under the same salt always yields the same `gen_…` id across
+ * sessions and re-imports, so re-importing an id-less file merges instead of
+ * duplicating every row.
+ *
+ * The salt scopes the id to one source. Hashing the bare URL made the same
+ * URL in two different sources collide: `mergeBookmarks` then replaced the
+ * older record wholesale, silently moving its `source_file_id` to the newest
+ * import and decrementing the older folder's count. With the source id in the
+ * preimage, each source keeps its own record. A NUL separator keeps the salt
+ * and url unambiguous (`('ab','c')` vs `('a','bc')`).
+ *
+ * The salt is optional only so a bare URL can still be hashed; an empty salt
+ * does NOT reproduce the legacy id. The NUL separator is part of the preimage,
+ * so `stableIdFromUrl(url, '')` already differs from the pre-salt `gen_…` that
+ * records written by earlier versions carry — those ids are not reproduced
+ * here. That is why the first id-less re-import after this change does not
+ * merge with them; the README documents the resulting duplicate.
  *
  * @param {string} url
+ * @param {string} [salt] Source scope, normally the `sourceFileId`.
  * @returns {string} e.g. `gen_a1b2c3d4e5f60718`
  */
-export function stableIdFromUrl(url) {
+export function stableIdFromUrl(url, salt = '') {
   const FNV_OFFSET = 0xcbf29ce484222325n;
   const FNV_PRIME = 0x100000001b3n;
   const MASK64 = 0xffffffffffffffffn;
   let hash = FNV_OFFSET;
-  const text = String(url);
+  const text = `${salt}\0${String(url)}`;
   for (let i = 0; i < text.length; i++) {
     hash ^= BigInt(text.charCodeAt(i));
     hash = (hash * FNV_PRIME) & MASK64;
@@ -54,7 +70,7 @@ export function stableIdFromUrl(url) {
  * Map a raw record to normalized fields. Resolution order (case-insensitive):
  *
  *   id      = id || bookmark_id || uid || fallbackId
- *             || stableIdFromUrl(url) || (Date.now() + index)
+ *             || stableIdFromUrl(url, sourceId) || (Date.now() + index)
  *   title   = title || name || EMPTY_TITLE
  *   url     = url || link || original_url || UNKNOWN_URL
  *   preview = article_preview || description || preview || excerpt
@@ -67,9 +83,11 @@ export function stableIdFromUrl(url) {
  * @param {object} rec         Raw record from a provider export.
  * @param {number} index       Record index within the batch (for last-resort ids).
  * @param {string} [fallbackId] Explicit id override — beats the stable hash.
+ * @param {string} [sourceId]  Source file id scoping the stable hash, so the
+ *   same URL under two sources stays two records (see `stableIdFromUrl`).
  * @returns {{ id: string, title: string, url: string, preview: string, content: string }}
  */
-export function normalizeFields(rec, index, fallbackId) {
+export function normalizeFields(rec, index, fallbackId, sourceId) {
   const lower = lowerKeyed(rec);
 
   const url = lower.url || lower.link || lower.original_url || UNKNOWN_URL;
@@ -87,7 +105,7 @@ export function normalizeFields(rec, index, fallbackId) {
   } else if (fallbackId != null) {
     id = fallbackId;
   } else if (url !== UNKNOWN_URL) {
-    id = stableIdFromUrl(url);
+    id = stableIdFromUrl(url, sourceId);
   } else {
     id = Date.now() + index;
   }
