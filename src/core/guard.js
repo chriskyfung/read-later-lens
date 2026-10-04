@@ -14,8 +14,16 @@
 import { isStateFresh } from './store.js';
 import { showToast } from '../utils/dom.js';
 
-/** The one message shown when another tab's write makes an action unsafe. */
-export const STALE_STATE_MESSAGE = '另一個分頁已更新資料，請重新載入後再試';
+/**
+ * The short reason shared by every surface that has to say *why* an action was
+ * refused — the guard's own toast and the importer's per-file failure text.
+ * The reason is the base string; the full message composes from it, so one
+ * edit propagates everywhere instead of drifting between copies.
+ */
+export const STALE_STATE_REASON = '另一個分頁已更新資料';
+
+/** The full refusal shown when another tab's write makes an action unsafe. */
+export const STALE_STATE_MESSAGE = `${STALE_STATE_REASON}，請重新載入後再試`;
 
 /**
  * Ask whether the action may proceed, refusing it (with a toast) when it may not.

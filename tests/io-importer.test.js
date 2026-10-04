@@ -10,6 +10,7 @@ import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
+import { STALE_STATE_REASON } from '../src/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
@@ -533,11 +534,10 @@ describe('processSingleFile — transaction boundary', () => {
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
     // The difference is what the user is told: the write was not slow, it lost.
-    // The short reason is single-sourced from the guard's canonical wording by
-    // the importer, so assert the composition instead of a frozen copy.
-    const { STALE_STATE_MESSAGE } = await import('../src/core/guard.js');
+    // The short reason is the guard's shared string, so assert against it
+    // directly rather than a frozen copy that could silently drift.
     expect(el('toastMsg').innerText).toBe(
-      `已還原匯入 a.csv：${STALE_STATE_MESSAGE.replace(/，請重新載入後再試$/, '')}，資料不會保留，請重新載入後再試`,
+      `已還原匯入 a.csv：${STALE_STATE_REASON}，資料不會保留，請重新載入後再試`,
     );
   });
 

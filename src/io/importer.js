@@ -4,6 +4,7 @@
  */
 
 import * as state from '../core/state.js';
+import { STALE_STATE_REASON } from '../core/guard.js';
 import { resolveImportAdapter } from '../providers/index.js';
 import {
   checkImport,
@@ -393,22 +394,10 @@ const PERSIST_FAILED_FLAG = 'persistFailed';
  * to the shared cache first". The import is rolled back either way, but the
  * user needs the real reason: re-importing keeps failing until they reload.
  *
- * The user-facing reason comes from the guard (`staleConflictReason()`), so a
+ * The user-facing reason is the guard's shared `STALE_STATE_REASON`, so a
  * wording change in one place updates every conflict surface together.
  */
 const CONFLICT_FLAG = 'cacheConflict';
-
-/**
- * The short "why" reused in every conflict message (per-file outcomes and the
- * batch summary) — identical to the guard's canonical wording by test, so a
- * drift between "the import failed because X" and "the action was refused
- * because Y" fails loudly. Imported lazily so the conflict string lives in
- * exactly one place (`src/core/guard.js`).
- */
-async function staleConflictReason() {
-  const { STALE_STATE_MESSAGE } = await import('../core/guard.js');
-  return STALE_STATE_MESSAGE.replace(/，請重新載入後再試$/, '');
-}
 
 /** Marker property when an overwrite file contains zero valid bookmark records. */
 const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
@@ -825,10 +814,9 @@ async function processSingleFile(file, finalName, profile, options = {}) {
 
     const saved = await persistWorkingSet();
     if (!saved.persisted) {
-      // Single-source the short reason: the throw path below names the
-      // conflict, and `staleConflictReason()` keeps it identical to the
-      // guard's canonical wording by test.
-      const reason = saved.conflict ? await staleConflictReason() : '無法寫入本機快取';
+      // The conflict names itself with the guard's shared reason; a plain
+      // write failure keeps its own wording.
+      const reason = saved.conflict ? STALE_STATE_REASON : '無法寫入本機快取';
       const err = new Error(reason);
       err[PERSIST_FAILED_FLAG] = true;
       if (saved.conflict) err[CONFLICT_FLAG] = true;
@@ -867,12 +855,11 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     if (err[PERSIST_FAILED_FLAG]) {
       if (err[CONFLICT_FLAG]) {
-        const reason = await staleConflictReason();
         return {
           status: 'failed',
           finalName,
-          message: `已還原匯入 ${finalName}：${reason}，資料不會保留，請重新載入後再試`,
-          reason,
+          message: `已還原匯入 ${finalName}：${STALE_STATE_REASON}，資料不會保留，請重新載入後再試`,
+          reason: STALE_STATE_REASON,
         };
       }
       return {
