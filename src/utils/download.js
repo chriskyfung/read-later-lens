@@ -47,24 +47,61 @@ export function downloadBlob(blob, filename) {
 }
 
 /**
+ * Ask for read-write access to a handle, reporting whether it can be written.
+ *
+ * `createWritable()` itself prompts for permission, but only after the write has
+ * already failed for a handle whose grant was revoked — so the check happens
+ * first, and a refusal falls through to the Save-As fallback instead of
+ * surfacing as a write failure.
+ *
+ * `requestPermission` needs transient user activation. The save-back click that
+ * started this write is one, but a caller invoking this outside a gesture gets
+ * `false` rather than an unhandled rejection.
+ *
+ * @param {FileSystemFileHandle} handle
+ * @returns {Promise<boolean>} Whether the handle is writable now.
+ */
+async function ensureWritable(handle) {
+  if (typeof handle.queryPermission !== 'function') return true;
+
+  const state = await handle.queryPermission({ mode: 'readwrite' });
+  if (state === 'granted') return true;
+  if (state !== 'prompt' || typeof handle.requestPermission !== 'function') return false;
+
+  try {
+    return (await handle.requestPermission({ mode: 'readwrite' })) === 'granted';
+  } catch (err) {
+    console.warn('File System Access permission request failed:', err);
+    return false;
+  }
+}
+
+/**
  * Try to write a file directly via the File System Access API; fall back to a
  * download if the handle/gesture/browser doesn't support it.
  *
  * @param {string} data
  * @param {string} filename
  * @param {string} mimeType
- * @param {FileSystemFileHandle} [handle] Optional existing handle to overwrite.
+ * @param {FileSystemFileHandle|null} [handle] The source's own handle, when it
+ *   came from the File System Access picker. Writing through it overwrites the
+ *   original file in place; without one the Save-As picker asks the user where
+ *   the copy should go.
  * @returns {Promise<void>}
  */
 export async function saveFileWithFallback(data, filename, mimeType, handle) {
-  // 1) Prefer an existing handle (e.g. from drag-and-drop).
+  // 1) Prefer the source's own handle, so save-back overwrites in place.
   if (handle && typeof handle.createWritable === 'function') {
     try {
-      const writable = await handle.createWritable();
-      await writable.write(data);
-      await writable.close();
-      showToast(`已成功寫入檔案: ${filename}`);
-      return;
+      if (!(await ensureWritable(handle))) {
+        console.warn('File System Access write skipped, permission not granted');
+      } else {
+        const writable = await handle.createWritable();
+        await writable.write(data);
+        await writable.close();
+        showToast(`已成功寫入檔案: ${filename}`);
+        return;
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       console.warn('File System Access write failed, falling back to download:', err);

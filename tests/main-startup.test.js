@@ -233,6 +233,9 @@ describe('entry-point feature wiring', () => {
       JSON.stringify(state.bookmarks, null, 2),
       'test.json',
       'application/json',
+      // No handle: this source was restored straight into state, so save-back
+      // falls back to Save-As rather than overwriting an original file.
+      null,
     );
     expect(els.saveSourceFilesList.listeners.click).toHaveLength(1);
   });

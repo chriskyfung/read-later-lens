@@ -249,6 +249,77 @@ describe('saveFileWithFallback', () => {
     expect(anchors).toHaveLength(1);
     expect(anchors[0].download).toBe('out.txt');
   });
+
+  describe('permission', () => {
+    // A handle with the permission API grafted on; `state` drives both calls.
+    const withPermission = (state, onRequest = state) => {
+      const handle = makeHandle();
+      handle.queryPermission = vi.fn(async () => state);
+      handle.requestPermission = vi.fn(async () => onRequest);
+      return handle;
+    };
+
+    it('writes without prompting when readwrite access is already granted', async () => {
+      const { anchors } = setupDom();
+      const handle = withPermission('granted');
+
+      await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
+
+      expect(handle.requestPermission).not.toHaveBeenCalled();
+      expect(handle.write).toHaveBeenCalledWith('data');
+      expect(anchors).toHaveLength(0);
+    });
+
+    it('requests access and writes when the grant is merely pending', async () => {
+      const { anchors } = setupDom();
+      const handle = withPermission('prompt', 'granted');
+
+      await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
+
+      expect(handle.requestPermission).toHaveBeenCalledWith({ mode: 'readwrite' });
+      expect(handle.write).toHaveBeenCalledWith('data');
+      expect(anchors).toHaveLength(0);
+    });
+
+    it('falls back to the picker when access is denied', async () => {
+      const { anchors } = setupDom();
+      const handle = withPermission('prompt', 'denied');
+      const picker = vi.fn(async () => makeHandle());
+      vi.stubGlobal('window', { showSaveFilePicker: picker });
+
+      await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
+
+      expect(handle.createWritable).not.toHaveBeenCalled();
+      expect(picker).toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+    });
+
+    it('falls back to the picker when a pending grant cannot be requested', async () => {
+      const { anchors } = setupDom();
+      const handle = withPermission('prompt');
+      delete handle.requestPermission;
+      vi.stubGlobal('window', { showSaveFilePicker: vi.fn(async () => makeHandle()) });
+
+      await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
+
+      expect(handle.createWritable).not.toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+    });
+
+    it('treats a rejected permission request as a fallback, not a crash', async () => {
+      const { anchors } = setupDom();
+      const handle = withPermission('prompt');
+      handle.requestPermission = vi.fn(async () => {
+        throw new Error('no gesture');
+      });
+      vi.stubGlobal('window', { showSaveFilePicker: vi.fn(async () => makeHandle()) });
+
+      await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
+
+      expect(handle.createWritable).not.toHaveBeenCalled();
+      expect(anchors).toHaveLength(0);
+    });
+  });
 });
 
 // ---- Modal focus helpers -------------------------------------------------

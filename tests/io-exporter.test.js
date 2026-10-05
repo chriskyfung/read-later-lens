@@ -168,7 +168,7 @@ describe('saveSingleFile', () => {
       [expect.objectContaining({ id: '1', source_file_id: 'F1' })],
       { delimiter: ',', newline: '\r\n' },
     );
-    expect(saveFileWithFallback).toHaveBeenCalledWith('csv-content', 'a.csv', 'text/csv');
+    expect(saveFileWithFallback).toHaveBeenCalledWith('csv-content', 'a.csv', 'text/csv', null);
   });
 
   it('pretty-prints json with the json mime type', async () => {
@@ -176,7 +176,24 @@ describe('saveSingleFile', () => {
     await saveSingleFile('F1');
     const [json] = saveFileWithFallback.mock.calls[0];
     expect(JSON.parse(json)).toEqual([expect.objectContaining({ id: '1' })]);
-    expect(saveFileWithFallback).toHaveBeenCalledWith(json, 'a.json', 'application/json');
+    expect(saveFileWithFallback).toHaveBeenCalledWith(json, 'a.json', 'application/json', null);
+  });
+
+  it('hands the stored file handle to the writer so save-back overwrites in place', async () => {
+    const handle = { createWritable: vi.fn() };
+    seed('csv', { fileHandle: handle });
+
+    await saveSingleFile('F1');
+
+    expect(saveFileWithFallback).toHaveBeenCalledWith('csv-content', 'a.csv', 'text/csv', handle);
+  });
+
+  it('passes no handle for a source without one, leaving the Save-As fallback', async () => {
+    seed('csv', { fileHandle: null });
+
+    await saveSingleFile('F1');
+
+    expect(saveFileWithFallback.mock.calls[0][3]).toBeNull();
   });
 
   it('rebuilds the source table in its own recorded layout and downloads a binary blob', async () => {

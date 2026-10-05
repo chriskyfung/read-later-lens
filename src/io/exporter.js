@@ -234,10 +234,14 @@ export async function saveSingleFile(fileId) {
       // quoted. An unknown dialect (a folder rebuilt from a unified export, a
       // cache from a version that predates capture) falls back to RFC 4180.
       const csv = Papa.unparse(hardenRecordsForCsv(rows), csvUnparseConfig(file.csvDialect));
-      await saveFileWithFallback(csv, file.name, 'text/csv');
+      // The handle is the source's own file (from the File System Access
+      // picker), so this overwrites it in place. It is null for anything
+      // imported through the file input or restored from cache, and the
+      // fallback inside saveFileWithFallback handles that.
+      await saveFileWithFallback(csv, file.name, 'text/csv', file.fileHandle ?? null);
     } else {
       const json = JSON.stringify(rows, null, 2);
-      await saveFileWithFallback(json, file.name, 'application/json');
+      await saveFileWithFallback(json, file.name, 'application/json', file.fileHandle ?? null);
     }
 
     // The file is structurally faithful, but any column the app has no value for
