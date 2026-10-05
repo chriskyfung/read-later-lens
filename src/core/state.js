@@ -44,7 +44,12 @@
  *   strings); null for non-CSV sources, for a meta Papa could not describe, and
  *   for sources cached by a version that predates this field — those fall
  *   back to RFC 4180 rather than a guessed dialect.
- * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
+ * @property {FileSystemFileHandle|null} [fileHandle] Writable handle for
+ *   save-back, kept only for the session: the app does not persist it (see
+ *   src/core/store.js), so a source restored from cache has none and its
+ *   save-back falls back to Save-As. Only the File System Access picker yields
+ *   one — an `<input type="file">` File is read-only and has no
+ *   createWritable(), so it is never stored here.
  */
 
 /** @type {BookmarkRecord[]} */

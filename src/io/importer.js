@@ -596,6 +596,9 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
  * @param {File} file
  * @param {string} finalName
  * @param {string} profile Import profile id chosen in the source picker.
+ * @param {FileSystemFileHandle|null} [fileHandle] Writable handle for this
+ *   file, when it was imported through the File System Access picker. null for
+ *   the `<input type="file">` path, whose File object has no createWritable().
  * @returns {Promise<{
  *   fileRecords: import('../core/state.js').SourceFileRecord[],
  *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
@@ -605,7 +608,7 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
  *   checkNote: string,
  * }>}
  */
-async function prepareSingleFile(file, finalName, profile) {
+async function prepareSingleFile(file, finalName, profile, fileHandle = null) {
   const fileId = newFileId();
   const ext = finalName.split('.').pop().toLowerCase();
 
@@ -615,7 +618,11 @@ async function prepareSingleFile(file, finalName, profile) {
     type: ext,
     profile,
     originalData: null,
-    fileHandle: file,
+    // The handle is what save-back writes through. Only the File System Access
+    // picker yields a real one: an `<input type="file">` File is read-only and
+    // has no createWritable(), so recording it here would look like save-back
+    // support that could never run.
+    fileHandle,
   };
 
   const adapter = resolveImportAdapter(profile);
@@ -756,6 +763,8 @@ function restoreImportSnapshot(snapshot) {
  * @param {string} profile Import profile id chosen in the source picker.
  * @param {object} [options]
  * @param {string|null} [options.replaceSourceId] Replaced source id when overwriting.
+ * @param {FileSystemFileHandle|null} [options.fileHandle] Writable handle
+ *   backing this file, when the File System Access picker supplied one.
  * @returns {Promise<object>} The per-file outcome for the batch summary:
  *   `{ status: 'imported', ... }` (message + counts) or
  *   `{ status: 'failed', finalName, message, reason }`. A handled failure
@@ -765,7 +774,7 @@ function restoreImportSnapshot(snapshot) {
  *   keeps only the last message a batch emits.
  */
 async function processSingleFile(file, finalName, profile, options = {}) {
-  const { replaceSourceId = null } = options;
+  const { replaceSourceId = null, fileHandle = null } = options;
   const ext = finalName.split('.').pop().toLowerCase();
   const snapshot = captureImportSnapshot();
 
@@ -795,7 +804,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
       }
     }
 
-    const prepared = await prepareSingleFile(file, finalName, profile);
+    const prepared = await prepareSingleFile(file, finalName, profile, fileHandle);
 
     // Overwrite safety: an overwrite choice replaces data, but must never
     // destroy an existing source for an empty file (0 valid bookmarks).
@@ -990,11 +999,17 @@ async function rollbackBatch(snapshot, fileName) {
  * @param {string} [options.profile] Source profile chosen in the picker
  *   (defaults to the session selection — InstapaperScraper unless changed).
  *   Unknown ids coerce to the default before anything is stamped or checked.
+ * @param {(FileSystemFileHandle|null)[]} [options.fileHandles] Writable handles
+ *   parallel to `files`, from the File System Access picker. A shorter or absent
+ *   list simply means those files have no handle, which is the `<input
+ *   type="file">` path's normal state — so a mismatch degrades to "no handle"
+ *   rather than pairing a file with someone else's handle.
  */
 export async function handleFileUploads(files, options = {}) {
   try {
     const profile = normalizeProfileId(options.profile ?? selectedProfileId);
     const pending = [...files];
+    const fileHandles = Array.isArray(options.fileHandles) ? options.fileHandles : [];
 
     // Fail-closed preflight: the duplicate prompt is the only interaction a
     // batch may need, and its absence is knowable BEFORE any state is mutated.
@@ -1024,14 +1039,17 @@ export async function handleFileUploads(files, options = {}) {
     // batch never claims a success it then rewound.
     const outcomes = [];
 
-    for (const file of pending) {
+    for (const [index, file] of pending.entries()) {
       const fileName = file.name;
+      // Indexed by position, so a file keeps its own handle whichever way the
+      // duplicate prompt resolves.
+      const fileHandle = fileHandles[index] ?? null;
       try {
         const duplicateId = findDuplicateSourceId(fileName);
         let outcome = null;
 
         if (!duplicateId) {
-          outcome = await processSingleFile(file, fileName, profile);
+          outcome = await processSingleFile(file, fileName, profile, { fileHandle });
         } else {
           // Ask only with the body text in place: without it the user would pick
           // an action without seeing which file it affects.
@@ -1044,11 +1062,12 @@ export async function handleFileUploads(files, options = {}) {
           if (action === 'overwrite') {
             outcome = await processSingleFile(file, fileName, profile, {
               replaceSourceId: duplicateId,
+              fileHandle,
             });
           } else if (action === 'keep') {
             const existingNames = [...state.sourceFiles.values()].map((source) => source.name);
             const newName = createUniqueSourceName(fileName, existingNames);
-            outcome = await processSingleFile(file, newName, profile);
+            outcome = await processSingleFile(file, newName, profile, { fileHandle });
           }
           // 'cancel' imports nothing and reports nothing: that is the user's call.
         }
@@ -1085,6 +1104,79 @@ export async function handleFileUploads(files, options = {}) {
 }
 
 /**
+ * File types offered by the File System Access picker.
+ *
+ * Extensions are declared alongside MIME types because Chromium matches on both,
+ * and the SQLite family in particular arrives under several different MIME
+ * types depending on the platform that wrote it.
+ */
+const PICKER_TYPES = [
+  { description: 'CSV', accept: { 'text/csv': ['.csv'] } },
+  { description: 'JSON', accept: { 'application/json': ['.json'] } },
+  {
+    description: 'SQLite',
+    accept: {
+      'application/vnd.sqlite3': ['.db', '.sqlite'],
+      'application/x-sqlite3': ['.db', '.sqlite'],
+      'application/octet-stream': ['.db', '.sqlite'],
+    },
+  },
+];
+
+/**
+ * Open the File System Access picker and import what it returns, keeping each
+ * file's writable handle so save-back can overwrite the original in place.
+ *
+ * Returns false when the browser has no picker, so the caller can fall back to
+ * the hidden `<input type="file">` — the only path in Firefox and Safari, where
+ * the File objects carry no handle and save-back degrades to Save-As.
+ *
+ * Must be called directly from the button's click handler: the picker requires
+ * transient user activation, which is gone once awaited through an event hop.
+ *
+ * @returns {Promise<boolean>} Whether the picker path ran (false = fall back).
+ */
+async function pickFilesWithHandles() {
+  if (!('showOpenFilePicker' in window)) return false;
+
+  let handles;
+  try {
+    // readwrite is the point of using the picker at all: it is what lets
+    // save-back write back to the same file instead of asking for a new one.
+    handles = await window.showOpenFilePicker({
+      multiple: true,
+      types: PICKER_TYPES,
+      excludeAcceptAllOption: false,
+      mode: 'readwrite',
+    });
+  } catch (err) {
+    // A cancelled picker is the user's decision, not a failure: say nothing and
+    // leave the modal open so they can pick again.
+    if (err.name === 'AbortError') return true;
+    console.warn('File System Access picker failed, falling back to file input:', err);
+    return false;
+  }
+
+  try {
+    const entries = await Promise.all(
+      handles.map(async (handle) => ({ file: await handle.getFile(), handle })),
+    );
+    if (entries.length === 0) return true;
+    // Close before parsing so the duplicate-name prompt never stacks beneath
+    // the source picker (the duplicate modal stays outside the layer stack).
+    closeImportModal();
+    await handleFileUploads(
+      entries.map((e) => e.file),
+      { profile: selectedProfileId, fileHandles: entries.map((e) => e.handle) },
+    );
+  } catch (err) {
+    console.error('檔案匯入失敗:', err);
+    showToast('檔案匯入失敗，請稍後再試');
+  }
+  return true;
+}
+
+/**
  * Register DOM listeners for the header import button, the source picker
  * modal, and the hidden file input.
  */
@@ -1096,7 +1188,9 @@ export function registerImporterListeners() {
   document.getElementById('importBtn')?.addEventListener('click', openImportModal);
   document.getElementById('closeImportBtn')?.addEventListener('click', closeImportModal);
   document.getElementById('importCancelBtn')?.addEventListener('click', closeImportModal);
-  document.getElementById('importPickFileBtn')?.addEventListener('click', () => fileInput.click());
+  document.getElementById('importPickFileBtn')?.addEventListener('click', async () => {
+    if (!(await pickFilesWithHandles())) fileInput.click();
+  });
 
   // Source cards: click selection + arrow-key navigation within the radiogroup.
   for (const profile of selectableProfiles()) {

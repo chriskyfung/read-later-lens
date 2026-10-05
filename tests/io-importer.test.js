@@ -794,12 +794,92 @@ describe('import source modal', () => {
     expect(el('importProfile-instapaper-scraper').getAttribute('aria-checked')).toBe('true');
   });
 
-  it('opens the hidden file input from the pick-file button', () => {
+  it('falls back to the hidden file input when the browser has no picker', async () => {
     registerImporterListeners();
 
     el('importPickFileBtn').dispatch('click');
+    // The FSA probe is awaited before falling back, so the click lands a tick
+    // later than the dispatch.
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(el('fileInput').click).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the hidden file input when the picker is unavailable', async () => {
+    const picker = vi.fn(() => {
+      throw Object.assign(new Error('no'), { name: 'SecurityError' });
+    });
+    globalThis.window.showOpenFilePicker = picker;
+    try {
+      registerImporterListeners();
+
+      el('importPickFileBtn').dispatch('click');
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(el('fileInput').click).toHaveBeenCalledTimes(1);
+    } finally {
+      delete globalThis.window.showOpenFilePicker;
+    }
+  });
+
+  it('requests readwrite access so save-back can overwrite the original file', async () => {
+    const picker = vi.fn(async () => []);
+    globalThis.window.showOpenFilePicker = picker;
+    try {
+      registerImporterListeners();
+
+      el('importPickFileBtn').dispatch('click');
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(picker).toHaveBeenCalledWith(
+        expect.objectContaining({ multiple: true, mode: 'readwrite' }),
+      );
+      // A handle-bearing picker never opens the input as well.
+      expect(el('fileInput').click).not.toHaveBeenCalled();
+    } finally {
+      delete globalThis.window.showOpenFilePicker;
+    }
+  });
+
+  it('imports picked files keeping each one’s own handle', async () => {
+    Papa.parse.mockImplementation((_text, config) => config.complete({ data: [], errors: [] }));
+    const handleA = { name: 'a.csv', getFile: async () => fakeFile('a.csv', 'id,title\n1,x') };
+    const handleB = { name: 'b.csv', getFile: async () => fakeFile('b.csv', 'id,title\n2,y') };
+    globalThis.window.showOpenFilePicker = vi.fn(async () => [handleA, handleB]);
+    try {
+      registerImporterListeners();
+      el('importBtn').dispatch('click');
+
+      el('importPickFileBtn').dispatch('click');
+      await new Promise((r) => setTimeout(r, 5));
+
+      // The modal closes before parsing, exactly as the input path does.
+      expect(stackDepth()).toBe(0);
+      const byName = new Map([...sourceFiles.values()].map((s) => [s.name, s]));
+      expect(byName.get('a.csv').fileHandle).toBe(handleA);
+      expect(byName.get('b.csv').fileHandle).toBe(handleB);
+    } finally {
+      delete globalThis.window.showOpenFilePicker;
+    }
+  });
+
+  it('says nothing and keeps the modal open when the user cancels the picker', async () => {
+    globalThis.window.showOpenFilePicker = vi.fn(async () => {
+      throw Object.assign(new Error('cancel'), { name: 'AbortError' });
+    });
+    try {
+      registerImporterListeners();
+      el('importBtn').dispatch('click');
+
+      el('importPickFileBtn').dispatch('click');
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(sourceFiles.size).toBe(0);
+      expect(stackDepth()).toBe(1); // still open, so they can pick again
+      expect(el('fileInput').click).not.toHaveBeenCalled();
+    } finally {
+      delete globalThis.window.showOpenFilePicker;
+    }
   });
 
   it('change closes the modal, clears the input value and stamps the profile', async () => {
@@ -1320,6 +1400,70 @@ describe('handleFileUploads — batch resilience', () => {
     expect(el('toastMsg').innerText).toBe(
       '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
     );
+  });
+});
+
+describe('handleFileUploads — fileHandle', () => {
+  it('records no handle for the input path, whose File cannot be written', async () => {
+    Papa.parse.mockImplementationOnce((_text, config) =>
+      config.complete({ data: [{ id: '1', title: 'x' }], errors: [] }),
+    );
+    const file = fakeFile('a.csv', 'id,title\n1,x');
+
+    await handleFileUploads([file]);
+
+    const [rec] = [...sourceFiles.values()];
+    expect(rec.fileHandle).toBeNull();
+    expect(rec.fileHandle).not.toBe(file);
+  });
+
+  it('pairs each file with the handle at its own index', async () => {
+    Papa.parse.mockImplementation((_text, config) => config.complete({ data: [], errors: [] }));
+    const handles = [{ n: 'a' }, { n: 'b' }];
+
+    await handleFileUploads([fakeFile('a.csv', ''), fakeFile('b.csv', '')], {
+      fileHandles: handles,
+    });
+
+    const byName = new Map([...sourceFiles.values()].map((s) => [s.name, s]));
+    expect(byName.get('a.csv').fileHandle).toBe(handles[0]);
+    expect(byName.get('b.csv').fileHandle).toBe(handles[1]);
+  });
+
+  it('treats a short handle list as "no handle" rather than mispairing', async () => {
+    Papa.parse.mockImplementation((_text, config) => config.complete({ data: [], errors: [] }));
+
+    await handleFileUploads([fakeFile('a.csv', ''), fakeFile('b.csv', '')], {
+      fileHandles: [{ n: 'a' }],
+    });
+
+    const byName = new Map([...sourceFiles.values()].map((s) => [s.name, s]));
+    expect(byName.get('a.csv').fileHandle).toEqual({ n: 'a' });
+    expect(byName.get('b.csv').fileHandle).toBeNull();
+  });
+
+  it('carries the handle through both duplicate resolutions', async () => {
+    // One valid row per parse: an overwrite that yields none is refused and
+    // rolled back, so the source (and its handle) would not survive.
+    Papa.parse.mockImplementation((_text, config) =>
+      config.complete({ data: [{ id: '1', title: 'x' }], errors: [] }),
+    );
+    const handle = { n: 'a' };
+    const upload = async (action) => {
+      setBookmarks([]);
+      setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv', originalData: '' }]]));
+      const pending = handleFileUploads([fakeFile('a.csv', 'id,title\n1,x')], {
+        fileHandles: [handle],
+      });
+      await new Promise((r) => setTimeout(r, 0));
+      el(action === 'overwrite' ? 'dupBtnOverwrite' : 'dupBtnKeepBoth').dispatch('click');
+      await pending;
+      return [...sourceFiles.values()].find((s) => s.fileHandle);
+    };
+
+    expect((await upload('overwrite')).fileHandle).toBe(handle);
+    // Keep-both renames the source, so match on the handle rather than the name.
+    expect((await upload('keep')).fileHandle).toBe(handle);
   });
 });
 
