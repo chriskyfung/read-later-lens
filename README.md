@@ -89,6 +89,8 @@ This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](h
 
 Click **匯入 (Import)** in the top-right corner to open the **source picker** — an intermediate modal where you choose the data source _before_ any file dialog appears. Pick a source type (InstapaperScraper is preselected and the choice is remembered for the session), press **選擇檔案…**, then select one or more `*.csv`, `*.json`, or `*.db` / `*.sqlite` files. Each imported file becomes a _source file_ (shown as a folder in the sidebar) that groups its bookmarks and records the profile it was imported under.
 
+In browsers that support the File System Access API (Chromium), **選擇檔案…** opens that API's picker in read-write mode, so saving a source file back overwrites the original file in place — no Save-As prompt. Everywhere else the app falls back to the plain file input, and those sources (like sources restored from the browser cache after a reload) save via a Save-As dialog or a download instead.
+
 ### Source types
 
 | Profile                          | Label in the UI          | Accepts                                                                                                                            | Behaviour                                                       |

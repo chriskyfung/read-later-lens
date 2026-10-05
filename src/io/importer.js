@@ -1131,8 +1131,10 @@ const PICKER_TYPES = [
  * the hidden `<input type="file">` — the only path in Firefox and Safari, where
  * the File objects carry no handle and save-back degrades to Save-As.
  *
- * Must be called directly from the button's click handler: the picker requires
- * transient user activation, which is gone once awaited through an event hop.
+ * Called directly from the button's click handler: showOpenFilePicker is
+ * invoked there synchronously, which is what keeps the user activation it
+ * requires. Activation is time-limited rather than consumed by an event hop,
+ * so the requirement is a habit, not a hard boundary.
  *
  * @returns {Promise<boolean>} Whether the picker path ran (false = fall back).
  */

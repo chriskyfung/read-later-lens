@@ -2,10 +2,13 @@
  * @fileoverview Import source picker modal — presentational markup only.
  *
  * Sits between the header 匯入 button and the native file picker: the user
- * picks an explicit source profile, then 選擇檔案… opens #fileInput. There is
- * deliberately no auto-detect card (see src/providers/profiles.js). The
- * official-CSV footnote explains why that format is not offered. Behavior
- * lives in src/io/importer.js (open/close, radiogroup keyboard, file input);
+ * picks an explicit source profile, then 選擇檔案… opens the File System
+ * Access picker where the browser has one — read-write, so save-back can
+ * overwrite the original file in place — and the hidden #fileInput
+ * everywhere else. There is deliberately no auto-detect card (see
+ * src/providers/profiles.js). The official-CSV footnote explains why that
+ * format is not offered. Behavior lives in src/io/importer.js (open/close,
+ * radiogroup keyboard, file input);
  * the layer registration lives in src/views/modalListeners.js.
  */
 

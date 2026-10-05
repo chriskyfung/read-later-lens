@@ -7,7 +7,8 @@
  *  - clearSearchBtn  → src/views/header.js (registerHeaderListeners)
  *  - clearCacheBtn   → src/views/header.js (registerHeaderListeners)
  *  - importBtn       → src/io/importer.js (opens the source picker modal)
- *  - fileInput       → src/io/importer.js (opened from the source picker)
+ *  - fileInput       → src/io/importer.js (fallback picker: used when the File
+ *                      System Access API is unavailable)
  *  - saveBackBtn     → src/io/exporter.js
  *
  * mountHeader() inserts the header as the FIRST child of <body>
