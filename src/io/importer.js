@@ -4,6 +4,7 @@
  */
 
 import * as state from '../core/state.js';
+import { STALE_STATE_REASON } from '../core/guard.js';
 import { resolveImportAdapter } from '../providers/index.js';
 import {
   checkImport,
@@ -387,6 +388,16 @@ const UNSUPPORTED_SOURCE_FLAG = 'unsupportedSourceFile';
 
 /** Marker property on the cache-write failure raised at the transaction boundary. */
 const PERSIST_FAILED_FLAG = 'persistFailed';
+
+/**
+ * Marker property narrowing {@link PERSIST_FAILED_FLAG} to "another tab wrote
+ * to the shared cache first". The import is rolled back either way, but the
+ * user needs the real reason: re-importing keeps failing until they reload.
+ *
+ * The user-facing reason is the guard's shared `STALE_STATE_REASON`, so a
+ * wording change in one place updates every conflict surface together.
+ */
+const CONFLICT_FLAG = 'cacheConflict';
 
 /** Marker property when an overwrite file contains zero valid bookmark records. */
 const EMPTY_OVERWRITE_FLAG = 'emptyOverwriteReplacement';
@@ -801,9 +812,14 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     for (const record of prepared.fileRecords) state.sourceFiles.set(record.id, record);
     const merge = acceptRecords(prepared.records);
 
-    if (!(await persistWorkingSet()).persisted) {
-      const err = new Error('無法寫入本機快取');
+    const saved = await persistWorkingSet();
+    if (!saved.persisted) {
+      // The conflict names itself with the guard's shared reason; a plain
+      // write failure keeps its own wording.
+      const reason = saved.conflict ? STALE_STATE_REASON : '無法寫入本機快取';
+      const err = new Error(reason);
       err[PERSIST_FAILED_FLAG] = true;
+      if (saved.conflict) err[CONFLICT_FLAG] = true;
       throw err;
     }
 
@@ -838,6 +854,14 @@ async function processSingleFile(file, finalName, profile, options = {}) {
 
     console.error(`解析檔案 ${finalName} 失敗:`, err);
     if (err[PERSIST_FAILED_FLAG]) {
+      if (err[CONFLICT_FLAG]) {
+        return {
+          status: 'failed',
+          finalName,
+          message: `已還原匯入 ${finalName}：${STALE_STATE_REASON}，資料不會保留，請重新載入後再試`,
+          reason: STALE_STATE_REASON,
+        };
+      }
       return {
         status: 'failed',
         finalName,
@@ -898,19 +922,27 @@ function acceptRecords(newBookmarks) {
  * The promise is awaited rather than floated, so a failed write is observable
  * and the merged records can be rolled back. A persistAndRender stub that
  * returns nothing counts as committed (the legacy fire-and-forget contract,
- * still used by other callers); the real one reports `{persisted, rendered}`.
+ * still used by other callers); the real one reports `{persisted, rendered,
+ * conflict}`. A conflict — another tab wrote between this tab's baseline and
+ * the save — is reported distinctly so the failure says WHY instead of blaming
+ * the cache.
  *
- * @returns {Promise<{persisted: boolean, rendered: boolean}>} Whether the
- *   working set reached storage, and whether the view was refreshed from it.
- *   The legacy contract reports `rendered: false`: a stub that says nothing
+ * @returns {Promise<{persisted: boolean, rendered: boolean, conflict: boolean}>}
+ *   Whether the working set reached storage, whether the view was refreshed
+ *   from it, and whether storage refused the write because another tab changed
+ *   it. The legacy contract reports `rendered: false`: a stub that says nothing
  *   proves nothing, so callers that must show fresh state re-render themselves.
  */
 async function persistWorkingSet() {
   const result = await deps.persistAndRender?.();
   if (result && typeof result === 'object') {
-    return { persisted: result.persisted !== false, rendered: result.rendered !== false };
+    return {
+      persisted: result.persisted !== false,
+      rendered: result.rendered !== false,
+      conflict: result.conflict === true,
+    };
   }
-  return { persisted: result !== false, rendered: false };
+  return { persisted: result !== false, rendered: false, conflict: false };
 }
 
 /**

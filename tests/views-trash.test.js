@@ -11,9 +11,18 @@ import {
   confirmEmptyTrash,
 } from '../src/views/trash.js';
 import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state.js';
+import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
 
 const OLDER = '2026-01-01T00:00:00.000Z';
 const NEWER = '2026-02-01T00:00:00.000Z';
+
+// The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
+// must be transparent everywhere else, so it defaults to "fresh".
+const gate = vi.hoisted(() => ({ fresh: true }));
+vi.mock('../src/core/store.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isStateFresh: async () => gate.fresh,
+}));
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -31,7 +40,9 @@ function makeEl() {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
     dispatch(type, ev) {
-      (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
+      // Returns a promise so an async handler can be awaited by the test; a
+      // synchronous handler still runs to completion before dispatch returns.
+      return Promise.all((this._l[type] || []).map((fn) => fn(ev || { stopPropagation() {} })));
     },
     classList: {
       _s: new Set(),
@@ -82,6 +93,7 @@ let renderFn;
 
 beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
+  gate.fresh = true;
   vi.stubGlobal(
     'confirm',
     vi.fn(() => true),
@@ -135,11 +147,11 @@ describe('renderTrashView', () => {
   });
 
   describe('restoreBookmark', () => {
-    it('clears the stamp, persists, re-renders and toasts', () => {
+    it('clears the stamp, persists, re-renders and toasts', async () => {
       setBookmarks([trashed('1', 'Older')]);
       selectedIds.add('1');
 
-      expect(restoreBookmark('1')).toBe(true);
+      expect(await restoreBookmark('1')).toBe(true);
 
       expect(bookmarks[0].deleted_at).toBeNull();
       expect(selectedIds.has('1')).toBe(false);
@@ -148,21 +160,21 @@ describe('renderTrashView', () => {
       expect(el('toastMsg').innerText).toBe('已還原書籤「Older」');
     });
 
-    it('ignores live or unknown ids', () => {
+    it('ignores live or unknown ids', async () => {
       setBookmarks([live('1', 'Active')]);
 
-      expect(restoreBookmark('1')).toBe(false);
-      expect(restoreBookmark('missing')).toBe(false);
+      expect(await restoreBookmark('1')).toBe(false);
+      expect(await restoreBookmark('missing')).toBe(false);
       expect(persistFn).not.toHaveBeenCalled();
     });
   });
 
   describe('purgeBookmark', () => {
-    it('removes the record permanently and toasts', () => {
+    it('removes the record permanently and toasts', async () => {
       setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
       selectedIds.add('1');
 
-      expect(purgeBookmark('1')).toBe(true);
+      expect(await purgeBookmark('1')).toBe(true);
 
       expect(bookmarks.map((b) => b.id)).toEqual(['2']);
       expect(selectedIds.has('1')).toBe(false);
@@ -170,26 +182,26 @@ describe('renderTrashView', () => {
       expect(el('toastMsg').innerText).toBe('已永久刪除該筆書籤');
     });
 
-    it('ignores unknown ids', () => {
-      expect(purgeBookmark('missing')).toBe(false);
+    it('ignores unknown ids', async () => {
+      expect(await purgeBookmark('missing')).toBe(false);
       expect(persistFn).not.toHaveBeenCalled();
     });
   });
 
   describe('confirmPurgeBookmark', () => {
-    it('purges after the confirm is accepted', () => {
+    it('purges after the confirm is accepted', async () => {
       setBookmarks([trashed('1', 'Older')]);
 
-      expect(confirmPurgeBookmark('1')).toBe(true);
+      expect(await confirmPurgeBookmark('1')).toBe(true);
 
       expect(bookmarks).toHaveLength(0);
     });
 
-    it('keeps the record when the confirm is declined', () => {
+    it('keeps the record when the confirm is declined', async () => {
       globalThis.confirm = vi.fn(() => false);
       setBookmarks([trashed('1', 'Older')]);
 
-      expect(confirmPurgeBookmark('1')).toBe(false);
+      expect(await confirmPurgeBookmark('1')).toBe(false);
 
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
@@ -197,12 +209,12 @@ describe('renderTrashView', () => {
   });
 
   describe('emptyTrash', () => {
-    it('purges every trashed record and keeps the live ones', () => {
+    it('purges every trashed record and keeps the live ones', async () => {
       setBookmarks([trashed('1', 'Older'), trashed('2', 'Newer', NEWER), live('3', 'Active')]);
       selectedIds.add('1');
       selectedIds.add('3');
 
-      expect(emptyTrash()).toBe(true);
+      expect(await emptyTrash()).toBe(true);
 
       expect(bookmarks.map((b) => b.id)).toEqual(['3']);
       expect(selectedIds.has('1')).toBe(false);
@@ -211,10 +223,10 @@ describe('renderTrashView', () => {
       expect(el('toastMsg').innerText).toBe('已清空回收桶（2 筆）');
     });
 
-    it('does nothing when the trash is already empty', () => {
+    it('does nothing when the trash is already empty', async () => {
       setBookmarks([live('1', 'Active')]);
 
-      expect(emptyTrash()).toBe(false);
+      expect(await emptyTrash()).toBe(false);
 
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
@@ -222,40 +234,40 @@ describe('renderTrashView', () => {
   });
 
   describe('confirmEmptyTrash', () => {
-    it('empties the trash after the confirm is accepted', () => {
+    it('empties the trash after the confirm is accepted', async () => {
       setBookmarks([trashed('1', 'Older')]);
 
-      expect(confirmEmptyTrash()).toBe(true);
+      expect(await confirmEmptyTrash()).toBe(true);
 
       expect(bookmarks).toHaveLength(0);
     });
 
-    it('keeps the trash when the confirm is declined', () => {
+    it('keeps the trash when the confirm is declined', async () => {
       globalThis.confirm = vi.fn(() => false);
       setBookmarks([trashed('1', 'Older')]);
 
-      expect(confirmEmptyTrash()).toBe(false);
+      expect(await confirmEmptyTrash()).toBe(false);
 
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
     });
 
-    it('never prompts for an empty trash', () => {
+    it('never prompts for an empty trash', async () => {
       const confirmSpy = vi.fn(() => true);
       globalThis.confirm = confirmSpy;
 
-      expect(confirmEmptyTrash()).toBe(false);
+      expect(await confirmEmptyTrash()).toBe(false);
       expect(confirmSpy).not.toHaveBeenCalled();
     });
   });
 
   describe('registerTrashListeners', () => {
-    it('restores a row through the delegated click', () => {
+    it('restores a row through the delegated click', async () => {
       registerTrashListeners();
       setBookmarks([trashed('1', 'Older')]);
       const button = { dataset: { restoreBookmark: '1' } };
 
-      el('trashList').dispatch('click', {
+      await el('trashList').dispatch('click', {
         target: { closest: (s) => (s === '[data-restore-bookmark]' ? button : null) },
       });
 
@@ -263,12 +275,12 @@ describe('renderTrashView', () => {
       expect(persistFn).toHaveBeenCalledTimes(1);
     });
 
-    it('purges a row through the delegated click (after confirm)', () => {
+    it('purges a row through the delegated click (after confirm)', async () => {
       registerTrashListeners();
       setBookmarks([trashed('1', 'Older')]);
       const button = { dataset: { purgeBookmark: '1' } };
 
-      el('trashList').dispatch('click', {
+      await el('trashList').dispatch('click', {
         target: { closest: (s) => (s === '[data-purge-bookmark]' ? button : null) },
       });
 
@@ -276,21 +288,21 @@ describe('renderTrashView', () => {
       expect(persistFn).toHaveBeenCalledTimes(1);
     });
 
-    it('ignores clicks that hit neither action button', () => {
+    it('ignores clicks that hit neither action button', async () => {
       registerTrashListeners();
       setBookmarks([trashed('1', 'Older')]);
 
-      el('trashList').dispatch('click', { target: { closest: () => null } });
+      await el('trashList').dispatch('click', { target: { closest: () => null } });
 
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
     });
 
-    it('empties the trash from the panel button', () => {
+    it('empties the trash from the panel button', async () => {
       registerTrashListeners();
       setBookmarks([trashed('1', 'Older'), live('2', 'Active')]);
 
-      el('emptyTrashBtn').dispatch('click');
+      await el('emptyTrashBtn').dispatch('click');
 
       expect(bookmarks.map((b) => b.id)).toEqual(['2']);
     });
@@ -300,6 +312,57 @@ describe('renderTrashView', () => {
     globalThis.document.getElementById = () => null;
     expect(() => renderTrashView()).not.toThrow();
     globalThis.document.getElementById = (id) => el(id);
+  });
+});
+
+describe('cross-tab stale gate', () => {
+  it('refuses a restore: the row stays trashed, nothing persists, and the reason is shown', async () => {
+    const bookmark = trashed('1', 'Older', OLDER);
+    setBookmarks([bookmark]);
+    gate.fresh = false;
+
+    expect(await restoreBookmark('1')).toBe(false);
+
+    expect(bookmark.deleted_at).toBe(OLDER);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
+  });
+
+  it('refuses a purge without removing the record', async () => {
+    setBookmarks([trashed('1', 'Older', OLDER)]);
+    gate.fresh = false;
+
+    expect(await purgeBookmark('1')).toBe(false);
+
+    expect(bookmarks).toHaveLength(1);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
+  });
+
+  it('refuses to empty the trash, so no record is purged', async () => {
+    setBookmarks([trashed('1', 'Older', OLDER), live('2', 'Active')]);
+    gate.fresh = false;
+
+    expect(await emptyTrash()).toBe(false);
+
+    expect(bookmarks).toHaveLength(2);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
+  });
+
+  it('refuses the purge even once the confirm is accepted, so nothing is lost', async () => {
+    const confirmSpy = vi.fn(() => true);
+    globalThis.confirm = confirmSpy;
+    setBookmarks([trashed('1', 'Older', OLDER)]);
+    gate.fresh = false;
+
+    expect(await confirmEmptyTrash()).toBe(false);
+
+    // The prompt is asked first; the destructive step behind it is what refuses.
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(bookmarks).toHaveLength(1);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
   });
 });
 

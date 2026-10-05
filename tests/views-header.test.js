@@ -12,6 +12,7 @@ import {
   searchQuery,
   sourceFiles,
 } from '../src/core/state.js';
+import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -258,6 +259,30 @@ describe('setSearchInputValue — programmatic input sync', () => {
   });
 });
 
+// The header's `dispatch` stub is synchronous — it returns the results array,
+// not a promise — so the stub element's events are collected for assertion
+// instead. The click still arms the 400ms wiper; awaiting its completion keeps
+// every clear-cache test deterministic without real timers.
+function armClearCache() {
+  const clicks = [];
+  const target = el('clearCacheBtn');
+  const listeners = target._l.click || [];
+  if (listeners.length === 0) {
+    throw new Error('clearCacheBtn has no click listener — registerHeaderListeners() first');
+  }
+  for (const fn of listeners) clicks.push(fn());
+  return Promise.all(clicks).then(() =>
+    vi.waitFor(
+      () => {
+        if (el('clearCacheIcon').classList.contains('animate-spin')) {
+          throw new Error('clear-cache wiper still running');
+        }
+      },
+      { timeout: 3000, interval: 10 },
+    ),
+  );
+}
+
 describe('registerHeaderListeners — clear cache', () => {
   const seed = () => setBookmarks([{ id: '1', title: 'x', source_file_id: 'F1' }]);
 
@@ -289,6 +314,48 @@ describe('registerHeaderListeners — clear cache', () => {
     expect(mapRef.size).toBe(0); // same Map instance, cleared in place
     expect(persistFn).toHaveBeenCalledTimes(1);
     expect(el('toastMsg').innerText).toBe('已成功清空本地快取');
+    expect(el('clearCacheIcon').classList.contains('animate-spin')).toBe(false);
+  });
+
+  it('refuses before wiping when another tab has written (fails closed)', async () => {
+    seed();
+    const renderFn = vi.fn();
+    const persistFn = vi.fn(async () => ({ persisted: true, rendered: true, conflict: false }));
+    initHeader({ render: renderFn, persistAndRender: persistFn });
+    registerHeaderListeners();
+
+    // Force the gate closed: the production isStateFresh() would see another
+    // tab's revision here. The mock lives on the store module the guard reads.
+    const store = await import('../src/core/store.js');
+    const probe = vi.spyOn(store, 'isStateFresh').mockResolvedValue(false);
+    try {
+      await armClearCache();
+      expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
+
+      // Nothing was wiped and nothing was persisted: the in-memory session
+      // still matches what the next reload will show.
+      expect(sourceFiles.size).toBe(1);
+      const { bookmarks } = await import('../src/core/state.js');
+      expect(bookmarks).toHaveLength(1);
+      expect(persistFn).not.toHaveBeenCalled();
+    } finally {
+      probe.mockRestore();
+    }
+  });
+
+  it('reports the conflict instead of success when the save loses the race', async () => {
+    seed();
+    const renderFn = vi.fn();
+    const persistFn = vi.fn(async () => ({ persisted: false, rendered: true, conflict: true }));
+    initHeader({ render: renderFn, persistAndRender: persistFn });
+    registerHeaderListeners();
+
+    await armClearCache();
+
+    // The cache still holds the other tab's working set, so the toast must say
+    // why nothing was wiped — never the unconditional success line.
+    expect(persistFn).toHaveBeenCalledTimes(1);
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
     expect(el('clearCacheIcon').classList.contains('animate-spin')).toBe(false);
   });
 

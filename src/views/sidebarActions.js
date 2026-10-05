@@ -8,6 +8,7 @@
 
 import * as state from '../core/state.js';
 import { getStorageUsage } from '../core/store.js';
+import { stateStillFresh } from '../core/guard.js';
 import { showToast } from '../utils/dom.js';
 
 /** @typedef {object} SidebarActionsDeps
@@ -48,12 +49,13 @@ export function selectFolder(folderId) {
  * @param {Event} e
  * @param {string} fileId
  */
-export function confirmDeleteFolder(e, fileId) {
+export async function confirmDeleteFolder(e, fileId) {
   e.stopPropagation();
   const file = state.sourceFiles.get(fileId);
   if (confirm(`確定要刪除檔案「${file ? file.name : ''}」與其包含的所有書籤嗎？`)) {
-    deleteFolder(fileId);
+    return deleteFolder(fileId);
   }
+  return false;
 }
 
 /**
@@ -67,8 +69,14 @@ export function confirmDeleteFolder(e, fileId) {
  *
  * @param {string} fileId
  * @param {boolean} [triggerRender=true]
+ * @returns {Promise<boolean>} `true` when the file and its bookmarks were deleted;
+ *   `false` when nothing was deleted, or when refused because another tab wrote.
  */
-export function deleteFolder(fileId, triggerRender = true) {
+export async function deleteFolder(fileId, triggerRender = true) {
+  // Gate before the first mutation: deleting on top of a working set this tab
+  // has not seen would discard rows the other tab just wrote.
+  if (!(await stateStillFresh())) return false;
+
   // Purge every record owned by the file, trashed or not.
   const doomed = state.bookmarks.filter((b) => b.source_file_id === fileId).map((b) => b.id);
   state.sourceFiles.delete(fileId);
@@ -82,6 +90,7 @@ export function deleteFolder(fileId, triggerRender = true) {
     deps.render();
     showToast('已刪除檔案及其所有書籤（含回收桶）');
   }
+  return true;
 }
 
 /**
@@ -96,10 +105,10 @@ export function registerSidebarListeners() {
     deps.render();
   });
   // Folder list — delegated select/delete
-  document.getElementById('folderList')?.addEventListener('click', (e) => {
+  document.getElementById('folderList')?.addEventListener('click', async (e) => {
     const deleteBtn = e.target.closest('[data-delete-folder]');
     if (deleteBtn) {
-      confirmDeleteFolder(e, deleteBtn.dataset.deleteFolder);
+      await confirmDeleteFolder(e, deleteBtn.dataset.deleteFolder);
       return;
     }
     const selectBtn = e.target.closest('[data-select-folder]');

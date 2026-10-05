@@ -16,6 +16,7 @@
  */
 
 import * as state from '../core/state.js';
+import { STALE_STATE_MESSAGE, stateStillFresh } from '../core/guard.js';
 import { showToast } from '../utils/dom.js';
 
 /** Delay (ms) between the last keystroke and applying the search. */
@@ -138,12 +139,29 @@ export function registerHeaderListeners() {
       const icon = document.getElementById('clearCacheIcon');
       icon.classList.add('animate-spin');
 
-      setTimeout(() => {
-        state.setBookmarks([]);
-        state.sourceFiles.clear(); // in-place clear (monolith parity)
-        deps.persistAndRender();
-        icon.classList.remove('animate-spin');
-        showToast('已成功清空本地快取');
+      setTimeout(async () => {
+        try {
+          // Gate before the only destructive header action: wiping on top of a
+          // working set this tab has not seen would strand the other tab's
+          // rows in storage while the in-memory session claims they are gone.
+          // stateStillFresh() already toasted the refusal — stop there.
+          if (!(await stateStillFresh())) return;
+
+          state.setBookmarks([]);
+          state.sourceFiles.clear(); // in-place clear (monolith parity)
+
+          // A conflict lost its race between the gate and the save, so the
+          // cache still holds the other tab's working set: clear the spinner
+          // and say why nothing was wiped instead of claiming success.
+          const saved = await deps.persistAndRender();
+          if (saved && typeof saved === 'object' && saved.conflict === true) {
+            showToast(STALE_STATE_MESSAGE);
+            return;
+          }
+          showToast('已成功清空本地快取');
+        } finally {
+          icon.classList.remove('animate-spin');
+        }
       }, 400);
     }
   });

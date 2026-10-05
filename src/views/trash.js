@@ -18,6 +18,7 @@
 
 import * as state from '../core/state.js';
 import { getTrashedBookmarks } from '../core/filters.js';
+import { stateStillFresh } from '../core/guard.js';
 import { showToast } from '../utils/dom.js';
 import { trashItemClass, trashItemHtml } from '../components/bookmarks/trashPanel.js';
 
@@ -94,11 +95,15 @@ export function renderTrashView() {
  * Restore one bookmark from the trash (clears `deleted_at`).
  *
  * @param {string} id
- * @returns {boolean} True when a trashed bookmark was restored.
+ * @returns {Promise<boolean>} True when a trashed bookmark was restored; false
+ *   when it was not, or when the action was refused because another tab wrote.
  */
-export function restoreBookmark(id) {
+export async function restoreBookmark(id) {
   const bookmark = state.bookmarks.find((b) => b.id === id && b.deleted_at);
   if (!bookmark) return false;
+
+  // Gate before the mutation: see deleteBookmark() in workspaceActions.js.
+  if (!(await stateStillFresh())) return false;
 
   state.restoreBookmarks([id]);
   state.selectedIds.delete(id);
@@ -112,11 +117,15 @@ export function restoreBookmark(id) {
  * Permanently remove one bookmark from the trash.
  *
  * @param {string} id
- * @returns {boolean} True when the record was purged.
+ * @returns {Promise<boolean>} True when the record was purged.
  */
-export function purgeBookmark(id) {
+export async function purgeBookmark(id) {
   const bookmark = state.bookmarks.find((b) => b.id === id);
   if (!bookmark) return false;
+
+  // Purging is irreversible, so this is the most expensive place to act on a
+  // working set another tab has already changed.
+  if (!(await stateStillFresh())) return false;
 
   state.purgeBookmarks([id]);
   state.selectedIds.delete(id);
@@ -130,9 +139,9 @@ export function purgeBookmark(id) {
  * Confirm, then permanently remove one bookmark.
  *
  * @param {string} id
- * @returns {boolean} True when the record was purged.
+ * @returns {Promise<boolean>} True when the record was purged.
  */
-export function confirmPurgeBookmark(id) {
+export async function confirmPurgeBookmark(id) {
   const bookmark = state.bookmarks.find((b) => b.id === id);
   if (!confirm(`確定要永久刪除書籤「${bookmark ? bookmark.title : ''}」嗎？此動作無法復原。`)) {
     return false;
@@ -143,11 +152,14 @@ export function confirmPurgeBookmark(id) {
 /**
  * Permanently remove every trashed bookmark.
  *
- * @returns {boolean} True when at least one record was purged.
+ * @returns {Promise<boolean>} True when at least one record was purged.
  */
-export function emptyTrash() {
+export async function emptyTrash() {
   const ids = getTrashedBookmarks().map((b) => b.id);
   if (ids.length === 0) return false;
+
+  // Gate before the mutation: see deleteBookmark() in workspaceActions.js.
+  if (!(await stateStillFresh())) return false;
 
   state.purgeBookmarks(ids);
   ids.forEach((id) => state.selectedIds.delete(id));
@@ -160,9 +172,9 @@ export function emptyTrash() {
 /**
  * Confirm, then permanently remove every trashed bookmark.
  *
- * @returns {boolean} True when the trash was emptied.
+ * @returns {Promise<boolean>} True when the trash was emptied.
  */
-export function confirmEmptyTrash() {
+export async function confirmEmptyTrash() {
   const count = getTrashedBookmarks().length;
   if (count === 0) return false;
   if (!confirm(`確定要永久刪除回收桶中的 ${count} 筆書籤嗎？此動作無法復原。`)) {
@@ -179,13 +191,13 @@ export function confirmEmptyTrash() {
 export function registerTrashListeners() {
   document.getElementById('emptyTrashBtn')?.addEventListener('click', confirmEmptyTrash);
 
-  document.getElementById('trashList')?.addEventListener('click', (e) => {
+  document.getElementById('trashList')?.addEventListener('click', async (e) => {
     const restoreBtn = e.target.closest('[data-restore-bookmark]');
     if (restoreBtn) {
-      restoreBookmark(restoreBtn.dataset.restoreBookmark);
+      await restoreBookmark(restoreBtn.dataset.restoreBookmark);
       return;
     }
     const purgeBtn = e.target.closest('[data-purge-bookmark]');
-    if (purgeBtn) confirmPurgeBookmark(purgeBtn.dataset.purgeBookmark);
+    if (purgeBtn) await confirmPurgeBookmark(purgeBtn.dataset.purgeBookmark);
   });
 }

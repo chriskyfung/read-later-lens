@@ -20,6 +20,13 @@ import { getFilteredBookmarks } from '../src/core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks.js';
 
 // Isolate the pure view collaborators.
+// The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
+// must be transparent everywhere else, so it defaults to "fresh".
+const gate = vi.hoisted(() => ({ fresh: true }));
+vi.mock('../src/core/store.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isStateFresh: async () => gate.fresh,
+}));
 vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
@@ -100,7 +107,9 @@ function makeEl() {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
     dispatch(type, ev) {
-      (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
+      // Returns a promise so an async handler can be awaited by the test; a
+      // synchronous handler still runs to completion before dispatch returns.
+      return Promise.all((this._l[type] || []).map((fn) => fn(ev || { stopPropagation() {} })));
     },
     classList: {
       _s: new Set(),
@@ -143,6 +152,7 @@ beforeAll(() => {
 beforeEach(() => {
   for (const k of Object.keys(els)) delete els[k];
   vi.clearAllMocks();
+  gate.fresh = true;
   setBookmarks([]);
   setSourceFiles(new Map());
   setSortBy('relevance');
@@ -184,7 +194,7 @@ describe('deleteBookmark', () => {
     setBookmarks([b1, b2]);
     selectedIds.add('1');
 
-    expect(deleteBookmark('1')).toBe(true);
+    expect(await deleteBookmark('1')).toBe(true);
 
     expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.has('1')).toBe(false);
@@ -203,69 +213,69 @@ describe('deleteBookmark', () => {
     initWorkspaceActions({ persist: mockPersist, render: vi.fn() });
     setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
 
-    expect(deleteBookmark('1')).toBe(false);
-    expect(deleteBookmark('missing')).toBe(false);
+    expect(await deleteBookmark('1')).toBe(false);
+    expect(await deleteBookmark('missing')).toBe(false);
     expect(mockPersist).not.toHaveBeenCalled();
   });
 });
 
 describe('confirmDeleteBookmark', () => {
-  it('trashes the bookmark without prompting (the action is reversible)', () => {
+  it('trashes the bookmark without prompting (the action is reversible)', async () => {
     setBookmarks([
       { id: '1', title: 'T1' },
       { id: '2', title: 'T2' },
     ]);
     selectedIds.add('1');
 
-    expect(confirmDeleteBookmark('1')).toBe(true);
+    expect(await confirmDeleteBookmark('1')).toBe(true);
 
     expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.has('1')).toBe(false);
     expect(updateBatchActionBar).toHaveBeenCalled();
   });
 
-  it('returns false for an unknown id without throwing', () => {
-    expect(() => confirmDeleteBookmark('missing')).not.toThrow();
-    expect(confirmDeleteBookmark('missing')).toBe(false);
+  it('returns false for an unknown id without throwing', async () => {
+    // Awaiting is what proves "without throwing": a rejection fails the test.
+    expect(await confirmDeleteBookmark('missing')).toBe(false);
   });
 });
 
 describe('deleteSelectedBookmarks', () => {
-  it('trashes every selected bookmark, clears selection and persists', () => {
+  it('trashes every selected bookmark, clears selection and persists', async () => {
     setBookmarks([{ id: '1' }, { id: '2' }, { id: '3' }]);
     selectedIds.add('1');
     selectedIds.add('3');
 
-    expect(deleteSelectedBookmarks()).toBe(true);
+    expect(await deleteSelectedBookmarks()).toBe(true);
 
     expect(trashBookmarks).toHaveBeenCalledWith(['1', '3']);
     expect(selectedIds.size).toBe(0);
   });
 
-  it('does nothing when the selection is empty', () => {
+  it('does nothing when the selection is empty', async () => {
     setBookmarks([{ id: '1' }]);
 
-    expect(deleteSelectedBookmarks()).toBe(false);
+    expect(await deleteSelectedBookmarks()).toBe(false);
 
     expect(trashBookmarks).not.toHaveBeenCalled();
   });
 });
 
 describe('confirmDeleteSelectedBookmarks', () => {
-  it('trashes the selected bookmarks without prompting', () => {
+  it('trashes the selected bookmarks without prompting', async () => {
     setBookmarks([{ id: '1' }, { id: '2' }]);
     selectedIds.add('1');
 
-    expect(confirmDeleteSelectedBookmarks()).toBe(true);
+    expect(await confirmDeleteSelectedBookmarks()).toBe(true);
 
     expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.size).toBe(0);
   });
 
-  it('does nothing when the selection is empty', () => {
+  it('does nothing when the selection is empty', async () => {
     setBookmarks([{ id: '1' }, { id: '2' }]);
 
-    expect(confirmDeleteSelectedBookmarks()).toBe(false);
+    expect(await confirmDeleteSelectedBookmarks()).toBe(false);
 
     expect(trashBookmarks).not.toHaveBeenCalled();
   });
@@ -307,7 +317,7 @@ describe('registerWorkspaceListeners', () => {
     expect(renderBookmarkCards).toHaveBeenCalled();
   });
 
-  it('wires the batchDeleteBtn', () => {
+  it('wires the batchDeleteBtn', async () => {
     const mockPersist = vi.fn();
     const mockRender = vi.fn();
     initWorkspaceActions({ persist: mockPersist, render: mockRender });
@@ -318,7 +328,7 @@ describe('registerWorkspaceListeners', () => {
     setBookmarks([b1, b2]);
     selectedIds.add('1');
 
-    el('batchDeleteBtn').dispatch('click');
+    await el('batchDeleteBtn').dispatch('click');
 
     expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(selectedIds.size).toBe(0);
@@ -346,29 +356,80 @@ describe('registerWorkspaceListeners', () => {
     expect(resetGraphZoom).toHaveBeenCalled();
   });
 
-  it('trashes a bookmark via the delegated grid click', () => {
+  it('trashes a bookmark via the delegated grid click', async () => {
     registerWorkspaceListeners();
     setBookmarks([
       { id: '1', title: 'T1' },
       { id: '2', title: 'T2' },
     ]);
     const button = { dataset: { deleteBookmark: '1' } };
-    el('bookmarkCardsGrid').dispatch('click', {
+    await el('bookmarkCardsGrid').dispatch('click', {
       target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
     });
     expect(trashBookmarks).toHaveBeenCalledWith(['1']);
     expect(updateBatchActionBar).toHaveBeenCalled();
   });
 
-  it('ignores a grid delete for an already-trashed bookmark', () => {
+  it('ignores a grid delete for an already-trashed bookmark', async () => {
     registerWorkspaceListeners();
     setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
     const button = { dataset: { deleteBookmark: '1' } };
     const callsBefore = trashBookmarks.mock.calls.length;
-    el('bookmarkCardsGrid').dispatch('click', {
+    await el('bookmarkCardsGrid').dispatch('click', {
       target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
     });
     expect(trashBookmarks.mock.calls.length).toBe(callsBefore);
     expect(selectedIds.size).toBe(0);
+  });
+});
+
+describe('cross-tab stale gate', () => {
+  it('refuses a delete: the record stays live, the selection holds, nothing persists', async () => {
+    const persist = vi.fn(async () => {});
+    initWorkspaceActions({ persist, render: vi.fn() });
+    const b1 = { id: '1', title: 'T1' };
+    setBookmarks([b1]);
+    selectedIds.add('1');
+    gate.fresh = false;
+
+    expect(await deleteBookmark('1')).toBe(false);
+
+    expect(b1.deleted_at).toBeUndefined();
+    expect(selectedIds.has('1')).toBe(true);
+    expect(trashBookmarks).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('refuses a batch delete, so no selected bookmark is trashed', async () => {
+    const persist = vi.fn(async () => {});
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1' }, { id: '2' }, { id: '3' }]);
+    selectedIds.add('1');
+    selectedIds.add('3');
+    gate.fresh = false;
+
+    expect(await deleteSelectedBookmarks()).toBe(false);
+
+    expect(selectedIds.size).toBe(2);
+    expect(trashBookmarks).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('refuses a grid click, so the delegated handler mutates nothing either', async () => {
+    registerWorkspaceListeners();
+    const persist = vi.fn(async () => {});
+    initWorkspaceActions({ persist, render: vi.fn() });
+    const b1 = { id: '1', title: 'T1' };
+    setBookmarks([b1]);
+    gate.fresh = false;
+    const button = { dataset: { deleteBookmark: '1' } };
+
+    await el('bookmarkCardsGrid').dispatch('click', {
+      target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
+    });
+
+    expect(b1.deleted_at).toBeUndefined();
+    expect(trashBookmarks).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
   });
 });

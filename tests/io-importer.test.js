@@ -10,6 +10,7 @@ import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
 import { resetLayers, stackDepth } from '../src/utils/dom.js';
+import { STALE_STATE_REASON } from '../src/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
@@ -517,6 +518,27 @@ describe('processSingleFile — transaction boundary', () => {
     expect(sourceFiles.size).toBe(0);
     expect(render).toHaveBeenCalledTimes(1);
     expect(el('toastMsg').innerText).toBe('已還原匯入 a.csv：無法寫入本機快取，資料不會保留');
+  });
+
+  it('names the cross-tab conflict instead of a generic cache failure', async () => {
+    initImporter({
+      persistAndRender: vi.fn(async () => ({ persisted: false, conflict: true, rendered: true })),
+    });
+    setBookmarks([{ id: 'keep', title: 'kept', source_file_id: 'F0' }]);
+    completeWith([{ id: '1', title: 'x' }]);
+
+    await handleFileUploads([csvFile()]);
+
+    const { bookmarks } = await import('../src/core/state.js');
+    // Same rollback as any failed write: the overtaken tab keeps what it had.
+    expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
+    expect(sourceFiles.size).toBe(0);
+    // The difference is what the user is told: the write was not slow, it lost.
+    // The short reason is the guard's shared string, so assert against it
+    // directly rather than a frozen copy that could silently drift.
+    expect(el('toastMsg').innerText).toBe(
+      `已還原匯入 a.csv：${STALE_STATE_REASON}，資料不會保留，請重新載入後再試`,
+    );
   });
 
   it('undoes a merge that a failing write left behind (orphan regression)', async () => {

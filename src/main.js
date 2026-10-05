@@ -2,6 +2,7 @@ import './styles/main.css';
 
 import * as state from './core/state.js';
 import { saveState, loadState } from './core/store.js';
+import { STALE_STATE_MESSAGE } from './core/guard.js';
 import { showToast } from './utils/dom.js';
 import { initDomains } from './views/domains.js';
 import { initWordCloud } from './views/wordcloud.js';
@@ -24,6 +25,14 @@ import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';
 
 /**
+ * Toast text when a post-action persist write fails for a reason OTHER than a
+ * cross-tab conflict (e.g. quota, transaction abort): before this feature the
+ * view's success toast stood alone, so a failed cache write quietly disagreed
+ * with what the user saw. The conflict case keeps its own message.
+ */
+export const PERSIST_WRITE_FAILED_MESSAGE = '無法寫入本機快取，剛才的變更可能不會保留';
+
+/**
  * Helper for I/O modules to trigger persistence and UI updates.
  *
  * Never rejects and never short-circuits: each step is guarded on its own so a
@@ -38,10 +47,15 @@ import { initTrash, registerTrashListeners } from './views/trash.js';
  */
 async function persistAndRender() {
   let persisted = false;
+  let conflict = false;
   try {
     // saveState() now reports failure instead of swallowing it; a throwing
-    // stub (or a future implementation) must be just as survivable.
-    persisted = (await saveState()) !== false;
+    // stub (or a future implementation) must be just as survivable. Both the
+    // `{persisted, conflict}` object and the legacy `false`/void forms read as
+    // "not persisted", so a stub that says nothing still counts as committed.
+    const saved = await saveState();
+    persisted = saved !== false && saved?.persisted !== false;
+    conflict = saved?.conflict === true;
   } catch (err) {
     console.warn('IndexedDB save failed:', err);
   }
@@ -61,7 +75,39 @@ async function persistAndRender() {
     console.warn('Render failed:', err);
   }
 
-  return { persisted, rendered };
+  return { persisted, rendered, conflict };
+}
+
+/**
+ * Persist on behalf of an action that has already mutated `state` in memory.
+ *
+ * Each such action probes `isStateFresh()` first, so a *refused* save (`{…
+ * conflict: true }`) means another tab won the race in that gap. The
+ * in-memory change and its render have already happened, so the only honest
+ * response left is to say so and ask for a reload — never to report quiet
+ * success. A genuine storage failure is *also* reported: the base `saveState`
+ * result (`persisted: false` without `conflict`) means this session is no
+ * longer cached, and a reload would resurrect what the user just deleted.
+ */
+async function persistAfterAction() {
+  try {
+    const saved = await saveState();
+    if (saved && saved.persisted === false && saved.conflict !== true) {
+      showToast(PERSIST_WRITE_FAILED_MESSAGE);
+      return;
+    }
+    if (saved && saved.conflict === true) {
+      showToast(STALE_STATE_MESSAGE);
+    }
+  } catch (err) {
+    console.warn('IndexedDB save failed:', err);
+  }
+
+  try {
+    await updateStorageUsageUI();
+  } catch (err) {
+    console.warn('Storage usage update failed:', err);
+  }
 }
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
@@ -72,27 +118,18 @@ async function boot() {
   mountModals();
   initHeader({ render: renderAll, persistAndRender });
   initSidebarActions({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
   initImporter({ persistAndRender, render: renderAll });
   initWorkspaceActions({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   initTrash({
-    persist: async () => {
-      await saveState();
-      await updateStorageUsageUI();
-    },
+    persist: persistAfterAction,
     render: renderAll,
   });
   registerHeaderListeners();

@@ -28,7 +28,9 @@ function makeEl() {
       this._l[type] = (this._l[type] || []).filter((f) => f !== fn);
     },
     dispatch(type, ev) {
-      (this._l[type] || []).forEach((fn) => fn(ev || { stopPropagation() {} }));
+      // Returns a promise so an async handler can be awaited by the test; a
+      // synchronous handler still runs to completion before dispatch returns.
+      return Promise.all((this._l[type] || []).map((fn) => fn(ev || { stopPropagation() {} })));
     },
     setAttribute(name, value) {
       this._attrs[name] = String(value);
@@ -156,13 +158,13 @@ describe('registerModalListeners', () => {
     expect(() => registerModalListeners()).not.toThrow();
   });
 
-  it('deletes the open bookmark from the reader (soft delete to the trash)', () => {
+  it('deletes the open bookmark from the reader (soft delete to the trash)', async () => {
     registerModalListeners();
     openReaderModal('1');
     expect(getReaderBookmarkId()).toBe('1');
     expect(el('readerModal').classList.contains('hidden')).toBe(false);
 
-    el('readerDeleteBtn').dispatch('click');
+    await el('readerDeleteBtn').dispatch('click');
 
     // The record survives with a `deleted_at` stamp so the trash can restore it.
     expect(bookmarks).toHaveLength(2);
@@ -172,10 +174,10 @@ describe('registerModalListeners', () => {
     expect(el('readerModal').classList.contains('hidden')).toBe(true);
   });
 
-  it('leaves the other bookmarks untouched when the reader delete trashes one', () => {
+  it('leaves the other bookmarks untouched when the reader delete trashes one', async () => {
     registerModalListeners();
     openReaderModal('1');
-    el('readerDeleteBtn').dispatch('click');
+    await el('readerDeleteBtn').dispatch('click');
 
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
     expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
