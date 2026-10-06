@@ -44,7 +44,6 @@
  *   strings); null for non-CSV sources, for a meta Papa could not describe, and
  *   for sources cached by a version that predates this field — those fall
  *   back to RFC 4180 rather than a guessed dialect.
- * @property {File|FileSystemFileHandle|null} [fileHandle] File handle for save-back.
  */
 
 /** @type {BookmarkRecord[]} */

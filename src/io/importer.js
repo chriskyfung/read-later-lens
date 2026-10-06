@@ -579,7 +579,6 @@ function expandEnvelopeSources(profile, rows, baseRecord, manifest, adapter) {
       // Referencing the same payload from every reconstructed source would also
       // store one copy of it N times.
       originalData: null,
-      fileHandle: null,
     });
     const adapted = adapter.importJsonOrCsv(groupRows, originalId, name);
     records.push(...adapted.records);
@@ -615,7 +614,6 @@ async function prepareSingleFile(file, finalName, profile) {
     type: ext,
     profile,
     originalData: null,
-    fileHandle: file,
   };
 
   const adapter = resolveImportAdapter(profile);

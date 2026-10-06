@@ -41,7 +41,6 @@ describe('store (IndexedDB)', () => {
             name: 'f.csv',
             type: 'csv',
             originalData: 'a,b\n1,2',
-            fileHandle: { name: 'f.csv' },
           },
         ],
       ]),
@@ -54,27 +53,6 @@ describe('store (IndexedDB)', () => {
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
     expect(sourceFiles.get('f1').name).toBe('f.csv');
     expect(sourceFiles.get('f1').originalData).toBe('a,b\n1,2');
-  });
-
-  it('does not persist File handles (monolith parity, avoids blob duplication)', async () => {
-    setSourceFiles(
-      new Map([
-        [
-          'f1',
-          {
-            id: 'f1',
-            name: 'f.csv',
-            type: 'csv',
-            originalData: 'x',
-            fileHandle: { name: 'f.csv' },
-          },
-        ],
-      ]),
-    );
-    await saveState();
-    setSourceFiles(new Map());
-    await loadState();
-    expect(sourceFiles.get('f1').fileHandle).toBeUndefined();
   });
 
   it('keeps SQLite payloads in memory only', async () => {
