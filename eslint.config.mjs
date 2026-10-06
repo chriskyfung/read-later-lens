@@ -36,7 +36,6 @@ export default [
         Element: 'readonly',
         NodeList: 'readonly',
         DOMParser: 'readonly',
-        FileSystemFileHandle: 'readonly',
         // Node (for scripts/ + server-side guards)
         globalThis: 'readonly',
         process: 'readonly',

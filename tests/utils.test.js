@@ -200,17 +200,7 @@ describe('downloadBlob', () => {
 });
 
 describe('saveFileWithFallback', () => {
-  it('writes directly when given a usable handle', async () => {
-    const { anchors, msg } = setupDom();
-    const handle = makeHandle();
-    await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
-    expect(handle.write).toHaveBeenCalledWith('data');
-    expect(handle.close).toHaveBeenCalledOnce();
-    expect(anchors).toHaveLength(0);
-    expect(msg.innerText).toContain('out.csv');
-  });
-
-  it('prompts with showSaveFilePicker when no handle is given', async () => {
+  it('prompts with showSaveFilePicker', async () => {
     const { anchors } = setupDom();
     const handle = makeHandle();
     const picker = vi.fn(async () => handle);
@@ -232,18 +222,7 @@ describe('saveFileWithFallback', () => {
     expect(anchors).toHaveLength(0);
   });
 
-  it('aborts silently when a supplied handle throws AbortError', async () => {
-    const { anchors } = setupDom();
-    const handle = {
-      createWritable: vi.fn(async () => {
-        throw abortError();
-      }),
-    };
-    await saveFileWithFallback('data', 'out.csv', 'text/csv', handle);
-    expect(anchors).toHaveLength(0);
-  });
-
-  it('falls back to a plain download when no handle and no picker', async () => {
+  it('falls back to a plain download when the picker is unavailable', async () => {
     const { anchors } = setupDom();
     await saveFileWithFallback('data', 'out.txt', 'text/plain');
     expect(anchors).toHaveLength(1);

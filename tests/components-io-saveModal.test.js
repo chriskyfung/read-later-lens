@@ -18,6 +18,17 @@ describe('saveModalHtml', () => {
     expect(html).toContain('id="exportAllUnifiedJsonBtn"');
     expect(html).toContain('id="exportAllUnifiedCsvBtn"');
   });
+
+  it('describes save-back as Save-As with a download fallback, never an in-place write', () => {
+    const html = saveModalHtml();
+
+    // The flow save-back actually implements. Promising a direct write would
+    // be untrue in Firefox/Safari, which have no showSaveFilePicker.
+    expect(html).toContain('另存新檔');
+    expect(html).toContain('其餘瀏覽器將直接下載');
+    expect(html).not.toContain('直接寫入');
+    expect(html).not.toContain('File System Access');
+  });
 });
 
 describe('saveSourceFileRowHtml', () => {

@@ -176,10 +176,10 @@ export async function closeDb() {
 export async function saveState() {
   try {
     const db = await getDb();
-    // Only serializable source metadata is persisted. The File /
-    // FileSystemFileHandle is deliberately NOT stored (mirrors the monolith,
-    // which omitted it to avoid duplicating the blob already held in
-    // `originalData`). SQLite payloads stay in memory only.
+    // Only serializable source metadata is persisted. Source records carry no
+    // file handles — save-back writes a copy (Save-As, then a download), so a
+    // handle would have no reader even if one were kept. SQLite payloads stay
+    // in memory only.
     const sourcesArray = Array.from(sourceFiles.entries()).map(([, v]) => ({
       id: v.id,
       name: v.name,
