@@ -399,12 +399,42 @@ describe('handleFileUploads — format dispatch', () => {
 // ---- failure semantics and toast coverage ---------------------------------
 describe('handleFileUploads — failure semantics (Option A)', () => {
   it('rejects unsupported extensions with an error toast and registers nothing', async () => {
-    await handleFileUploads([fakeFile('notes.txt', 'just some text')]);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await handleFileUploads([fakeFile('notes.txt', 'just some text')]);
 
-    expect(sourceFiles.size).toBe(0);
-    expect(el('toastMsg').innerText).toBe(
-      '不支援的檔案格式「.txt」，請上傳 CSV、JSON 或 SQLite 檔案',
-    );
+      expect(sourceFiles.size).toBe(0);
+      expect(el('toastMsg').innerText).toBe(
+        '不支援的檔案格式「.txt」，請上傳 CSV、JSON 或 SQLite 檔案',
+      );
+      // An expected user error, not a defect: diagnosing it in the console
+      // adds noise without signal.
+      expect(errSpy).not.toHaveBeenCalled();
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it('still logs genuinely unexpected import failures', async () => {
+    Papa.parse.mockImplementationOnce((text, config) => {
+      config.complete({ data: [{ id: '1', title: 'boom' }], errors: [] });
+    });
+    // A bare throw has none of the expected-failure flags, so the generic
+    // fallback — and its error log — is what applies.
+    vi.mocked(importJsonOrCsv).mockImplementationOnce(() => {
+      throw new Error('adapter blew up');
+    });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await handleFileUploads([fakeFile('boom.csv', 'id,title\n1,boom')]);
+
+      expect(sourceFiles.size).toBe(0);
+      expect(el('toastMsg').innerText).toBe('解析檔案 boom.csv 失敗，請確認格式');
+      expect(errSpy).toHaveBeenCalledTimes(1);
+      expect(errSpy.mock.calls[0][0]).toContain('boom.csv');
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 
   it('fails the whole CSV when Papa yields no usable rows but errors', async () => {

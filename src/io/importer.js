@@ -850,7 +850,10 @@ async function processSingleFile(file, finalName, profile, options = {}) {
       return { status: 'failed', finalName, message: err.message, reason: '未匯入任何有效書籤' };
     }
 
-    console.error(`解析檔案 ${finalName} 失敗:`, err);
+    // Expected user and environment failures are diagnosed below each branch
+    // by the message they return, so they never reach the error log: an
+    // unsupported file, an unsupported source, and a refused cache write are
+    // routine, not defects. Only the generic fallback underneath logs.
     if (err[PERSIST_FAILED_FLAG]) {
       if (err[CONFLICT_FLAG]) {
         return {
@@ -878,6 +881,7 @@ async function processSingleFile(file, finalName, profile, options = {}) {
     if (err[UNSUPPORTED_SOURCE_FLAG]) {
       return { status: 'failed', finalName, message: err.message, reason: '來源檔案不受支援' };
     }
+    console.error(`解析檔案 ${finalName} 失敗:`, err);
     return {
       status: 'failed',
       finalName,
