@@ -1,8 +1,10 @@
 /**
  * @fileoverview Save/back & export options modal — presentational markup only.
  *
- * Extracted byte-for-byte from the original monolith (index.html "MODAL 3").
- * Behavior lives in src/io/exporter.js (openSaveModal + button listeners).
+ * Extracted from the original monolith (index.html "MODAL 3"), with the
+ * save-back line reworded once save-back stopped promising an in-place
+ * File System Access write (see src/utils/download.js). Behavior lives in
+ * src/io/exporter.js (openSaveModal + button listeners).
  */
 
 import { escapeHtml } from '../../utils/dom.js';
@@ -25,7 +27,7 @@ export function saveModalHtml() {
       </div>
 
       <p class="text-xs text-slate-300 leading-relaxed">
-        選擇回寫至原來源檔案（優先使用 File System Access API 直接寫入，不支援時將以下載方式處理）：
+        選擇將變更另存回原來的源檔案（支援另存新檔的瀏覽器會開啟儲存對話框，其餘瀏覽器將直接下載）：
       </p>
 
       <div id="saveSourceFilesList" class="space-y-2 max-h-52 overflow-y-auto pr-1">
