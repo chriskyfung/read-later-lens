@@ -179,7 +179,7 @@ describe('saveSingleFile', () => {
     expect(saveFileWithFallback).toHaveBeenCalledWith(json, 'a.json', 'application/json');
   });
 
-  it('rebuilds the source table in its own recorded layout and downloads a binary blob', async () => {
+  it('rebuilds the source table in its own recorded layout and saves it through the Save-As pipeline', async () => {
     const statements = [];
     const lifecycle = [];
     setSQL({
@@ -207,12 +207,18 @@ describe('saveSingleFile', () => {
     expect(statements[1].params).toEqual(['1', 't1', 'https://a.com', 'p']);
     expect(statements).toHaveLength(2);
 
-    expect(downloadBlob).toHaveBeenCalledTimes(1);
-    const [blob, filename] = downloadBlob.mock.calls[0];
-    expect(blob).toBeInstanceOf(Blob);
-    expect(blob.type).toBe('application/octet-stream');
-    expect(blob.size).toBe(3);
+    // Route through the same Save-As pipeline as every other source type, so a
+    // .db save offers the picker in Chromium and downloads elsewhere. The bytes
+    // arrive as a Uint8Array and are re-blobbed inside the helper (Blob clones
+    // its input), which is why this asserts on (data, name, mime) rather than a
+    // Blob.
+    expect(saveFileWithFallback).toHaveBeenCalledTimes(1);
+    const [data, filename, mimeType] = saveFileWithFallback.mock.calls[0];
+    expect(data).toBeInstanceOf(Uint8Array);
+    expect(Array.from(data)).toEqual([1, 2, 3]);
     expect(filename).toBe('a.db');
+    expect(mimeType).toBe('application/octet-stream');
+    expect(downloadBlob).not.toHaveBeenCalled();
 
     // Released exactly once, and only after export() copied the bytes out.
     expect(lifecycle).toEqual(['export', 'close']);
@@ -384,7 +390,7 @@ describe('saveSingleFile', () => {
     // faithful copy.
     expect(statements[0].sql).toContain('"mystery_column" TEXT');
     expect(statements[1].params).toEqual(['1', 't1', null]);
-    expect(downloadBlob).toHaveBeenCalledTimes(1);
+    expect(saveFileWithFallback).toHaveBeenCalledTimes(1);
     expect(el('toastMsg').innerText).toBe('已匯出 a.db，但有 1 個欄位無對應資料，已寫入空白');
   });
 

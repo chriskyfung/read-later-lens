@@ -52,7 +52,7 @@ export function downloadBlob(blob, filename) {
  * download (Firefox/Safari). A user-cancelled picker (AbortError) aborts
  * silently.
  *
- * @param {string} data
+ * @param {string|Uint8Array} data
  * @param {string} filename
  * @param {string} mimeType
  * @returns {Promise<void>}

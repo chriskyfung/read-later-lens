@@ -291,11 +291,14 @@ export async function saveSingleFile(fileId) {
           }),
         );
       });
-      // export() copies the bytes out of the database, so the blob handed to
-      // the downloader below stays valid after the handle is released.
+      // export() copies the bytes out of the database, so the buffer handed to
+      // the saver below stays valid after the handle is released. Blob clones
+      // its input, so the bytes are copied once more inside the helper rather
+      // than pinned until the object URL is revoked. Same Save-As pipeline as
+      // every other source type: picker where the browser has one, download
+      // everywhere else.
       const binaryArray = db.export();
-      const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
-      downloadBlob(blob, file.name);
+      await saveFileWithFallback(binaryArray, file.name, 'application/octet-stream');
     } finally {
       // The handle holds an in-WASM-heap database for the rest of the session.
       // close() is idempotent, but guard it so a failing teardown can never
@@ -303,7 +306,7 @@ export async function saveSingleFile(fileId) {
       try {
         db.close();
       } catch {
-        // Already closed, or nothing left to free — the download already ran.
+        // Already closed, or nothing left to free — the save already ran.
       }
     }
 
