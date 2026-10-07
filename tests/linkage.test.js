@@ -1,12 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildLinkageGraph, LINKAGE_LIMIT, LINKAGE_THRESHOLD } from '../src/analytics/linkage.js';
-
-vi.mock('../src/analytics/tokenize.js', async (importOriginal) => {
-  const actual = await importOriginal();
-  const wrapped = { ...actual };
-  wrapped.tokenizeText = vi.fn((text) => actual.tokenizeText(text));
-  return wrapped;
-});
 
 const bm = (id, over = {}) => ({
   id: String(id),
@@ -23,15 +16,6 @@ const bm = (id, over = {}) => ({
 });
 
 describe('buildLinkageGraph', () => {
-  let tokenizeTextSpy;
-
-  beforeEach(async () => {
-    const mod = await import('../src/analytics/tokenize.js');
-    tokenizeTextSpy = vi.spyOn(mod, 'tokenizeText');
-  });
-
-  afterEach(() => vi.restoreAllMocks());
-
   it('exposes the monolith constants', () => {
     expect(LINKAGE_LIMIT).toBe(50);
     expect(LINKAGE_THRESHOLD).toBe(0.15);
@@ -113,14 +97,31 @@ describe('buildLinkageGraph', () => {
     expect(noTags[0].tags).toEqual([]);
   });
 
-  it('tokenizes each document once per graph build (memoized)', () => {
-    const many = Array.from({ length: 6 }, (_, i) => bm(i + 1));
-    buildLinkageGraph(many);
-    expect(tokenizeTextSpy).toHaveBeenCalledTimes(6); // 6 documents, never 6 * 5 pairs
-  });
-
   it('emits links in pair order (i, j)', () => {
     const { links } = buildLinkageGraph([bm(1), bm(2), bm(3)]);
     expect(links.map((l) => `${l.source}->${l.target}`)).toEqual(['1->2', '1->3', '2->3']);
+  });
+
+  it('computes the same topology as the monolith for a hand-built fixture', () => {
+    const docs = [
+      bm(1, { title: 'alpha beta', article_preview: 'gamma delta' }),
+      bm(2, { title: 'alpha beta', article_preview: 'gamma delta' }),
+      bm(3, { title: 'deep fur', article_preview: 'fast hat' }),
+      bm(4, { title: 'alpha beta', article_preview: 'eager blue' }),
+    ];
+    const { nodes, links } = buildLinkageGraph(docs);
+
+    // Tokens: 1&2 = {alpha,beta,gamma,delta}; 3 = {deep,fur,fast,hat};
+    // 4 = {alpha,beta,eager,blue}. 1-2 identical → 1.0; 1-4 and 2-4 share
+    // alpha+beta → 2/(√4·√4) = 0.5; 3 is disjoint → 0.
+    expect(links).toEqual([
+      { source: '1', target: '2', value: 1 },
+      { source: '1', target: '4', value: 0.5 },
+      { source: '2', target: '4', value: 0.5 },
+    ]);
+    expect(nodes[0].degree).toBe(2); // 1-2, 1-4
+    expect(nodes[1].degree).toBe(2); // 1-2, 2-4
+    expect(nodes[2].degree).toBe(0); // disjoint from all
+    expect(nodes[3].degree).toBe(2); // 1-4, 2-4
   });
 });

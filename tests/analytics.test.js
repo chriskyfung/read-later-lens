@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { simpleStem, tokenizeText, tokenizeFrequency } from '../src/analytics/tokenize.js';
+import {
+  simpleStem,
+  tokenizeText,
+  tokenizeFrequency,
+  bookmarkText,
+} from '../src/analytics/tokenize.js';
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from '../src/analytics/stopwords.js';
 import { cosineSimilarity, mostSimilar, bookmarkTokenFreq } from '../src/analytics/similarity.js';
 import { wordCloudFrequencies, wordCloudItems } from '../src/analytics/wordcloud.js';
@@ -62,6 +67,31 @@ describe('tokenizeFrequency', () => {
     const freq = tokenizeFrequency('fox fox cat');
     expect(freq.get('fox')).toBe(2);
     expect(freq.get('cat')).toBe(1);
+  });
+});
+
+describe('bookmarkText', () => {
+  it('joins title and preview with a single space', () => {
+    expect(bookmarkText({ id: 'x', title: 'a', article_preview: 'b' })).toBe('a b');
+  });
+
+  it('treats missing title / preview as empty strings', () => {
+    expect(bookmarkText({ id: 'x', title: 'a' })).toBe('a ');
+    expect(bookmarkText({ id: 'x', article_preview: 'b' })).toBe(' b');
+    expect(bookmarkText({ id: 'x' })).toBe(' ');
+    expect(bookmarkText({})).toBe(' ');
+  });
+});
+
+describe('wordCloudFrequencies', () => {
+  it('retains first-seen order across the top-60 cap (stable tie-break)', () => {
+    const docs = Array.from({ length: 70 }, (_, i) => ({
+      id: String(i),
+      title: `item${i}`,
+      article_preview: '',
+    }));
+    const freq = wordCloudFrequencies(docs);
+    expect(freq.map(([word]) => word)).toEqual(docs.map((d) => d.title).slice(0, 60));
   });
 });
 

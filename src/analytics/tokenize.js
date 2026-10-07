@@ -69,7 +69,18 @@ export function tokenizeText(text) {
  *
  * @param {string} text
  * @returns {Map<string, number>}
+
+/**
+ * Text source for frequency analysis: bookmark title + plain-text preview.
+ * Single definition so field renames/additions happen in one place.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @returns {string}
  */
+export function bookmarkText(b) {
+  return (b.title || '') + ' ' + (b.article_preview || '');
+}
+
 export function tokenizeFrequency(text) {
   const freq = new Map();
   for (const t of tokenizeText(text)) {
