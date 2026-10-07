@@ -4,6 +4,13 @@
  * Used by both the D3 linkage graph and the similarity recommendations modal.
  * Math matches the original monolith: dot product over term-frequency maps of
  * (title + article_preview).
+ *
+ * Architecture: two public APIs over one shared scoring core.
+ * - `bookmarkTokenFreq()` tokenizes and counts.
+ * - `cosineScore()` is the single, private scoring core (freq map in, score out).
+ * - `cosineSimilarity()` and `mostSimilar()` are thin facades over `cosineScore()`.
+ *   The scoring math was copy-pasted between the two functions; it now lives in
+ *   one place and cannot drift between the graph and the recommendations.
  */
 
 import { tokenizeText } from './tokenize.js';
@@ -30,10 +37,19 @@ export function bookmarkTokenFreq(b) {
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {number} 0..1
  */
-export function cosineSimilarity(a, b) {
-  const freqA = bookmarkTokenFreq(a);
-  const freqB = bookmarkTokenFreq(b);
-
+/**
+ * Cosine similarity from two pre-computed term-frequency maps.
+ *
+ * Core math: dot product over the combined vocabulary, divided by the product
+ * of the L2 norms of the two frequency vectors. Returns 0 when either vector
+ * is empty (no shared or no meaningful tokens).
+ *
+ * @param {Map<string, number>} freqA
+ * @param {Map<string, number>} freqB
+ * @returns {number} 0..1
+ * @private
+ */
+function cosineScore(freqA, freqB) {
   const vocab = new Set([...freqA.keys(), ...freqB.keys()]);
   let dot = 0;
   let normA = 0;
@@ -52,6 +68,17 @@ export function cosineSimilarity(a, b) {
 }
 
 /**
+ * Cosine similarity between two bookmarks (title + preview space).
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} a
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @returns {number} 0..1
+ */
+export function cosineSimilarity(a, b) {
+  return cosineScore(bookmarkTokenFreq(a), bookmarkTokenFreq(b));
+}
+
+/**
  * Rank all bookmarks by similarity to a target, excluding the target itself.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
@@ -64,24 +91,7 @@ export function mostSimilar(list, target, top = 5) {
 
   const results = list
     .filter((b) => b.id !== target.id)
-    .map((b) => {
-      const freqB = bookmarkTokenFreq(b);
-      const vocab = new Set([...targetFreq.keys(), ...freqB.keys()]);
-      let dot = 0;
-      let normA = 0;
-      let normB = 0;
-
-      for (const term of vocab) {
-        const ta = targetFreq.get(term) || 0;
-        const tb = freqB.get(term) || 0;
-        dot += ta * tb;
-        normA += ta * ta;
-        normB += tb * tb;
-      }
-
-      const score = normA > 0 && normB > 0 ? dot / (Math.sqrt(normA) * Math.sqrt(normB)) : 0;
-      return { doc: b, score };
-    })
+    .map((b) => ({ doc: b, score: cosineScore(targetFreq, bookmarkTokenFreq(b)) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, top);
 
