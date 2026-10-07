@@ -2,10 +2,18 @@
  * @fileoverview Light-weight tokenizer — CJK bigrams + English stemming.
  *
  * Mirrors the original `tokenizeText` / `simpleStem` exactly so word-cloud and
- * similarity results remain identical after the refactor.
+ * similarity results remain identical after the refactor. The character sets
+ * and token-policy constants live in `textConstants.js`.
  */
 
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
+import {
+  INVALID_CHARS,
+  CJK_CHAR,
+  ENGLISH_TOKEN,
+  DIGITS_ONLY,
+  MIN_TOKEN_LENGTH,
+} from './constants.js';
 
 /**
  * Light English stemmer (original behaviour, preserved).
@@ -31,19 +39,19 @@ export function simpleStem(word) {
  */
 export function tokenizeText(text) {
   if (!text) return [];
-  const cleaned = text.toLowerCase().replace(/[^\w\s\u4e00-\u9fa5\u3040-\u30ff]/g, ' ');
+  const cleaned = text.toLowerCase().replace(INVALID_CHARS, ' ');
   const rawTokens = cleaned.split(/\s+/);
   const tokens = [];
 
   for (const word of rawTokens) {
-    if (!word || word.length < 2) continue;
+    if (!word || word.length < MIN_TOKEN_LENGTH) continue;
 
     // English-like token
-    if (/^[a-z0-9]+$/.test(word)) {
-      if (!ENGLISH_STOPWORDS.has(word) && !/^\d+$/.test(word)) {
+    if (ENGLISH_TOKEN.test(word)) {
+      if (!ENGLISH_STOPWORDS.has(word) && !DIGITS_ONLY.test(word)) {
         tokens.push(simpleStem(word));
       }
-    } else if (/[\u4e00-\u9fa5\u3040-\u30ff]/.test(word)) {
+    } else if (CJK_CHAR.test(word)) {
       // CJK / CJK-mixed token — emit bigrams
       for (let i = 0; i < word.length - 1; i++) {
         const bigram = word.substring(i, i + 2);
