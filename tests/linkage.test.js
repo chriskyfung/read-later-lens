@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildLinkageGraph, LINKAGE_LIMIT, LINKAGE_THRESHOLD } from '../src/analytics/linkage.js';
+
+vi.mock('../src/analytics/tokenize.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  const wrapped = { ...actual };
+  wrapped.tokenizeText = vi.fn((text) => actual.tokenizeText(text));
+  return wrapped;
+});
 
 const bm = (id, over = {}) => ({
   id: String(id),
@@ -16,6 +23,15 @@ const bm = (id, over = {}) => ({
 });
 
 describe('buildLinkageGraph', () => {
+  let tokenizeTextSpy;
+
+  beforeEach(async () => {
+    const mod = await import('../src/analytics/tokenize.js');
+    tokenizeTextSpy = vi.spyOn(mod, 'tokenizeText');
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
   it('exposes the monolith constants', () => {
     expect(LINKAGE_LIMIT).toBe(50);
     expect(LINKAGE_THRESHOLD).toBe(0.15);
@@ -95,5 +111,16 @@ describe('buildLinkageGraph', () => {
     // tags fall back to [] when absent
     const { nodes: noTags } = buildLinkageGraph([bm(2, { tags: undefined })]);
     expect(noTags[0].tags).toEqual([]);
+  });
+
+  it('tokenizes each document once per graph build (memoized)', () => {
+    const many = Array.from({ length: 6 }, (_, i) => bm(i + 1));
+    buildLinkageGraph(many);
+    expect(tokenizeTextSpy).toHaveBeenCalledTimes(6); // 6 documents, never 6 * 5 pairs
+  });
+
+  it('emits links in pair order (i, j)', () => {
+    const { links } = buildLinkageGraph([bm(1), bm(2), bm(3)]);
+    expect(links.map((l) => `${l.source}->${l.target}`)).toEqual(['1->2', '1->3', '2->3']);
   });
 });

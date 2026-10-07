@@ -6,11 +6,12 @@
  * pairwise cosine-similarity edges above a threshold. Kept DOM- and d3-free so
  * the topology rules are unit-testable.
  *
- * Matches the original monolith: links when `cosineSimilarity > 0.15`, degree
- * incremented on both endpoints, `'unknown'` domain fallback, `www.` stripped.
+ * Matches the original monolith: links when the cosine similarity of a pair is
+ * strictly greater than the threshold, degree incremented on both endpoints,
+ * 'unknown' domain fallback, 'www.' stripped (first-occurrence semantics).
  */
 
-import { cosineSimilarity } from './similarity.js';
+import { bookmarkTokenFreq, cosineScore } from './similarity.js';
 
 /** Monolith cap for the graph (top 50 filtered bookmarks). */
 export const LINKAGE_LIMIT = 50;
@@ -31,6 +32,15 @@ export function buildLinkageGraph(bookmarks, options = {}) {
   const threshold = options.threshold ?? LINKAGE_THRESHOLD;
   const selected = bookmarks.slice(0, limit);
 
+  const { nodes, domains } = buildNodes(selected);
+  const freqs = selected.map(bookmarkTokenFreq); // one tokenizing pass per document
+  const links = buildLinks(nodes, freqs, threshold);
+
+  return { nodes, links, domains };
+}
+
+/** Derive node records and the domain set from a filtered selection. */
+function buildNodes(selected) {
   const domains = new Set();
   const nodes = selected.map((b) => {
     let domain = 'unknown';
@@ -42,11 +52,15 @@ export function buildLinkageGraph(bookmarks, options = {}) {
     domains.add(domain);
     return { id: b.id, title: b.title, url: b.url, domain, degree: 0, tags: b.tags || [] };
   });
+  return { nodes, domains };
+}
 
+/** Build pairwise links above the threshold, incrementing both endpoints' degree. */
+function buildLinks(nodes, freqs, threshold) {
   const links = [];
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      const sim = cosineSimilarity(selected[i], selected[j]);
+      const sim = cosineScore(freqs[i], freqs[j]);
       if (sim > threshold) {
         links.push({ source: nodes[i].id, target: nodes[j].id, value: sim });
         nodes[i].degree++;
@@ -54,6 +68,5 @@ export function buildLinkageGraph(bookmarks, options = {}) {
       }
     }
   }
-
-  return { nodes, links, domains };
+  return links;
 }

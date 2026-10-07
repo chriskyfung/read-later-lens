@@ -7,17 +7,18 @@
  *
  * Architecture: two public APIs over one shared scoring core.
  * - `bookmarkTokenFreq()` tokenizes and counts.
- * - `cosineScore()` is the single, private scoring core (freq map in, score out).
- * - `cosineSimilarity()` and `mostSimilar()` are thin facades over `cosineScore()`.
- *   The scoring math was copy-pasted between the two functions; it now lives in
- *   one place and cannot drift between the graph and the recommendations.
+ * - `cosineScore()` is the single scoring core (pre-computed freq maps in, score out).
+ * - `cosineSimilarity()` and `mostSimilar()` are thin facades over `cosineScore()`,
+ *   so the scoring math cannot drift between the graph and the recommendations.
+ *
+ * Note: the linkage graph builds each document's frequency map once (see
+ * `buildLinkageGraph` in `src/analytics/linkage.js`) and re-uses it across
+ * every pairwise score.
  */
 
 import { tokenizeText } from './tokenize.js';
 
 /**
- * Token frequency map for a bookmark's title + preview.
- *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {Map<string, number>}
  */
@@ -31,13 +32,6 @@ export function bookmarkTokenFreq(b) {
 }
 
 /**
- * Cosine similarity between two bookmarks (title + preview space).
- *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} a
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
- * @returns {number} 0..1
- */
-/**
  * Cosine similarity from two pre-computed term-frequency maps.
  *
  * Core math: dot product over the combined vocabulary, divided by the product
@@ -47,9 +41,8 @@ export function bookmarkTokenFreq(b) {
  * @param {Map<string, number>} freqA
  * @param {Map<string, number>} freqB
  * @returns {number} 0..1
- * @private
  */
-function cosineScore(freqA, freqB) {
+export function cosineScore(freqA, freqB) {
   const vocab = new Set([...freqA.keys(), ...freqB.keys()]);
   let dot = 0;
   let normA = 0;
@@ -68,8 +61,6 @@ function cosineScore(freqA, freqB) {
 }
 
 /**
- * Cosine similarity between two bookmarks (title + preview space).
- *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} a
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {number} 0..1
