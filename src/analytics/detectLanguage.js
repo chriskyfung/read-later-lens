@@ -7,8 +7,14 @@
  * bundle budget makes sense.
  */
 
-const CJK_RE = /[\u4e00-\u9fa5]/g;
-const JA_RE = /[\u3040-\u30ff]/g;
+import { CJK_IDEOGRAPHS, KANA } from './constants.js';
+
+const CJK_RE = new RegExp(`[${CJK_IDEOGRAPHS}]`, 'g');
+const JA_RE = new RegExp(`[${KANA}]`, 'g');
+
+/** Minimum kana count that triggers Japanese; minimum ideograph count that triggers Chinese. */
+const JA_MIN_COUNT = 3;
+const CJK_MIN_COUNT = 3;
 
 /**
  * @param {string} text
@@ -18,7 +24,7 @@ export function detectLanguage(text) {
   if (!text) return 'en';
   const cjk = (text.match(CJK_RE) || []).length;
   const ja = (text.match(JA_RE) || []).length;
-  if (ja > 3) return 'ja';
-  if (cjk > 3) return 'zh';
+  if (ja > JA_MIN_COUNT) return 'ja';
+  if (cjk > CJK_MIN_COUNT) return 'zh';
   return 'en';
 }
