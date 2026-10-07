@@ -102,6 +102,53 @@ describe('mostSimilar', () => {
     const freq = bookmarkTokenFreq({ id: 'x', title: 'fox', article_preview: 'fox fox' });
     expect(freq.get('fox')).toBe(3);
   });
+
+  it('returns [] for an empty list', () => {
+    expect(mostSimilar([], { id: 'x', title: 'a', article_preview: 'b' })).toEqual([]);
+  });
+
+  it('returns [] when top is 0', () => {
+    expect(
+      mostSimilar(
+        [{ id: 'a', title: 'a', article_preview: 'b' }],
+        { id: 'x', title: 'a', article_preview: 'b' },
+        0,
+      ),
+    ).toEqual([]);
+  });
+
+  it('ranks every bookmark and excludes none when the target is not in the list', () => {
+    const list = [
+      { id: 'a', title: 'apple pie', article_preview: '' },
+      { id: 'b', title: 'zebra', article_preview: '' },
+    ];
+    const target = { id: 't', title: 'apple pie', article_preview: '' };
+    const res = mostSimilar(list, target, 5);
+    expect(res.map((r) => r.doc.id)).toEqual(['a', 'b']);
+    expect(res[0].score).toBeCloseTo(1);
+  });
+
+  it('preserves insertion order on score ties', () => {
+    const list = [
+      { id: 'x', title: 'apple pie', article_preview: '' },
+      { id: 'y', title: 'apple pie', article_preview: '' },
+      { id: 'z', title: 'zzz', article_preview: '' },
+    ];
+    const target = { id: 't', title: 'apple pie', article_preview: '' };
+    const res = mostSimilar(list, target, 5);
+    expect(res.map((r) => r.doc.id)).toEqual(['x', 'y', 'z']);
+  });
+
+  it('returns all-zero scores when the target has no meaningful tokens', () => {
+    const list = [
+      { id: 'a', title: 'the the the', article_preview: '' },
+      { id: 'b', title: 'alpha', article_preview: '' },
+    ];
+    const target = { id: 't', title: 'the', article_preview: '' };
+    const res = mostSimilar(list, target, 5);
+    expect(res.map((r) => r.score)).toEqual([0, 0]);
+    expect(res.map((r) => r.doc.id)).toEqual(['a', 'b']);
+  });
 });
 
 describe('wordcloud', () => {
