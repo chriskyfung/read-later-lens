@@ -53,6 +53,10 @@ export default [
         },
       ],
       'no-useless-escape': 'off',
+      // Never-reassigned bindings must be const: the analytics word loop
+      // shipped `let` for years because neither the recommended set nor this
+      // file flagged it.
+      'prefer-const': 'error',
       // DOM-sink tripwire: an interpolated template assigned to innerHTML (or
       // passed to insertAdjacentHTML) is how imported data becomes markup.
       // Escape it with escapeHtml() (src/utils/dom.js) or build nodes with

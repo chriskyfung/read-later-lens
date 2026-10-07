@@ -35,7 +35,7 @@ export function tokenizeText(text) {
   const rawTokens = cleaned.split(/\s+/);
   const tokens = [];
 
-  for (let word of rawTokens) {
+  for (const word of rawTokens) {
     if (!word || word.length < 2) continue;
 
     // English-like token
