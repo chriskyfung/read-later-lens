@@ -16,19 +16,14 @@
  * every pairwise score.
  */
 
-import { tokenizeText } from './tokenize.js';
+import { bookmarkText, tokenizeFrequency } from './tokenize.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {Map<string, number>}
  */
 export function bookmarkTokenFreq(b) {
-  const freq = new Map();
-  const text = (b.title || '') + ' ' + (b.article_preview || '');
-  for (const t of tokenizeText(text)) {
-    freq.set(t, (freq.get(t) || 0) + 1);
-  }
-  return freq;
+  return tokenizeFrequency(bookmarkText(b));
 }
 
 /**

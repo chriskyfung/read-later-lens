@@ -8,7 +8,7 @@
  * (top 60 terms, size ratio 0.75 + (count/max)*1.5).
  */
 
-import { tokenizeText } from './tokenize.js';
+import { bookmarkText, tokenizeFrequency } from './tokenize.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
@@ -17,9 +17,8 @@ import { tokenizeText } from './tokenize.js';
 export function wordCloudFrequencies(list) {
   const freq = new Map();
   for (const b of list) {
-    const text = (b.title || '') + ' ' + (b.article_preview || '');
-    for (const t of tokenizeText(text)) {
-      freq.set(t, (freq.get(t) || 0) + 1);
+    for (const [t, n] of tokenizeFrequency(bookmarkText(b))) {
+      freq.set(t, (freq.get(t) || 0) + n);
     }
   }
   return Array.from(freq.entries())
