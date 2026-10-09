@@ -18,6 +18,8 @@ export const KANA = '\u3040-\u30ff';
 export const CJK_RANGES = `${CJK_IDEOGRAPHS}${KANA}`;
 
 /* ---- Tokenizer regexes ---- */
+/** Whitespace run — token boundary. */
+export const WHITESPACE = /\s+/;
 
 /** Everything *not* a Latin word char, whitespace, or CJK — replaced with ' '. */
 export const INVALID_CHARS = new RegExp(`[^\\w\\s${CJK_RANGES}]`, 'g');

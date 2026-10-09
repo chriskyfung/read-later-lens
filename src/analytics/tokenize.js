@@ -13,6 +13,7 @@ import {
   ENGLISH_TOKEN,
   DIGITS_ONLY,
   MIN_TOKEN_LENGTH,
+  WHITESPACE,
 } from './constants.js';
 
 /**
@@ -40,7 +41,7 @@ export function simpleStem(word) {
 export function tokenizeText(text) {
   if (!text) return [];
   const cleaned = text.toLowerCase().replace(INVALID_CHARS, ' ');
-  const rawTokens = cleaned.split(/\s+/);
+  const rawTokens = cleaned.split(WHITESPACE);
   const tokens = [];
 
   for (const word of rawTokens) {
