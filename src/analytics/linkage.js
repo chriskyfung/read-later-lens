@@ -12,6 +12,7 @@
  */
 
 import { bookmarkTokenFreq, cosineScore } from './similarity.js';
+import { extractDomain } from '../utils/url.js';
 
 /** Monolith cap for the graph (top 50 filtered bookmarks). */
 export const LINKAGE_LIMIT = 50;
@@ -43,12 +44,7 @@ export function buildLinkageGraph(bookmarks, options = {}) {
 function buildNodes(selected) {
   const domains = new Set();
   const nodes = selected.map((b) => {
-    let domain = 'unknown';
-    try {
-      domain = new URL(b.url).hostname.replace('www.', '');
-    } catch {
-      // Invalid URL — keep the 'unknown' fallback (monolith parity).
-    }
+    const domain = extractDomain(b.url, 'unknown');
     domains.add(domain);
     return { id: b.id, title: b.title, url: b.url, domain, degree: 0, tags: b.tags || [] };
   });
