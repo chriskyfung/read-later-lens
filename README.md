@@ -46,7 +46,7 @@ pnpm dev
 
 Then open the URL the dev server prints (usually `http://localhost:5173`).
 
-> Works best in modern Chrome/Edge/Firefox. The app is not designed for fully offline operation — its dependencies load from npm at dev/build time, and first load in the browser still needs an internet connection to load the CDN libraries listed below.
+> Works best in modern Chrome/Edge/Firefox. The app is not designed for fully offline operation — its dependencies load from npm at dev/build time, and it makes **no third-party requests**: every runtime library ships from the bundle, so once the app is served, it keeps working without an internet connection.
 
 ### Development scripts
 
@@ -171,14 +171,14 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 ## Technology Stack
 
-D3.js remains a runtime CDN dependency. PapaParse, Tailwind CSS, SQL.js, and the rest ship from npm: PapaParse is bundled so the browser runs the parser the round-trip test exercises end-to-end, Tailwind CSS is compiled at build time by `@tailwindcss/vite`, and SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
+All runtime libraries ship from npm and are bundled by Vite: PapaParse is bundled so the browser runs the parser the round-trip test exercises end-to-end, Tailwind CSS is compiled at build time by `@tailwindcss/vite`, D3.js is imported by `src/views/linkage.js` and bundled into the app (no runtime CDN), and SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
 
 | Library                                                          | Version | Loading            | Purpose                                           |
 | ---------------------------------------------------------------- | ------- | ------------------ | ------------------------------------------------- |
 | [Tailwind CSS](https://tailwindcss.com/)                         | 4.3.3   | npm (bundled)      | Utility-first styling and the dark slate UI       |
 | [PapaParse](https://github.com/mholt/PapaParse)                  | 5.7.0   | npm (bundled)      | CSV parsing                                       |
 | [SQL.js](https://sql.js.org/)                                    | 1.14.2  | npm (lazy bundled) | WebAssembly SQLite — `.db` import/parse/re-export |
-| [D3.js](https://d3js.org/)                                       | 7.8.5   | CDN (runtime)      | Force-directed concept linkage graph              |
+| [D3.js](https://d3js.org/)                                       | 7.9.0   | npm (bundled)      | Force-directed concept linkage graph              |
 | [idb](https://github.com/jakearchibald/idb)                      | 8.x     | npm (bundled)      | IndexedDB promise wrapper                         |
 | [Vite](https://vite.dev/)                                        | 8.x     | npm (dev)          | Dev server and production bundler                 |
 | [Vitest](https://vitest.dev/)                                    | 4.x     | npm (dev)          | Unit testing framework                            |
@@ -195,7 +195,7 @@ The whole app — interface, data processing, NLP/analytics, and visualizations 
 - The **concept graph is capped at the top 50** filtered bookmarks to keep the topology readable.
 - **The official Instapaper account CSV is not supported** (links-only schema, no previews or ids) — the picker's sanity check blocks it and suggests an InstapaperScraper export instead. Header fingerprinting covers CSV/JSON only; SQLite files are not header-checked.
 - **SQLite source re-export** reproduces the source's own table name and column list, which is recorded at import time and cached. Raw `.db` buffers are still **not** cached to IndexedDB (see [Storage & Privacy](#storage--privacy)), so a source imported by a version that predates schema recording cannot be re-emitted as a `.db` — the app refuses and points you at the unified export rather than writing a file with a different schema. Columns the app has no value for are re-emitted as `NULL` and the count is reported.
-- **D3.js** still loads from a CDN, so the app needs an internet connection on first load; it is not designed for fully offline operation. PapaParse, Tailwind CSS, and the rest are bundled and do not need one. `index.html` still carries the D3 `<script>` tag; bundling it needs a visual check of the concept graph and is left to a follow-up.
+- The **concept graph** is the only view with a visual requirement — render it once (`pnpm dev`, open the graph tab, drag/zoom) to make sure the bundled D3 paints correctly. Everything else ships as bundled modules, and the app makes no third-party requests.
 - The project is a **single-page app with bundled dependencies** — there is a dev/build step (Vite + pnpm), not a self-contained single file.
 
 ## Contributing
