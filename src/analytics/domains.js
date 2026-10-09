@@ -9,15 +9,13 @@
  * @param {number} [limit=15]
  * @returns {Array<[string, number]>} sorted desc by count
  */
+import { extractDomain } from '../utils/url.js';
+
 export function topDomains(list, limit = 15) {
   const map = new Map();
   for (const b of list) {
-    try {
-      const d = new URL(b.url).hostname.replace('www.', '');
-      if (d) map.set(d, (map.get(d) || 0) + 1);
-    } catch {
-      // Invalid URL — skip.
-    }
+    const d = extractDomain(b.url);
+    if (d) map.set(d, (map.get(d) || 0) + 1);
   }
   return Array.from(map.entries())
     .sort((a, b) => b[1] - a[1])
