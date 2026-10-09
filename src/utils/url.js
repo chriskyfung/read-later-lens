@@ -5,10 +5,6 @@
  * * `src/analytics/domains.js` — top-domains, skip-on-invalid
  * * `src/analytics/linkage.js` — graph node domains, 'unknown' fallback
  * * `src/views/bookmarks.js` — bookmark domain badge, 'web' fallback
- *
- * Known quirk (preserved from the original call sites, fixed in the follow-up
- * `fix(utils)` commit): `www.` is stripped on first occurrence anywhere in the
- * hostname, not just a leading prefix.
  */
 
 /**
@@ -22,7 +18,7 @@
  */
 export function extractDomain(url, fallback = '') {
   try {
-    return new URL(url).hostname.replace('www.', '');
+    return new URL(url).hostname.replace(/^www\./, '');
   } catch {
     return fallback;
   }

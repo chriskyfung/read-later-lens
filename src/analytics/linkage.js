@@ -8,7 +8,7 @@
  *
  * Matches the original monolith: links when the cosine similarity of a pair is
  * strictly greater than the threshold, degree incremented on both endpoints,
- * 'unknown' domain fallback, 'www.' stripped (first-occurrence semantics).
+ * 'unknown' domain fallback, 'www.' leading prefix stripped.
  */
 
 import { bookmarkTokenFreq, cosineScore } from './similarity.js';
