@@ -9,12 +9,12 @@
 
 import { CJK_IDEOGRAPHS, KANA } from './constants.js';
 
-const CJK_RE = new RegExp(`[${CJK_IDEOGRAPHS}]`, 'g');
+const IDEOGRAPH_RE = new RegExp(`[${CJK_IDEOGRAPHS}]`, 'g');
 const JA_RE = new RegExp(`[${KANA}]`, 'g');
 
 /** Minimum kana count that triggers Japanese; minimum ideograph count that triggers Chinese. */
 const JA_MIN_COUNT = 3;
-const CJK_MIN_COUNT = 3;
+const IDEOGRAPH_MIN_COUNT = 3;
 
 /**
  * @param {string} text
@@ -22,9 +22,9 @@ const CJK_MIN_COUNT = 3;
  */
 export function detectLanguage(text) {
   if (!text) return 'en';
-  const cjk = (text.match(CJK_RE) || []).length;
+  const ideographs = (text.match(IDEOGRAPH_RE) || []).length;
   const ja = (text.match(JA_RE) || []).length;
   if (ja > JA_MIN_COUNT) return 'ja';
-  if (cjk > CJK_MIN_COUNT) return 'zh';
+  if (ideographs > IDEOGRAPH_MIN_COUNT) return 'zh';
   return 'en';
 }

@@ -3,7 +3,7 @@
  *
  * Mirrors the original `tokenizeText` / `simpleStem` exactly so word-cloud and
  * similarity results remain identical after the refactor. The character sets
- * and token-policy constants live in `textConstants.js`.
+ * and token-policy constants live in `constants.js`.
  */
 
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
