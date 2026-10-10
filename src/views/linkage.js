@@ -25,19 +25,36 @@ import { getFilteredBookmarksTop } from '../core/filters.js';
 import { buildLinkageGraph } from '../analytics/linkage.js';
 import { openReaderModal } from './readerModal.js';
 import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../components/linkage/graph.js';
+import { activateTab } from './tabs.js';
+import { showToast } from '../utils/dom.js';
 
 let currentSvg = null;
 let currentZoom = null;
 let currentSimulation = null;
+let currentNodes = null;
+let currentNodeSelection = null;
+let currentWidth = 0;
+let currentHeight = 0;
+let focusedNodeId = null;
+let pendingFocusCenter = false;
 
 /**
  * Render the concept-linkage graph tab.
  */
 export function renderConceptLinkageGraph() {
+  if (currentSimulation) currentSimulation.stop();
+  // Clear render + focus state first, so an early return (no container, or an
+  // empty library) cannot leave stale references for the focus API below.
+  currentSimulation = null;
+  currentSvg = null;
+  currentZoom = null;
+  currentNodes = null;
+  currentNodeSelection = null;
+  resetFocus();
+
   const container = document.getElementById('d3GraphCanvas');
   if (!container) return;
   container.innerHTML = '';
-  if (currentSimulation) currentSimulation.stop();
 
   const tooltip = document.getElementById('graphTooltip');
   const ttTitle = document.getElementById('ttTitle');
@@ -52,6 +69,8 @@ export function renderConceptLinkageGraph() {
 
   const width = container.clientWidth || 800;
   const height = container.clientHeight || 500;
+  currentWidth = width;
+  currentHeight = height;
 
   const { nodes: nodesList, links, domains } = buildLinkageGraph(filtered);
 
@@ -112,6 +131,9 @@ export function renderConceptLinkageGraph() {
     .append('g')
     .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
 
+  currentNodes = nodesList;
+  currentNodeSelection = node;
+
   // Append Circles
   node
     .append('circle')
@@ -120,6 +142,9 @@ export function renderConceptLinkageGraph() {
     .attr('stroke', '#0f172a')
     .attr('stroke-width', 2)
     .attr('class', 'cursor-pointer transition-all duration-200');
+
+  // Node emphasis (focused ring / dimmed others) is applied by focusLinkageNode,
+  // not here: a fresh render starts with no highlight.
 
   // Append Labels
   node
@@ -169,6 +194,17 @@ export function renderConceptLinkageGraph() {
       .attr('y2', (d) => d.target.y);
 
     node.attr('transform', (d) => `translate(${d.x},${d.y})`);
+
+    centerFocusedNode();
+  });
+
+  simulation.on('end', () => {
+    if (focusedNodeId != null) {
+      // The first-tick centering used early coordinates; re-center once on the
+      // final layout so the focused node is truly centered after settling.
+      pendingFocusCenter = true;
+      centerFocusedNode();
+    }
   });
 
   function dragstarted(event, d) {
@@ -188,6 +224,59 @@ export function renderConceptLinkageGraph() {
 }
 
 /**
+ * Apply the current node emphasis to the rendered selection: the focused
+ * bookmark's circle gains an indigo ring (stroke-width 4) and every other node
+ * dims to 40% opacity. No-op when nothing is focused.
+ */
+function applyFocusStyles() {
+  if (currentNodeSelection == null || focusedNodeId == null) return;
+  currentNodeSelection.attr('opacity', (d) => (d.id === focusedNodeId ? 1 : 0.4));
+  currentNodeSelection
+    .select('circle')
+    .attr('stroke', (d) => (d.id === focusedNodeId ? '#6366f1' : '#0f172a'))
+    .attr('stroke-width', (d) => (d.id === focusedNodeId ? 4 : 2));
+}
+
+/** Remove any emphasis, restoring every node to its default appearance. */
+function clearFocusStyles() {
+  if (currentNodeSelection == null) return;
+  currentNodeSelection.attr('opacity', 1);
+  currentNodeSelection.select('circle').attr('stroke', '#0f172a').attr('stroke-width', 2);
+}
+
+/**
+ * Center the viewport on the focused bookmark (animated, zoom k=1.6) so the
+ * user always sees exactly which node is highlighted. Idempotent — repeated
+ * calls mid-animation are ignored; the centering is re-applied when the
+ * simulation settles (the 'end' event).
+ */
+function centerFocusedNode() {
+  if (focusedNodeId == null || pendingFocusCenter === false) return;
+  const node = currentNodes ? currentNodes.find((d) => d.id === focusedNodeId) : null;
+  if (!node || !currentSvg || !currentZoom) {
+    pendingFocusCenter = false;
+    return;
+  }
+  const dx = currentWidth / 2 - node.x * 1.6;
+  const dy = currentHeight / 2 - node.y * 1.6;
+  currentSvg
+    .transition()
+    .duration(450)
+    .call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(1.6));
+  pendingFocusCenter = false;
+}
+
+/**
+ * Clear the node emphasis (graph re-rendered or view reset), restoring the
+ * default view with no highlighted bookmark.
+ */
+function resetFocus() {
+  clearFocusStyles();
+  focusedNodeId = null;
+  pendingFocusCenter = false;
+}
+
+/**
  * Zoom the graph by a multiplicative factor (toolbar buttons).
  *
  * @param {number} factor
@@ -202,5 +291,50 @@ export function zoomGraphBy(factor) {
 export function resetGraphZoom() {
   if (currentSvg && currentZoom)
     currentSvg.transition().call(currentZoom.transform, d3.zoomIdentity);
+  resetFocus();
   renderConceptLinkageGraph();
+}
+
+/**
+ * Highlight and center a rendered node by bookmark id. Returns false — and
+ * drops any stale highlight — when the id has no node in the current graph
+ * (e.g. it fell outside the top-50 cap or was filtered out).
+ *
+ * @param {string} id
+ * @returns {boolean} whether a node was found and focused
+ */
+export function focusLinkageNode(id) {
+  const node = currentNodes ? currentNodes.find((d) => d.id === id) : null;
+  if (!node) {
+    clearFocusStyles();
+    resetFocus();
+    return false;
+  }
+  focusedNodeId = id;
+  applyFocusStyles();
+  pendingFocusCenter = true;
+  // A settled simulation will not tick again, so center immediately in that
+  // case; otherwise the tick handler centers on the first repositioned frame.
+  if (!currentSimulation || currentSimulation.alpha() <= currentSimulation.alphaMin()) {
+    centerFocusedNode();
+  }
+  return true;
+}
+
+/**
+ * Switch to the linkage tab, render the graph, and focus the given bookmark's
+ * node. The single entry point the bookmark-card and reader-modal buttons use.
+ * Toasts when the bookmark is not among the rendered nodes.
+ *
+ * @param {string} id
+ * @returns {boolean} whether a node was found and focused
+ */
+export function openLinkageForBookmark(id) {
+  activateTab('linkage');
+  renderConceptLinkageGraph();
+  const focused = focusLinkageNode(id);
+  if (!focused) {
+    showToast('該書籤不在目前的關聯圖中（超出前 50 筆或已被篩除）');
+  }
+  return focused;
 }
