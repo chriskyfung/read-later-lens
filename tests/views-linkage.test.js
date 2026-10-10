@@ -95,6 +95,53 @@ function parseTransform(transform) {
   return m ? { x: +m[1], y: +m[2], k: +m[3] } : null;
 }
 
+/**
+ * Wait for the deferred topology (Frame B) to land.
+ *
+ * A focused render paints the bookmark in one call and appends the rest of the
+ * graph in a later macrotask, so anything that asserts on the *whole* graph
+ * has to wait for it. Polling on a count rather than a fixed sleep keeps this
+ * robust when the fallback timer fires sooner or later than expected.
+ *
+ * @param {HTMLElement} canvas
+ * @param {number} expectedCircles
+ * @param {number} timeout
+ */
+async function waitForTopology(canvas, expectedCircles, timeout = 3000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (canvas.querySelectorAll('circle').length >= expectedCircles) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(
+    `topology did not arrive: expected ${expectedCircles} circles, ` +
+      `found ${canvas.querySelectorAll('circle').length}`,
+  );
+}
+
+/**
+ * Map each rendered node to its emphasis state, keyed by label text.
+ *
+ * Keying by label rather than index matters: a focused render appends the
+ * TARGET first and the rest afterwards, so DOM order is target-first and does
+ * NOT follow filtered order.
+ *
+ * @param {HTMLElement} canvas
+ * @returns {Map<string, {stroke: string|null, opacity: string|null}>}
+ */
+function nodesByLabel(canvas) {
+  const out = new Map();
+  for (const g of canvas.querySelectorAll('g.nodes > g')) {
+    const label = g.querySelector('text');
+    if (!label) continue;
+    out.set(label.textContent, {
+      stroke: g.querySelector('circle').getAttribute('stroke'),
+      opacity: g.getAttribute('opacity'),
+    });
+  }
+  return out;
+}
+
 afterEach(() => {
   resetModuleState();
 });
@@ -249,7 +296,7 @@ describe('focus & camera API', () => {
   });
 
   it('centres the focused node in the SAME call, before any simulation tick', () => {
-    setBookmarks([BM(10, 'alpha beta'), BM(20, 'gamma delta')]);
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
     createCanvas();
 
     // Deliberately NOT awaiting: the whole point of pinning + a synchronous
@@ -278,43 +325,110 @@ describe('focus & camera API', () => {
     expect(ringed[0].parentElement.getAttribute('transform')).toBe('translate(400,250)');
   });
 
-  it('paints the ring before the first tick, not after it', () => {
-    setBookmarks([BM(10, 'alpha beta'), BM(20, 'gamma delta')]);
+  it('paints only the bookmark in the first frame, then the rest of the graph', async () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
     createCanvas();
 
     openLinkageForBookmark('20');
 
+    // Frame A: exactly one circle, and it is the bookmark we asked for.
     const canvas = document.getElementById('d3GraphCanvas');
-    const circles = [...canvas.querySelectorAll('circle')];
-    expect(circles).toHaveLength(2);
-    const ringed = circles.filter((c) => c.getAttribute('stroke') === '#6366f1');
-    expect(ringed).toHaveLength(1);
-    expect(ringed[0].parentElement.getAttribute('opacity')).toBe('1');
+    expect(canvas.querySelectorAll('circle')).toHaveLength(1);
+    const first = canvas.querySelector('circle');
+    expect(first.getAttribute('stroke')).toBe('#6366f1');
+    expect(first.parentElement.getAttribute('opacity')).toBe('1');
+    expect(canvas.querySelector('text').textContent).toBe('gamma beta');
+
+    // Frame B: the rest of the topology arrives afterwards.
+    await waitForTopology(canvas, 2);
+    expect(canvas.querySelectorAll('circle')).toHaveLength(2);
+    const nodes = nodesByLabel(canvas);
+    expect(nodes.get('gamma beta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+    expect(nodes.get('alpha zeta')).toEqual({ stroke: '#0f172a', opacity: '0.4' });
   });
 
   it('moves the highlight between nodes on repeated calls', async () => {
     setBookmarks([BM(10, 'alpha beta gamma'), BM(20, 'delta epsilon zeta')]);
 
     openLinkageForBookmark('10');
-    const circles = document.getElementById('d3GraphCanvas').querySelectorAll('circle');
-    expect(circles).toHaveLength(2);
-    expect(circles[0].getAttribute('stroke')).toBe('#6366f1');
-    expect(circles[0].getAttribute('stroke-width')).toBe('4');
-    expect(circles[0].parentElement.getAttribute('opacity')).toBe('1');
-    expect(circles[1].getAttribute('stroke')).toBe('#0f172a');
-    expect(circles[1].getAttribute('stroke-width')).toBe('2');
-    expect(circles[1].parentElement.getAttribute('opacity')).toBe('0.4');
+    await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
+    let nodes = nodesByLabel(document.getElementById('d3GraphCanvas'));
+    expect(nodes.get('alpha beta...')).toEqual({ stroke: '#6366f1', opacity: '1' });
+    expect(nodes.get('delta epsi...')).toEqual({ stroke: '#0f172a', opacity: '0.4' });
 
     openLinkageForBookmark('20');
     // Re-query: the second call re-rendered and replaced the SVG.
-    const next = document.getElementById('d3GraphCanvas').querySelectorAll('circle');
-    expect(next).toHaveLength(2);
-    expect(next[0].getAttribute('stroke')).toBe('#0f172a');
-    expect(next[0].parentElement.getAttribute('opacity')).toBe('0.4');
-    expect(next[1].getAttribute('stroke')).toBe('#6366f1');
-    expect(next[1].parentElement.getAttribute('opacity')).toBe('1');
+    await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
+    nodes = nodesByLabel(document.getElementById('d3GraphCanvas'));
+    expect(nodes.get('alpha beta...')).toEqual({ stroke: '#0f172a', opacity: '0.4' });
+    expect(nodes.get('delta epsi...')).toEqual({ stroke: '#6366f1', opacity: '1' });
 
     await waitForTransform(document.getElementById('d3GraphCanvas'));
+  });
+
+  it('discards a superseded frame instead of appending twice', async () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+    createCanvas();
+
+    // Two clicks inside one macrotask: only the second render's Frame B may run.
+    openLinkageForBookmark('10');
+    openLinkageForBookmark('20');
+
+    const canvas = document.getElementById('d3GraphCanvas');
+    await waitForTopology(canvas, 2);
+
+    // Exactly one node per bookmark — not 3 or 4 from a stale frame.
+    expect(canvas.querySelectorAll('circle')).toHaveLength(2);
+    const nodes = nodesByLabel(canvas);
+    expect([...nodes.keys()].sort()).toEqual(['alpha zeta', 'gamma beta']);
+    // ...and the highlight matches the SECOND request.
+    expect(nodes.get('gamma beta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+  });
+
+  it('leaves no pin behind for an unfocused render', async () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+    createCanvas();
+
+    // Focused first (which pins), then a plain render of the same data.
+    openLinkageForBookmark('10');
+    await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
+    renderConceptLinkageGraph();
+    await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
+
+    // A leaked fx would freeze every node at the centre. Wait for the
+    // simulation to move at least one node away from its seed position.
+    const canvas = document.getElementById('d3GraphCanvas');
+    const seedPositions = [...canvas.querySelectorAll('g.nodes > g')].map((g) =>
+      g.getAttribute('transform'),
+    );
+    const deadline = Date.now() + 3000;
+    let moved = false;
+    while (Date.now() < deadline && !moved) {
+      await new Promise((r) => setTimeout(r, 50));
+      moved = [...canvas.querySelectorAll('g.nodes > g')].some(
+        (g, i) => g.getAttribute('transform') !== seedPositions[i],
+      );
+    }
+    expect(moved).toBe(true);
+  });
+
+  it('grows the focused node once the link pass gives it a degree', async () => {
+    // Three near-identical docs so the target's degree reaches 2. Degree 1
+    // would not prove anything: the radius floor is
+    // max(8, 4 + sqrt(1) * 4) === 8, i.e. the Frame A placeholder value.
+    const text = 'apple pie recipe tart pastry cherry';
+    setBookmarks([BM(10, text), BM(20, text), BM(30, text)]);
+    createCanvas();
+
+    openLinkageForBookmark('10');
+    const canvas = document.getElementById('d3GraphCanvas');
+    expect(canvas.querySelector('circle').getAttribute('r')).toBe('8');
+
+    await waitForTopology(canvas, 3);
+    const ringed = [...canvas.querySelectorAll('circle')].find(
+      (c) => c.getAttribute('stroke') === '#6366f1',
+    );
+    expect(Number(ringed.getAttribute('r'))).toBeGreaterThan(8);
   });
 
   it('returns false, drops the highlight and toasts when the id has no node', async () => {

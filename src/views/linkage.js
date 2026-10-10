@@ -22,7 +22,7 @@
 
 import * as d3 from 'd3';
 import { getFilteredBookmarksTop } from '../core/filters.js';
-import { buildLinkageGraph } from '../analytics/linkage.js';
+import { buildLinkageGraph, buildGraphNodes } from '../analytics/linkage.js';
 import { openReaderModal } from './readerModal.js';
 import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../components/linkage/graph.js';
 import { activateTab } from './tabs.js';
@@ -40,6 +40,46 @@ let pendingFocusCenter = false;
 
 /** Zoom factor applied when focusing a node. Shared by both camera paths. */
 export const FOCUS_ZOOM = 1.6;
+
+/**
+ * Multiplier on d3's origin spiral for the not-yet-positioned nodes of a
+ * focused render. d3 seeds them in a tight ~10px spiral around the origin,
+ * which on a focused graph means heavily overlapping `forceCollide` radii and
+ * an explosive first tick. Spreading them lets the graph grow outward from the
+ * centred bookmark instead.
+ */
+const INITIAL_SPREAD = 2.5;
+
+/** Monotonic id of the most recent render; lets a deferred frame self-cancel. */
+let renderGeneration = 0;
+
+/** Handle of a deferred (Frame B) topology build, so it can be cancelled. */
+let pendingTopologyTimer = null;
+
+/** Cancel a deferred topology build, if one is outstanding. */
+function cancelPendingTopology() {
+  if (pendingTopologyTimer == null) return;
+  clearTimeout(pendingTopologyTimer);
+  pendingTopologyTimer = null;
+}
+
+/**
+ * Run `fn` after the browser has had a chance to paint.
+ *
+ * Frame A of a focused render must be on screen before Frame B's topology pass
+ * blocks the main thread, so this is `requestAnimationFrame` followed by a
+ * macrotask (a rAF callback runs *before* paint, so deferring inside it is what
+ * actually yields). Falls back to a plain macrotask where rAF is unavailable
+ * (jsdom without `pretendToBeVisual`), which still lets the microtask queue
+ * drain — enough for the tests, which never assert on paint.
+ */
+function afterPaint(fn) {
+  if (typeof window === 'object' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(() => setTimeout(fn, 0));
+  } else {
+    setTimeout(fn, 0);
+  }
+}
 
 /**
  * Render the concept-linkage graph tab.
@@ -62,6 +102,10 @@ export function renderConceptLinkageGraph(focusId = null) {
   currentNodes = null;
   currentNodeSelection = null;
   resetFocus();
+  // Any topology still owed by a previous render belongs to a graph that is
+  // about to be replaced, and running it would append nodes twice.
+  cancelPendingTopology();
+  const generation = ++renderGeneration;
 
   const container = document.getElementById('d3GraphCanvas');
   if (!container) return false;
@@ -83,26 +127,42 @@ export function renderConceptLinkageGraph(focusId = null) {
   currentWidth = width;
   currentHeight = height;
 
-  const { nodes: nodesList, links, domains } = buildLinkageGraph(filtered);
+  // ---- Frame A scaffolding ------------------------------------------------
+  // Node records and the domain set are the cheap half of the graph build, so
+  // they are available immediately. The link pass (tokenize + O(n^2) cosine)
+  // is what costs tens to hundreds of ms; when focusing, it is deferred until
+  // after this frame has painted, so the bookmark is on screen first.
+  //
+  // Both are `let` because an unfocused render replaces them with the full
+  // build's output, which is the only place each node's degree becomes known.
+  let { nodes: nodesList, domains } = buildGraphNodes(filtered);
 
-  // Resolve the focus target BEFORE the simulation is built. A null here means
-  // "nothing to focus": fall through to a plain render so the graph still
-  // appears, and report it so the caller can toast.
+  // Resolve the focus target. A null here means "nothing to focus": fall
+  // through to a plain, single-pass render so the graph still appears, and
+  // report it so the caller can toast.
   let focusNode = null;
   if (focusId != null) {
     focusNode = nodesList.find((d) => d.id === focusId) || null;
     if (focusNode) {
       // Pin to the canvas centre. d3's initializeNodes() copies fx/fy onto
       // x/y, and every tick() restores x = fx after the forces run, so this
-      // position holds for the lifetime of the simulation. That is what lets
-      // the camera be set once, below, instead of chasing the layout.
+      // position holds for the lifetime of the simulation.
       focusNode.fx = width / 2;
       focusNode.fy = height / 2;
+      focusNode.x = width / 2;
+      focusNode.y = height / 2;
       focusedNodeId = focusNode.id;
     }
   }
 
   const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(domains);
+
+  // Mutable holders so DOM built in one frame can reach selections that only
+  // exist in a later one: the hover handlers read the link selection and the
+  // drag handlers read the simulation, neither of which exists while Frame A
+  // is on screen.
+  const linkRef = { current: null };
+  const simRef = { current: null };
 
   const svg = d3
     .select('#d3GraphCanvas')
@@ -123,6 +183,212 @@ export function renderConceptLinkageGraph(focusId = null) {
   currentSvg = svg;
   currentZoom = zoom;
 
+  /**
+   * The single node wrapper for this render, created once. Frame B appends its
+   * nodes into this same wrapper, so every node stays under one element and the
+   * emphasis/tick handlers can reach all of them with one selection.
+   */
+  const nodeWrapper = g.append('g').attr('class', 'nodes');
+
+  /** Append one drag-enabled `<g>` per node, returning the enter selection. */
+  const appendNodeGroups = (data) =>
+    nodeWrapper
+      .selectAll('g')
+      .data(data, (d) => d.id)
+      .enter()
+      .append('g')
+      .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+
+  /** Append the circle, label and interactions for a node selection. */
+  const decorateNodes = (node) => {
+    node
+      .append('circle')
+      .attr('r', (d) => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
+      .attr('fill', (d) => colorScale(d.domain))
+      .attr('stroke', '#0f172a')
+      .attr('stroke-width', 2)
+      .attr('class', 'cursor-pointer transition-all duration-200');
+
+    node
+      .append('text')
+      .text((d) => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
+      .attr('x', (d) => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
+      .attr('y', 4)
+      .attr('fill', '#94a3b8')
+      .attr('font-size', '10px')
+      .attr('pointer-events', 'none');
+
+    node
+      .on('mouseover', (event, d) => {
+        tooltip.style.opacity = '1';
+        ttTitle.innerText = d.title;
+        ttDomain.innerText = d.domain;
+        ttTags.innerHTML = linkageTooltipTagsHtml(d.tags);
+        if (!linkRef.current) return; // Frame A: no links drawn yet
+        linkRef.current
+          .style('stroke', (l) =>
+            l.source.id === d.id || l.target.id === d.id ? '#6366f1' : '#334155',
+          )
+          .style('stroke-opacity', (l) => (l.source.id === d.id || l.target.id === d.id ? 1 : 0.2))
+          .style('stroke-width', (l) => (l.source.id === d.id || l.target.id === d.id ? 3 : 1));
+      })
+      .on('mousemove', (event) => {
+        tooltip.style.left = `${event.clientX}px`;
+        tooltip.style.top = `${event.clientY - 15}px`;
+      })
+      .on('mouseout', () => {
+        tooltip.style.opacity = '0';
+        if (!linkRef.current) return;
+        linkRef.current
+          .style('stroke', '#334155')
+          .style('stroke-opacity', 0.6)
+          .style('stroke-width', (l) => Math.min(4, Math.max(1, l.weight)));
+      })
+      .on('click', (event, d) => {
+        openReaderModal(d.id);
+      });
+  };
+
+  function dragstarted(event, d) {
+    if (!simRef.current || !event.active) return;
+    simRef.current.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+  function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+  function dragended(event, d) {
+    if (!event.active && simRef.current) simRef.current.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+
+  // ---- Frame B: the expensive half, deferred until after the first paint --
+  // Only reached by a focused render. Runs the link pass, then builds the rest
+  // of the graph around the already-centred bookmark.
+  const buildRestOfGraph = () => {
+    const { nodes: freshNodes, links } = buildLinkageGraph(filtered);
+
+    // Keep OUR object in the array — the DOM already holds it as __data__ — and
+    // adopt the degree the link pass computed for it. Substituting the fresh
+    // copy would orphan the painted node: d3's data binding, forceLink's id
+    // lookup and the tick handler must all agree on the same object.
+    const idx = freshNodes.findIndex((n) => n.id === focusId);
+    if (idx !== -1) {
+      focusNode.degree = freshNodes[idx].degree;
+      freshNodes[idx] = focusNode;
+    }
+
+    // Spread the as-yet-unpositioned nodes out from the centred bookmark so the
+    // graph grows away from it, instead of every node piling onto one spot and
+    // being flung apart by forceCollide on the first tick.
+    freshNodes.forEach((n) => {
+      if (n === focusNode) return;
+      n.x = width / 2 + (n.x || 0) * INITIAL_SPREAD;
+      n.y = height / 2 + (n.y || 0) * INITIAL_SPREAD;
+    });
+
+    const simulation = d3
+      .forceSimulation(freshNodes)
+      .force(
+        'link',
+        d3
+          .forceLink(links)
+          .id((d) => d.id)
+          .distance(120),
+      )
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force(
+        'collide',
+        d3.forceCollide().radius((d) => Math.max(12, 6 + d.degree * 2)),
+      );
+
+    currentSimulation = simulation;
+    simRef.current = simulation;
+
+    linkRef.current = g
+      .append('g')
+      .selectAll('line')
+      .data(links)
+      .enter()
+      .append('line')
+      .attr('stroke', '#334155')
+      .attr('stroke-opacity', 0.6)
+      .attr('stroke-width', (d) => Math.min(4, Math.max(1, d.weight)));
+
+    const rest = appendNodeGroups(freshNodes.filter((n) => n !== focusNode));
+    decorateNodes(rest);
+    rest.attr('transform', (d) => `translate(${d.x},${d.y})`);
+
+    // Every node is on screen now, so the emphasis covers all of them (the
+    // newcomers are dimmed) and the tick handler can move them all.
+    currentNodes = freshNodes;
+    currentNodeSelection = nodeWrapper.selectAll('g');
+    applyFocusStyles();
+    // The target's radius only became knowable once the link pass gave it a
+    // degree, so refresh it here rather than leaving the Frame A placeholder.
+    currentNodeSelection
+      .select('circle')
+      .attr('r', (d) => Math.max(8, 4 + Math.sqrt(d.degree) * 4));
+
+    simulation.on('tick', () => {
+      linkRef.current
+        .attr('x1', (d) => d.source.x)
+        .attr('y1', (d) => d.source.y)
+        .attr('x2', (d) => d.target.x)
+        .attr('y2', (d) => d.target.y);
+
+      currentNodeSelection.attr('transform', (d) => `translate(${d.x},${d.y})`);
+
+      centerFocusedNode();
+    });
+
+    simulation.on('end', () => {
+      if (focusedNodeId != null) {
+        // The first-tick centering used early coordinates; re-center once on
+        // the final layout. The target is pinned, so this settles the others
+        // around it rather than moving the target.
+        pendingFocusCenter = true;
+        centerFocusedNode();
+      }
+    });
+  };
+
+  // ---- Frame A: the focused bookmark, in this very call -------------------
+  if (focusNode) {
+    const node = appendNodeGroups([focusNode]);
+    currentNodes = nodesList;
+    currentNodeSelection = node;
+    // The tick handler writes this same attribute; seed it now so the node is
+    // visible at the centre on the first paint instead of flashing at (0,0).
+    node.attr('transform', (d) => `translate(${d.x},${d.y})`);
+    decorateNodes(node);
+    setFocusCamera();
+    applyFocusStyles();
+
+    pendingTopologyTimer = afterPaint(() => {
+      // A newer render (another click, resetGraphZoom, a tab switch) has
+      // replaced this graph, so its topology is no longer wanted.
+      if (generation !== renderGeneration) return;
+      pendingTopologyTimer = null;
+      buildRestOfGraph();
+    });
+
+    return true;
+  }
+
+  // ---- Unfocused render: one pass, as before ------------------------------
+  // Replace the degree-less placeholders with the full build's nodes, and
+  // widen the colour scale's domain to match.
+  const built = buildLinkageGraph(filtered);
+  nodesList = built.nodes;
+  const links = built.links;
+  domains = built.domains;
+  colorScale.domain(domains);
+
   const simulation = d3
     .forceSimulation(nodesList)
     .force(
@@ -140,6 +406,7 @@ export function renderConceptLinkageGraph(focusId = null) {
     );
 
   currentSimulation = simulation;
+  simRef.current = simulation;
 
   const link = g
     .append('g')
@@ -151,23 +418,9 @@ export function renderConceptLinkageGraph(focusId = null) {
     .attr('stroke-opacity', 0.6)
     .attr('stroke-width', (d) => Math.min(4, Math.max(1, d.weight)));
 
-  const node = g
-    .append('g')
-    .selectAll('g')
-    .data(nodesList)
-    .enter()
-    .append('g')
-    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
-
+  const node = appendNodeGroups(nodesList);
   currentNodes = nodesList;
   currentNodeSelection = node;
-
-  // Centre the camera in THIS call, before the simulation exists: the node was
-  // pinned to the canvas centre when it was resolved, so setFocusCamera() maps
-  // it exactly onto the viewport centre at FOCUS_ZOOM. No transition and no
-  // wait for the first simulation tick — which is what removes the
-  // "render, then center" delay.
-  if (focusNode) setFocusCamera();
 
   // Append Circles
   node
@@ -249,21 +502,6 @@ export function renderConceptLinkageGraph(focusId = null) {
       centerFocusedNode();
     }
   });
-
-  function dragstarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
-  }
-  function dragged(event, d) {
-    d.fx = event.x;
-    d.fy = event.y;
-  }
-  function dragended(event, d) {
-    if (!event.active) simulation.alphaTarget(0);
-    d.fx = null;
-    d.fy = null;
-  }
 
   return focusNode != null;
 }
