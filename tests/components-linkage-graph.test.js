@@ -9,10 +9,10 @@ import { describe, it, expect } from 'vitest';
  */
 
 describe('linkage graph helpers', () => {
-  it('exports empty state html identical to monolith', () => {
+  it('returns the empty-state markup for the zero-bookmark case', () => {
     const result = linkageEmptyStateHtml();
     expect(result).toBe(
-      '<div class="text-slate-500 text-xs flex items-center justify-center h-full">需要至少 2 筆書籤以構建關聯網絡拓撲圖</div>',
+      '<div class="text-slate-500 text-xs flex items-center justify-center h-full">尚無書籤可構建關聯網絡拓撲圖</div>',
     );
   });
 
