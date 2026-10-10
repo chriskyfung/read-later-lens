@@ -277,6 +277,19 @@ it('loads one module entry without a global bridge or inline action handlers', (
   checkSources(new URL('src/', root));
 });
 
+it('bundles D3 from the dependency instead of a runtime CDN', () => {
+  const root = new URL('../', import.meta.url);
+  const html = readFileSync(new URL('index.html', root), 'utf8');
+  // d3 is imported by src/views/linkage.js from node_modules; the cdnjs
+  // copy would be dead weight (and shipped 7.8.5 while the bundle runs
+  // 7.9.0), so no remote script may remain in the shell.
+  expect(html).not.toMatch(/<script[^>]+src="https?:/);
+  // The module-level import is what replaces the tag; it must be present
+  // and never removed.
+  const linkage = readFileSync(new URL('src/views/linkage.js', root), 'utf8');
+  expect(linkage).toMatch(/import \* as d3 from 'd3'/);
+});
+
 it('compiles Tailwind at build time instead of loading a runtime CDN', () => {
   const root = new URL('../', import.meta.url);
   const html = readFileSync(new URL('index.html', root), 'utf8');
