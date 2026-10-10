@@ -59,6 +59,9 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="readerSimilarityBtn"');
     expect(html).toContain('title="刪除此書籤"');
     expect(html).toContain('title="查看相似文章"');
+    // Linkage shortcut (🕸️ 關聯), grouped beside the similarity button.
+    expect(html).toContain('id="readerLinkageBtn"');
+    expect(html).toContain('title="在概念關聯圖中檢視"');
     expect(html).toContain('hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
     expect(html).toContain('d="M6 18L18 6M6 6l12 12"'); // close icon path
   });

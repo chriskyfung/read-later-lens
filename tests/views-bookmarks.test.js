@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+// The card footer's linkage button navigates to the graph; the navigation
+// itself is covered by tests/views-linkage.test.js. Mock it here so this file
+// stays a wiring test and does not pull d3 into the node environment.
+vi.mock('../src/views/linkage.js', () => ({
+  openLinkageForBookmark: vi.fn(() => true),
+}));
 import {
   renderBookmarkCards,
   toggleSelectBookmark,
@@ -8,6 +14,7 @@ import {
   updateBookmarksHeader,
   createBookmarkCard,
 } from '../src/views/bookmarks.js';
+import { openLinkageForBookmark } from '../src/views/linkage.js';
 import {
   setBookmarks,
   setActiveFolder,
@@ -27,8 +34,13 @@ function makeEl() {
     appendChild(c) {
       this.children.push(c);
     },
-    querySelector() {
-      return makeEl();
+    querySelector(sel) {
+      // Memoize per selector so a specific button (e.g. '.open-linkage-btn')
+      // is addressable and keeps its own listeners, instead of every
+      // querySelector handing back a fresh throwaway element.
+      if (!this._bySelector) this._bySelector = {};
+      if (!this._bySelector[sel]) this._bySelector[sel] = makeEl();
+      return this._bySelector[sel];
     },
     style: {},
     inert: false,
@@ -375,5 +387,29 @@ describe('card click opens the reader', () => {
 
     card.listeners.keydown({ target: {}, key: 'Enter', preventDefault: () => {} });
     expect(els.readerModal.classList.contains('hidden')).toBe(true);
+  });
+});
+
+describe('card linkage shortcut', () => {
+  const bookmark = {
+    id: '1',
+    title: 'Apple <News>',
+    url: 'https://www.apple.com/x',
+    instapaper_url: 'https://www.instapaper.com/read/1',
+    article_preview: 'pie text',
+    detected_language: 'en',
+    source_file_name: 'My Export.csv',
+    tags: ['tech', 'fruit'],
+  };
+
+  it('delegates the footer button to openLinkageForBookmark with the card id', () => {
+    vi.mocked(openLinkageForBookmark).mockClear();
+    setBookmarks([bookmark]);
+    const card = createBookmarkCard(bookmarks[0]);
+
+    card.querySelector('.open-linkage-btn').listeners.click();
+
+    expect(openLinkageForBookmark).toHaveBeenCalledTimes(1);
+    expect(openLinkageForBookmark).toHaveBeenCalledWith(bookmark.id);
   });
 });

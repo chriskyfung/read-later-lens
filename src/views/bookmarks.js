@@ -14,6 +14,7 @@ import { getFilteredBookmarks } from '../core/filters.js';
 import { bookmarkCardClass, bookmarkCardHtml } from '../components/bookmarks/card.js';
 import { openReaderModal } from './readerModal.js';
 import { openSimilarityModal } from './similarityModal.js';
+import { openLinkageForBookmark } from './linkage.js';
 
 /**
  * Derive the domain badge text for a bookmark URL.
@@ -95,6 +96,9 @@ export function createBookmarkCard(bookmark) {
   card
     .querySelector('.open-similarity-btn')
     .addEventListener('click', () => openSimilarityModal(bookmark.id));
+  card
+    .querySelector('.open-linkage-btn')
+    .addEventListener('click', () => openLinkageForBookmark(bookmark.id));
   card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = bookmark.id;
 
   card.tabIndex = 0;

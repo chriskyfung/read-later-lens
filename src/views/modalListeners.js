@@ -25,7 +25,15 @@ import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js'
 import { confirmDeleteBookmark } from './workspaceActions.js';
 import { closeSaveModal } from '../io/exporter.js';
 import { closeImportModal } from '../io/importer.js';
-import { closeLayer, registerModalLayer, topLayer, topLayerId, trapFocus } from '../utils/dom.js';
+import {
+  closeLayer,
+  registerModalLayer,
+  resetLayers,
+  topLayer,
+  topLayerId,
+  trapFocus,
+} from '../utils/dom.js';
+import { openLinkageForBookmark } from './linkage.js';
 
 /**
  * Close the topmost layer on Escape and keep Tab focus inside it. No-ops when
@@ -69,6 +77,16 @@ export function registerModalListeners() {
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();
     if (id) openSimilarityModal(id);
+  });
+
+  // Navigating to the graph means leaving the reader, so close every overlay
+  // first: the linkage tab is underneath them and would otherwise be hidden.
+  document.getElementById('readerLinkageBtn')?.addEventListener('click', () => {
+    const id = getReaderBookmarkId();
+    if (id) {
+      resetLayers();
+      openLinkageForBookmark(id);
+    }
   });
 
   document.addEventListener('keydown', handleKeydown);
