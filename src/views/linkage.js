@@ -1,8 +1,11 @@
 /**
  * @fileoverview D3 concept-linkage graph view.
  *
- * Ports the monolith's `renderConceptLinkageGraph` verbatim: container
- * `#d3GraphCanvas`, top-50 nodes, cosine-similarity links above 0.15,
+ * NOTE: ported from the monolith with one deliberate deviation: the monolith
+ * refused to render with fewer than 2 bookmarks (`filtered.length < 2`); a lone
+ * bookmark now renders its single node. The rest of the port is otherwise
+ * verbatim.
+ *
  * domain-based colour scale, degree-based sizing, drag + zoom, the hover
  * tooltip (`#graphTooltip` / `#ttTitle` / `#ttDomain` / `#ttTags`), and node
  * click → reader modal. Zoom/pan state is module-private here and driven by
@@ -21,10 +24,7 @@ import * as d3 from 'd3';
 import { getFilteredBookmarksTop } from '../core/filters.js';
 import { buildLinkageGraph } from '../analytics/linkage.js';
 import { openReaderModal } from './readerModal.js';
-import {
-  linkageEmptyStateHtml,
-  linkageTooltipTagsHtml,
-} from '../components/linkage/graph.js';
+import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../components/linkage/graph.js';
 
 let currentSvg = null;
 let currentZoom = null;
@@ -45,7 +45,7 @@ export function renderConceptLinkageGraph() {
   const ttTags = document.getElementById('ttTags');
 
   const filtered = getFilteredBookmarksTop(50); // Limit to top 50 for graph clarity
-  if (filtered.length < 2) {
+  if (filtered.length === 0) {
     container.innerHTML = linkageEmptyStateHtml();
     return;
   }
