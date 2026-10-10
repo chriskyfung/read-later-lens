@@ -19,6 +19,7 @@ import {
   resetGraphZoom,
   openLinkageForBookmark,
   focusLinkageNode,
+  FOCUS_ZOOM,
 } from '../src/views/linkage.js';
 import { setBookmarks } from '../src/core/state.js';
 
@@ -80,6 +81,18 @@ async function waitForTransform(canvas, expected = /scale\(1\.6\)/, timeout = 20
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   return last;
+}
+
+/**
+ * Parse the three components out of an SVG
+ * `transform="translate(x,y) scale(k)"`.
+ *
+ * @param {string|null} transform
+ * @returns {{x: number, y: number, k: number}|null}
+ */
+function parseTransform(transform) {
+  const m = /translate\(([-\d.]+),([-\d.]+)\)\s+scale\(([\d.]+)\)/.exec(transform || '');
+  return m ? { x: +m[1], y: +m[2], k: +m[3] } : null;
 }
 
 afterEach(() => {
@@ -233,6 +246,50 @@ describe('focus & camera API', () => {
     expect(canvas.querySelector('svg > g').getAttribute('transform')).toMatch(
       /translate\(-?[0-9.]+,-?[0-9.]+\) scale\(1\.6\)/,
     );
+  });
+
+  it('centres the focused node in the SAME call, before any simulation tick', () => {
+    setBookmarks([BM(10, 'alpha beta'), BM(20, 'gamma delta')]);
+    createCanvas();
+
+    // Deliberately NOT awaiting: the whole point of pinning + a synchronous
+    // camera is that the first paint is already centred. Any assertion here
+    // that needs `await` would be proving the opposite.
+    const ok = openLinkageForBookmark('10');
+
+    expect(ok).toBe(true);
+    const canvas = document.getElementById('d3GraphCanvas');
+    const t = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
+    expect(t).not.toBeNull();
+    expect(t.k).toBeCloseTo(FOCUS_ZOOM, 5);
+
+    // The node is pinned at the canvas centre (jsdom reports clientWidth 0, so
+    // the view falls back to 800x500), and the camera maps it onto the middle
+    // of the viewport at scale k: 400 * 1.6 + tx === 400.
+    expect(t.x).toBeCloseTo(400 * (1 - FOCUS_ZOOM), 5);
+    expect(t.y).toBeCloseTo(250 * (1 - FOCUS_ZOOM), 5);
+
+    // ...and that position is already painted, so the node is visible at the
+    // centre on the very first frame rather than flashing at the origin.
+    const ringed = [...canvas.querySelectorAll('circle')].filter(
+      (c) => c.getAttribute('stroke') === '#6366f1',
+    );
+    expect(ringed).toHaveLength(1);
+    expect(ringed[0].parentElement.getAttribute('transform')).toBe('translate(400,250)');
+  });
+
+  it('paints the ring before the first tick, not after it', () => {
+    setBookmarks([BM(10, 'alpha beta'), BM(20, 'gamma delta')]);
+    createCanvas();
+
+    openLinkageForBookmark('20');
+
+    const canvas = document.getElementById('d3GraphCanvas');
+    const circles = [...canvas.querySelectorAll('circle')];
+    expect(circles).toHaveLength(2);
+    const ringed = circles.filter((c) => c.getAttribute('stroke') === '#6366f1');
+    expect(ringed).toHaveLength(1);
+    expect(ringed[0].parentElement.getAttribute('opacity')).toBe('1');
   });
 
   it('moves the highlight between nodes on repeated calls', async () => {

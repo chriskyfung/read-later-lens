@@ -38,10 +38,21 @@ let currentHeight = 0;
 let focusedNodeId = null;
 let pendingFocusCenter = false;
 
+/** Zoom factor applied when focusing a node. Shared by both camera paths. */
+export const FOCUS_ZOOM = 1.6;
+
 /**
  * Render the concept-linkage graph tab.
+ *
+ * @param {string|null} [focusId] Bookmark id to pin and centre on. When given,
+ *   the node is positioned at the canvas centre BEFORE the force simulation is
+ *   built (via `fx`/`fy`), so the camera can be placed on it in this same call
+ *   with no transition and no wait for the first simulation tick. Omit it for
+ *   a plain, unfocused render.
+ * @returns {boolean} Whether the graph rendered (false when there is no
+ *   container, or when nothing matches the active filters).
  */
-export function renderConceptLinkageGraph() {
+export function renderConceptLinkageGraph(focusId = null) {
   if (currentSimulation) currentSimulation.stop();
   // Clear render + focus state first, so an early return (no container, or an
   // empty library) cannot leave stale references for the focus API below.
@@ -53,7 +64,7 @@ export function renderConceptLinkageGraph() {
   resetFocus();
 
   const container = document.getElementById('d3GraphCanvas');
-  if (!container) return;
+  if (!container) return false;
   container.innerHTML = '';
 
   const tooltip = document.getElementById('graphTooltip');
@@ -64,7 +75,7 @@ export function renderConceptLinkageGraph() {
   const filtered = getFilteredBookmarksTop(50); // Limit to top 50 for graph clarity
   if (filtered.length === 0) {
     container.innerHTML = linkageEmptyStateHtml();
-    return;
+    return false;
   }
 
   const width = container.clientWidth || 800;
@@ -73,6 +84,23 @@ export function renderConceptLinkageGraph() {
   currentHeight = height;
 
   const { nodes: nodesList, links, domains } = buildLinkageGraph(filtered);
+
+  // Resolve the focus target BEFORE the simulation is built. A null here means
+  // "nothing to focus": fall through to a plain render so the graph still
+  // appears, and report it so the caller can toast.
+  let focusNode = null;
+  if (focusId != null) {
+    focusNode = nodesList.find((d) => d.id === focusId) || null;
+    if (focusNode) {
+      // Pin to the canvas centre. d3's initializeNodes() copies fx/fy onto
+      // x/y, and every tick() restores x = fx after the forces run, so this
+      // position holds for the lifetime of the simulation. That is what lets
+      // the camera be set once, below, instead of chasing the layout.
+      focusNode.fx = width / 2;
+      focusNode.fy = height / 2;
+      focusedNodeId = focusNode.id;
+    }
+  }
 
   const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(domains);
 
@@ -134,6 +162,13 @@ export function renderConceptLinkageGraph() {
   currentNodes = nodesList;
   currentNodeSelection = node;
 
+  // Centre the camera in THIS call, before the simulation exists: the node was
+  // pinned to the canvas centre when it was resolved, so setFocusCamera() maps
+  // it exactly onto the viewport centre at FOCUS_ZOOM. No transition and no
+  // wait for the first simulation tick — which is what removes the
+  // "render, then center" delay.
+  if (focusNode) setFocusCamera();
+
   // Append Circles
   node
     .append('circle')
@@ -143,8 +178,16 @@ export function renderConceptLinkageGraph() {
     .attr('stroke-width', 2)
     .attr('class', 'cursor-pointer transition-all duration-200');
 
-  // Node emphasis (focused ring / dimmed others) is applied by focusLinkageNode,
-  // not here: a fresh render starts with no highlight.
+  // Node emphasis goes here, not above: it styles the circles, which only
+  // exist once they have been appended.
+  if (focusNode) applyFocusStyles();
+
+  // Paint the nodes at their initial positions NOW rather than leaving them
+  // unpositioned until the first tick. The tick handler writes this same
+  // attribute; without it every node renders at the origin (top-left) for one
+  // frame, which is most visible on a focused node the camera is already
+  // centred on.
+  node.attr('transform', (d) => `translate(${d.x},${d.y})`);
 
   // Append Labels
   node
@@ -221,6 +264,23 @@ export function renderConceptLinkageGraph() {
     d.fx = null;
     d.fy = null;
   }
+
+  return focusNode != null;
+}
+
+/**
+ * Place the camera on the focused node with NO transition — used when the
+ * node is already pinned (i.e. by the render that requested the focus), where
+ * a first paint that is already centred is the whole point.
+ *
+ * The transform maps node (x, y) to the viewport centre at scale FOCUS_ZOOM.
+ */
+function setFocusCamera() {
+  const node = currentNodes ? currentNodes.find((d) => d.id === focusedNodeId) : null;
+  if (!node || !currentSvg || !currentZoom) return;
+  const dx = currentWidth / 2 - node.x * FOCUS_ZOOM;
+  const dy = currentHeight / 2 - node.y * FOCUS_ZOOM;
+  currentSvg.call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(FOCUS_ZOOM));
 }
 
 /**
@@ -245,8 +305,8 @@ function clearFocusStyles() {
 }
 
 /**
- * Center the viewport on the focused bookmark (animated, zoom k=1.6) so the
- * user always sees exactly which node is highlighted. Idempotent — repeated
+ * Center the viewport on the focused bookmark (animated, zoom k=FOCUS_ZOOM) so
+ * the user always sees exactly which node is highlighted. Idempotent — repeated
  * calls mid-animation are ignored; the centering is re-applied when the
  * simulation settles (the 'end' event).
  */
@@ -257,12 +317,12 @@ function centerFocusedNode() {
     pendingFocusCenter = false;
     return;
   }
-  const dx = currentWidth / 2 - node.x * 1.6;
-  const dy = currentHeight / 2 - node.y * 1.6;
+  const dx = currentWidth / 2 - node.x * FOCUS_ZOOM;
+  const dy = currentHeight / 2 - node.y * FOCUS_ZOOM;
   currentSvg
     .transition()
     .duration(450)
-    .call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(1.6));
+    .call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(FOCUS_ZOOM));
   pendingFocusCenter = false;
 }
 
@@ -324,15 +384,17 @@ export function focusLinkageNode(id) {
 /**
  * Switch to the linkage tab, render the graph, and focus the given bookmark's
  * node. The single entry point the bookmark-card and reader-modal buttons use.
- * Toasts when the bookmark is not among the rendered nodes.
+ *
+ * The node is pinned and the camera centred inside the render call, so the
+ * graph's FIRST paint already shows the bookmark highlighted and centred — no
+ * waiting for the force simulation to start moving, and no zoom transition.
  *
  * @param {string} id
  * @returns {boolean} whether a node was found and focused
  */
 export function openLinkageForBookmark(id) {
   activateTab('linkage');
-  renderConceptLinkageGraph();
-  const focused = focusLinkageNode(id);
+  const focused = renderConceptLinkageGraph(id);
   if (!focused) {
     showToast('該書籤不在目前的關聯圖中（超出前 50 筆或已被篩除）');
   }
