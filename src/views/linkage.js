@@ -39,7 +39,12 @@ import {
   refreshNodeRadii,
   wireSimulationHandlers,
 } from './linkage/simulation.js';
-import { prepareFocusedTopology, resolveFocusTarget } from './linkage/topology.js';
+import {
+  prepareFocusedTopology,
+  resolveFocusTarget,
+  unpinNode,
+  pinNodeAt,
+} from './linkage/topology.js';
 import {
   graphState,
   cancelPendingTopology,
@@ -272,6 +277,12 @@ export function resetGraphZoom() {
  * drops any stale highlight — when the id has no node in the current graph
  * (e.g. it fell outside the top-50 cap or was filtered out).
  *
+ * Pins the node IN PLACE (fx/fy = current x/y), establishing the same
+ * invariant a focused render does: a still-running simulation cannot move the
+ * highlighted node and invalidate the camera aimed at it. The previous focus,
+ * if any, is unpinned first so pins never accumulate. Dragging the node (which
+ * nulls fx/fy on release) or re-rendering releases the pin.
+ *
  * @param {string} id
  * @returns {boolean} whether a node was found and focused
  */
@@ -282,6 +293,12 @@ export function focusLinkageNode(id) {
     resetFocus();
     return false;
   }
+  // Free the old focus before arming the new one (same-node refocus is a
+  // cheap re-pin at the same coordinates).
+  if (graphState.focusedNodeId != null && graphState.focusedNodeId !== id) {
+    unpinNode(graphState.nodes.find((d) => d.id === graphState.focusedNodeId));
+  }
+  pinNodeAt(node, node.x, node.y);
   graphState.focusedNodeId = id;
   applyFocusStyles();
   graphState.pendingFocusCenter = true;

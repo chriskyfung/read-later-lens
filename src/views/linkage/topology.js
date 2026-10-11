@@ -19,6 +19,38 @@
 export const INITIAL_SPREAD = 2.5;
 
 /**
+ * Pin a node so the simulation cannot move it: every tick restores `x = fx`,
+ * so the painted position — and any camera aimed at it — stays valid.
+ *
+ * Shared by both focus entry points so they establish the same invariant:
+ * the focused-render path pins at the canvas centre (see resolveFocusTarget),
+ * the post-render `focusLinkageNode` pins in place. Null-tolerant, so a
+ * "previous focus" lookup that missed costs nothing.
+ *
+ * @param {{ x: number, y: number }|null|undefined} node
+ * @param {number} x
+ * @param {number} y
+ */
+export function pinNodeAt(node, x, y) {
+  if (!node) return;
+  node.fx = x;
+  node.fy = y;
+}
+
+/**
+ * Release a node back to a free body (drop `fx`/`fy`), keeping `x`/`y` where
+ * they are. Used when a focus moves elsewhere or is dropped, so a stale pin
+ * cannot outlive the highlight it belonged to. Null-tolerant.
+ *
+ * @param {{ fx?: number, fy?: number }|null|undefined} node
+ */
+export function unpinNode(node) {
+  if (!node) return;
+  node.fx = undefined;
+  node.fy = undefined;
+}
+
+/**
  * Find the node to focus and pin it to the canvas centre.
  *
  * d3's initializeNodes() copies fx/fy onto x/y, and every tick() restores
@@ -39,10 +71,9 @@ export function resolveFocusTarget(nodes, focusId, width, height) {
   if (focusId == null) return null;
   const node = nodes.find((d) => d.id === focusId) || null;
   if (!node) return null;
-  node.fx = width / 2;
-  node.fy = height / 2;
   node.x = width / 2;
   node.y = height / 2;
+  pinNodeAt(node, width / 2, height / 2);
   return node;
 }
 

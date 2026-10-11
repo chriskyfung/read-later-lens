@@ -13,6 +13,7 @@
 
 import * as d3 from 'd3';
 import { graphState } from './state.js';
+import { unpinNode } from './topology.js';
 
 /** Zoom factor applied when focusing a node. Shared by both camera paths. */
 export const FOCUS_ZOOM = 1.6;
@@ -125,9 +126,17 @@ export function clearFocusStyles() {
 /**
  * Clear the node emphasis (graph re-rendered or view reset), restoring the
  * default view with no highlighted bookmark.
+ *
+ * Also releases the focused node's pin (see ./linkage/topology.js), so a
+ * reset cannot leave a node frozen in place with nothing highlighted. A
+ * no-op when nothing is rendered — which is the render-start case, where
+ * clearRenderState has already dropped `nodes`.
  */
 export function resetFocus() {
   clearFocusStyles();
+  if (graphState.focusedNodeId != null && graphState.nodes) {
+    unpinNode(graphState.nodes.find((d) => d.id === graphState.focusedNodeId));
+  }
   graphState.focusedNodeId = null;
   graphState.pendingFocusCenter = false;
 }

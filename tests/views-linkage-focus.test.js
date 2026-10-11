@@ -23,6 +23,7 @@ import {
   FOCUS_ZOOM,
 } from '../src/views/linkage.js';
 import { setBookmarks } from '../src/core/state.js';
+import { graphState } from '../src/views/linkage/state.js';
 import {
   BM,
   createCanvas,
@@ -229,6 +230,73 @@ describe('focus & camera API', () => {
     expect(circles[0].getAttribute('stroke-width')).toBe('2');
     expect(circles[0].parentElement.getAttribute('opacity')).not.toBe('0.4');
     expect(document.getElementById('toastMsg').innerText).toContain('不在目前的關聯圖中');
+  });
+
+  it('pins the focused node in place, like the focused-render path does', () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+    renderConceptLinkageGraph();
+    createCanvas();
+
+    // focusLinkageNode must establish the SAME invariant a focused render
+    // does: the highlighted node carries fx/fy, so a still-running simulation
+    // cannot invalidate the camera by moving it after the pan lands.
+    expect(focusLinkageNode('10')).toBe(true);
+
+    const nodes = graphState.nodes;
+    const focused = nodes.find((d) => d.id === '10');
+    expect(focused.fx).toBe(focused.x);
+    expect(focused.fy).toBe(focused.y);
+    // Pinned in place — no teleport to the canvas centre, no layout jump.
+    // (The unfocused render's layout is free, so the node is wherever the
+    // simulation put it; all that matters is that it is now stuck there.)
+    expect(focused.fx).not.toBe(400);
+
+    // Only the focused node is pinned; the other stays free to settle.
+    const other = nodes.find((d) => d.id === '20');
+    expect(other.fx).toBeUndefined();
+    expect(other.fy).toBeUndefined();
+  });
+
+  it('unpins the previously focused node when refocusing another', () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+    renderConceptLinkageGraph();
+
+    focusLinkageNode('10');
+    focusLinkageNode('20');
+
+    const nodes = graphState.nodes;
+    expect(nodes.find((d) => d.id === '10').fx).toBeUndefined();
+    expect(nodes.find((d) => d.id === '10').fy).toBeUndefined();
+    const focused = nodes.find((d) => d.id === '20');
+    expect(focused.fx).toBe(focused.x);
+    expect(focused.fy).toBe(focused.y);
+  });
+
+  it('unpins the previously focused node when the new id has no node', () => {
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+    renderConceptLinkageGraph();
+
+    focusLinkageNode('10');
+    expect(focusLinkageNode('zzz')).toBe(false);
+
+    // The stale pin must not outlive the stale highlight it belonged to.
+    const previous = graphState.nodes.find((d) => d.id === '10');
+    expect(previous.fx).toBeUndefined();
+    expect(previous.fy).toBeUndefined();
+  });
+
+  it('keeps the pin across a settled simulation without re-pinning', () => {
+    // Parity claim the PR description makes, asserted directly: after EITHER
+    // entry point succeeds, the focused node is pinned at its current spot.
+    setBookmarks([BM(1, 'lone node')]);
+    openLinkageForBookmark('1');
+    expect(graphState.nodes.find((d) => d.id === '1').fx).not.toBeUndefined();
+
+    renderConceptLinkageGraph();
+    focusLinkageNode('1');
+    const node = graphState.nodes.find((d) => d.id === '1');
+    expect(node.fx).toBe(node.x);
+    expect(node.fy).toBe(node.y);
   });
 
   it('clears the highlight when the view is reset', async () => {

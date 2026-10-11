@@ -22,6 +22,8 @@ import { linkStrokeWidth } from '../src/views/linkage/simulation.js';
 import {
   resolveFocusTarget,
   prepareFocusedTopology,
+  pinNodeAt,
+  unpinNode,
   INITIAL_SPREAD,
 } from '../src/views/linkage/topology.js';
 import { FOCUS_ZOOM, focusCameraTransform } from '../src/views/linkage/focus.js';
@@ -99,6 +101,33 @@ describe('resolveFocusTarget', () => {
     const nodes = [node('a')];
     resolveFocusTarget(nodes, 'zzz', 800, 500);
     expect(nodes[0].fx).toBeUndefined();
+  });
+});
+
+describe('pinNodeAt / unpinNode', () => {
+  it('pins the node at the given coordinates without touching x/y', () => {
+    const n = { id: 'a', x: 120, y: 700 };
+    pinNodeAt(n, 120, 700);
+    expect(n.fx).toBe(120);
+    expect(n.fy).toBe(700);
+    // Pinning in place must not teleport the node: x/y keep their values so
+    // the painted position (and the camera aimed at it) stays put.
+    expect(n.x).toBe(120);
+    expect(n.y).toBe(700);
+  });
+
+  it('unpins the node, returning it to a free body', () => {
+    const n = { id: 'a', x: 5, y: 6, fx: 5, fy: 6 };
+    unpinNode(n);
+    expect(n.fx).toBeUndefined();
+    expect(n.fy).toBeUndefined();
+    expect(n.x).toBe(5);
+    expect(n.y).toBe(6);
+  });
+
+  it('tolerates null/undefined nodes on both helpers', () => {
+    expect(() => pinNodeAt(null, 1, 2)).not.toThrow();
+    expect(() => unpinNode(undefined)).not.toThrow();
   });
 });
 
