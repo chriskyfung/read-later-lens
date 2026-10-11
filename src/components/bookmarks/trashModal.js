@@ -27,7 +27,7 @@ export const trashItemColumns = [
  * its neighbours. The exact string is pinned by tests.
  */
 export function trashItemClass() {
-  return 'bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between gap-3 transition';
+  return 'bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl p-4 flex items-center justify-between gap-3 transition';
 }
 
 /**
@@ -98,7 +98,7 @@ export function trashModalHtml() {
           </button>
         </header>
 
-        <div class="px-5 py-4 overflow-y-auto flex-1">
+        <div class="bg-slate-900/50 px-5 py-4 overflow-y-auto flex-1">
           <div id="trashList" class="space-y-3"></div>
 
           <div id="trashEmptyState" class="hidden flex flex-col items-center justify-center py-6 text-center">
