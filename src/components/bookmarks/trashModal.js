@@ -8,8 +8,11 @@
  * `trashItemHtml` and `formatDeletedAt` are the parity builders for the
  * old trash-panel markup: the DOM-XSS registry audit (tests/dom-xss-sinks.js)
  * targets them by the same string shape, so they keep the original
- * implementation (escaping, fallback fallbacks, class names).
+ * fallbacks and class names. Escaping is not re-implemented here: builders
+ * use the shared escapeHtml() from src/utils/dom.js — the helper named by
+ * CONTRIBUTING and the eslint DOM-sink tripwire.
  */
+import { escapeHtml } from '../../utils/dom.js';
 
 /** Columns for each trashed row (documentation of the row structure). */
 export const trashItemColumns = [
@@ -25,18 +28,6 @@ export const trashItemColumns = [
  */
 export function trashItemClass() {
   return 'bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between gap-3 transition';
-}
-
-/**
- * Escape text content so <, >, &, ", ' are safe inside HTML text nodes.
- */
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 /**
