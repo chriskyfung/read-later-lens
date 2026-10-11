@@ -6,8 +6,6 @@
  * Tailwind v4 idioms. Card rendering lives in src/views/bookmarks.js.
  */
 
-import { trashPanelHtml } from './trashPanel.js';
-
 /** @returns {string} The bookmarks panel markup. */
 export function panelBookmarksHtml() {
   return `
@@ -42,7 +40,6 @@ export function panelBookmarksHtml() {
             <p class="text-slate-500 text-xs max-w-sm mb-4">點擊右上角的「匯入」載入 Instapaper 的 CSV, JSON 或 SQLite (.db) 檔案。</p>
           </div>
 
-${trashPanelHtml()}
         </div>
 `;
 }

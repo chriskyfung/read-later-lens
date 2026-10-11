@@ -1,26 +1,34 @@
 /**
- * @fileoverview Trash (回收桶) view — the flat, unfiltered list of soft-deleted
- * bookmarks, plus restore / permanent-delete / empty-trash actions.
+ * @fileoverview Trash (回收桶) view — the flat, unfiltered projection of
+ * soft-deleted bookmarks, plus restore / permanent-delete / empty-trash
+ * actions.
  *
- * Design notes (see the soft-delete plan):
+ * Design notes (soft-delete plan):
  *  - The trash is a *projection* over `deleted_at`, not a second store, so it
  *    survives reloads through the existing IndexedDB bookmark blob.
- *  - The list is intentionally flat and unfiltered (ignores activeFolder /
- *    activeLang / activeTag / searchQuery) — simple and robust. Reusing the
- *    header filters (with in-place dimming of non-matching rows) is a backlog item.
+ *  - The list lives in a dedicated modal (src/components/bookmarks/trashModal.js,
+ *    opened from the sidebar's 回收桶 row in src/views/sidebarActions.js). The
+ *    grid behind it stays mounted, so the modal keeps the current folder,
+ *    language, tag and search context; it is intentionally flat and unfiltered
+ *    (ignores activeFolder / activeLang / activeTag / searchQuery) — simple and
+ *    robust. Reusing the header filters with in-place dimming of non-matching
+ *    rows is a backlog item.
+ *  - The modal rides the shared layer stack (src/utils/dom.js), so Escape
+ *    unwinds it, Tab stays trapped inside it, and close restores focus to the
+ *    sidebar row that opened it.
  *  - Folder deletion is deliberately NOT soft: deleteFolder() purges a file's
- *    trashed bookmarks too, so a trashed bookmark can never outlive its source
+ *    trashed bookmarks too, so a trashed record can never outlive its source
  *    file and "restore into a deleted folder" is impossible by construction.
  *
  * `persist`/`render` are injected by src/main.js, mirroring sidebarActions and
  * workspaceActions.
  */
-
 import * as state from '../core/state.js';
 import { getTrashedBookmarks } from '../core/filters.js';
 import { stateStillFresh } from '../core/guard.js';
 import { showToast } from '../utils/dom.js';
-import { trashItemClass, trashItemHtml } from '../components/bookmarks/trashPanel.js';
+import { trashItemHtml } from '../components/bookmarks/trashModal.js';
+import { pushLayer, popLayer } from '../utils/dom.js';
 
 /** @typedef {object} TrashDeps
  * @property {function} persist - Save state to IndexedDB and refresh usage UI.
@@ -29,7 +37,7 @@ import { trashItemClass, trashItemHtml } from '../components/bookmarks/trashPane
 let deps = { persist: () => {}, render: () => {} };
 
 /**
- * Inject side-effect callbacks (same pattern as initWorkspaceActions).
+ * Inject side-effect callbacks (same pattern as initSidebarActions).
  * @param {TrashDeps} injectedDeps
  */
 export function initTrash(injectedDeps) {
@@ -37,63 +45,48 @@ export function initTrash(injectedDeps) {
 }
 
 /**
- * Build a single trashed-bookmark row and wire its dataset ids.
- *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} bookmark
- * @returns {HTMLDivElement}
- */
-export function createTrashItem(bookmark) {
-  const item = document.createElement('div');
-  item.className = trashItemClass();
-  item.innerHTML = trashItemHtml(bookmark);
-  item.querySelector('[data-restore-bookmark]').dataset.restoreBookmark = bookmark.id;
-  item.querySelector('[data-purge-bookmark]').dataset.purgeBookmark = bookmark.id;
-  return item;
-}
-
-/**
- * Render the trash panel (and hide the bookmark grid / empty state).
- *
- * Also owns the shared grid header (`#filteredCount`, `#selectAllCheckbox`,
- * `#activeFilterSummary`) while the trash is active, because the active-filter
- * pipeline yields nothing for the 'TRASH' pseudo-folder.
+ * Render the modal's list + summary + empty state. Pure DOM orchestration:
+ * never touches the bookmark grid or the sidebar — the trash lives in its own
+ * modal, so those stay exactly as the current folder/langs/tag/search view
+ * leaves them.
  */
 export function renderTrashView() {
-  const panel = document.getElementById('trashPanel');
   const list = document.getElementById('trashList');
-  if (!panel || !list) return;
-
-  const grid = document.getElementById('bookmarkCardsGrid');
-  const emptyState = document.getElementById('emptyState');
-  const trashEmptyState = document.getElementById('trashEmptyState');
   const summary = document.getElementById('trashSummary');
-
-  panel.classList.remove('hidden');
-  grid?.classList.add('hidden');
-  emptyState?.classList.add('hidden');
+  const emptyState = document.getElementById('trashEmptyState');
+  if (!list || !summary || !emptyState) return;
 
   const trashed = getTrashedBookmarks();
 
-  if (summary) summary.innerText = `共 ${trashed.length} 筆`;
-  const filteredCount = document.getElementById('filteredCount');
-  if (filteredCount) filteredCount.innerText = String(trashed.length);
-  const selectAll = document.getElementById('selectAllCheckbox');
-  if (selectAll) selectAll.checked = false;
-  const filterSummary = document.getElementById('activeFilterSummary');
-  if (filterSummary) filterSummary.innerText = `目前分類: 回收桶 | 符合: ${trashed.length} 筆`;
-
   list.innerHTML = '';
+  summary.textContent = `共 ${trashed.length} 筆`;
+
   if (trashed.length === 0) {
-    trashEmptyState?.classList.remove('hidden');
+    emptyState.classList.remove('hidden');
     return;
   }
-  trashEmptyState?.classList.add('hidden');
-  trashed.forEach((b) => list.appendChild(createTrashItem(b)));
+  emptyState.classList.add('hidden');
+
+  list.innerHTML = trashed.map((bookmark) => trashItemHtml(bookmark)).join('');
+}
+
+/**
+ * Open the trash modal on top of whatever is on screen. The list renders
+ * before the push so it is fresh even when another overlay is stacked on top;
+ * closeTrashModal() restores focus to the sidebar row that opened it.
+ */
+export function openTrashModal() {
+  renderTrashView();
+  pushLayer('trashModal', { restore: renderTrashView });
+}
+
+/** Close the trash modal, revealing whatever layer sits beneath it. */
+export function closeTrashModal() {
+  popLayer('trashModal');
 }
 
 /**
  * Restore one bookmark from the trash (clears `deleted_at`).
- *
  * @param {string} id
  * @returns {Promise<boolean>} True when a trashed bookmark was restored; false
  *   when it was not, or when the action was refused because another tab wrote.
@@ -109,13 +102,13 @@ export async function restoreBookmark(id) {
   state.selectedIds.delete(id);
   deps.persist();
   deps.render();
+  renderTrashView();
   showToast(`已還原書籤「${bookmark.title}」`);
   return true;
 }
 
 /**
  * Permanently remove one bookmark from the trash.
- *
  * @param {string} id
  * @returns {Promise<boolean>} True when the record was purged.
  */
@@ -131,13 +124,13 @@ export async function purgeBookmark(id) {
   state.selectedIds.delete(id);
   deps.persist();
   deps.render();
+  renderTrashView();
   showToast('已永久刪除該筆書籤');
   return true;
 }
 
 /**
  * Confirm, then permanently remove one bookmark.
- *
  * @param {string} id
  * @returns {Promise<boolean>} True when the record was purged.
  */
@@ -151,7 +144,6 @@ export async function confirmPurgeBookmark(id) {
 
 /**
  * Permanently remove every trashed bookmark.
- *
  * @returns {Promise<boolean>} True when at least one record was purged.
  */
 export async function emptyTrash() {
@@ -165,13 +157,13 @@ export async function emptyTrash() {
   ids.forEach((id) => state.selectedIds.delete(id));
   deps.persist();
   deps.render();
+  renderTrashView();
   showToast(`已清空回收桶（${ids.length} 筆）`);
   return true;
 }
 
 /**
  * Confirm, then permanently remove every trashed bookmark.
- *
  * @returns {Promise<boolean>} True when the trash was emptied.
  */
 export async function confirmEmptyTrash() {
@@ -186,7 +178,7 @@ export async function confirmEmptyTrash() {
 /**
  * Attach the trash listeners (delegated row actions + empty trash).
  *
- * Register AFTER mountWorkspace() (src/components/workspace.js).
+ * Register AFTER mountModals() (src/components/modals.js) so the buttons exist.
  */
 export function registerTrashListeners() {
   document.getElementById('emptyTrashBtn')?.addEventListener('click', confirmEmptyTrash);
@@ -198,6 +190,8 @@ export function registerTrashListeners() {
       return;
     }
     const purgeBtn = e.target.closest('[data-purge-bookmark]');
-    if (purgeBtn) await confirmPurgeBookmark(purgeBtn.dataset.purgeBookmark);
+    if (purgeBtn) {
+      await confirmPurgeBookmark(purgeBtn.dataset.purgeBookmark);
+    }
   });
 }

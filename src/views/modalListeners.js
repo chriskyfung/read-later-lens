@@ -21,6 +21,7 @@
  */
 
 import { closeReaderModal, getReaderBookmarkId } from './readerModal.js';
+import { closeTrashModal } from '../views/trash.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark } from './workspaceActions.js';
 import { closeSaveModal } from '../io/exporter.js';
@@ -64,6 +65,9 @@ export function registerModalListeners() {
 
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
   document.getElementById('closeSimilarityBtn')?.addEventListener('click', closeSimilarityModal);
+  document.getElementById('closeTrashBtn')?.addEventListener('click', closeTrashModal);
+
+  registerModalLayer('trashModal', { close: closeTrashModal });
 
   // Reader actions. Soft delete (the record moves to the trash and can be
   // restored), so the handler just needs to know whether a live bookmark was

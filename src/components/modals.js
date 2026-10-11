@@ -1,29 +1,30 @@
 /**
- * @fileoverview Modal components aggregator — mounts all overlay markup.
+ * @fileoverview Modal shell registry + stacking layer.
  *
- * Each overlay's markup was extracted byte-for-byte from the original
- * monolith (index.html). Mounting appends the blocks to the end of <body>
- * in the same order the monolith used, so paint order / z-index stacking
- * is unchanged.
+ * Each overlay's markup was extracted byte-for-byte from the original monolith
+ * into its own module under src/components/. Mounting appends the blocks to
+ * the end of <body> in the same order the monolith used, so focus order,
+ * z-index layers and (for the stackable ones) popstate/Escape semantics are
+ * unchanged.
  *
- * Behavior mapping:
- *  - readerModal      → src/views/readerModal.js
- *  - similarityModal  → src/views/similarityModal.js
- *  - saveModal        → src/io/exporter.js
- *  - importModal      → src/io/importer.js
- *  - duplicateModal   → src/io/importer.js
- *  - toast            → src/utils/dom.js
+ * - readerModal      -> src/views/readerModal.js
+ * - similarityModal  -> src/views/similarityModal.js
+ * - saveModal        -> src/io/exporter.js
+ * - importModal      -> src/io/importer.js
+ * - duplicateModal   -> src/io/importer.js
+ * - trashModal       -> src/components/bookmarks/trashModal.js
+ * - toast            -> src/utils/dom.js
  *
  * Listener registration (close buttons) lives in src/views/modalListeners.js
  * and must run AFTER mountModals().
  */
-
 import { readerModalHtml } from './readerModal.js';
 import { similarityModalHtml } from './similarityModal.js';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';
-import { toastHtml } from './toast.js';
+import { trashModalHtml } from './bookmarks/trashModal.js';
+import { toastNotificationHtml } from './toast.js';
 
 /**
  * Append all overlay markup to the end of <body> (monolith order preserved).
@@ -36,6 +37,7 @@ export function mountModals() {
       saveModalHtml() +
       importModalHtml() +
       duplicateModalHtml() +
-      toastHtml(),
+      trashModalHtml() +
+      toastNotificationHtml(),
   );
 }
