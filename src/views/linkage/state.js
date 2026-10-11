@@ -25,7 +25,9 @@
  * @property {string|null} focusedNodeId Bookmark id being highlighted, or null.
  * @property {boolean} pendingFocusCenter Whether the next tick should re-centre.
  * @property {number} renderGeneration Monotonic id of the latest render.
- * @property {ReturnType<typeof setTimeout>|null} pendingTopologyTimer Deferred Frame B handle.
+ * @property {{ cancel: () => void }|null} pendingTopologyTimer Deferred Frame
+ *   B handle returned by `afterPaint` (see ./linkage/scene.js); `cancel()`
+ *   stops both the rAF and the inner macrotask stage.
  */
 
 /** @type {GraphState} */
@@ -72,7 +74,7 @@ export function clearRenderState() {
 /** Cancel a deferred topology build, if one is outstanding. */
 export function cancelPendingTopology() {
   if (graphState.pendingTopologyTimer == null) return;
-  clearTimeout(graphState.pendingTopologyTimer);
+  graphState.pendingTopologyTimer.cancel();
   graphState.pendingTopologyTimer = null;
 }
 

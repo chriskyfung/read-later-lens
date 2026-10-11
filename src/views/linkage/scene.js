@@ -29,14 +29,46 @@ import { linkStrokeWidth } from './simulation.js';
  * (jsdom without `pretendToBeVisual`), which still lets the microtask queue
  * drain — enough for the tests, which never assert on paint.
  *
+ * Returns a handle whose `cancel()` stops both stages: it drops the pending
+ * rAF (when one is still outstanding) and clears the inner timeout, and a
+ * `cancelled` flag guards the window between the two so a late-firing rAF
+ * cannot arm the timeout after a cancel. `graphState.pendingTopologyTimer`
+ * stores this handle, which is what makes `cancelPendingTopology()` real
+ * rather than a no-op (the previous version returned `undefined`, so the
+ * caller's `clearTimeout(undefined)` never cleared anything).
+ *
  * @param {() => void} fn
+ * @returns {{ cancel: () => void }} cancellable handle for this deferred call
  */
 export function afterPaint(fn) {
+  const handle = {
+    cancelled: false,
+    rafId: null,
+    timeoutId: null,
+    cancel() {
+      handle.cancelled = true;
+      if (handle.rafId != null && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(handle.rafId);
+        handle.rafId = null;
+      }
+      if (handle.timeoutId != null) {
+        clearTimeout(handle.timeoutId);
+        handle.timeoutId = null;
+      }
+    },
+  };
+
   if (typeof window === 'object' && typeof window.requestAnimationFrame === 'function') {
-    window.requestAnimationFrame(() => setTimeout(fn, 0));
+    handle.rafId = window.requestAnimationFrame(() => {
+      // A cancel that raced the rAF must not arm the macrotask stage.
+      if (handle.cancelled) return;
+      handle.timeoutId = setTimeout(fn, 0);
+    });
   } else {
-    setTimeout(fn, 0);
+    handle.timeoutId = setTimeout(fn, 0);
   }
+
+  return handle;
 }
 
 /**

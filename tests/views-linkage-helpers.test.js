@@ -9,13 +9,15 @@
  * rather than surfacing as a broken canvas.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   nodeRadius,
   nodeLabelOffsetX,
   truncateNodeLabel,
   NODE_RADIUS_MIN,
 } from '../src/views/linkage/nodes.js';
+import { afterPaint } from '../src/views/linkage/scene.js';
+import { graphState, cancelPendingTopology } from '../src/views/linkage/state.js';
 import { linkStrokeWidth } from '../src/views/linkage/simulation.js';
 import {
   resolveFocusTarget,
@@ -186,5 +188,96 @@ describe('focusCameraTransform', () => {
     const a = focusCameraTransform(node, 800, 500);
     const b = focusCameraTransform(node, 800, 500);
     expect(a).toEqual(b);
+  });
+});
+
+describe('afterPaint cancellation', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  /**
+   * Install a minimal `window.requestAnimationFrame` double so the real-browser
+   * branch is exercised even though the node test environment has no window.
+   * Returns a `flush()` that runs every pending rAF callback synchronously.
+   */
+  function stubWindowRaf() {
+    let nextId = 1;
+    const pending = new Map();
+    vi.stubGlobal('window', {
+      requestAnimationFrame: (cb) => {
+        const id = nextId++;
+        pending.set(id, cb);
+        return id;
+      },
+      cancelAnimationFrame: (id) => {
+        pending.delete(id);
+      },
+    });
+    return {
+      flush() {
+        for (const [id, cb] of [...pending]) {
+          pending.delete(id);
+          cb();
+        }
+      },
+      pendingCount: () => pending.size,
+    };
+  }
+
+  it('returns a cancellable handle on the macrotask fallback path', () => {
+    const fn = vi.fn();
+    const handle = afterPaint(fn);
+    expect(handle).toBeTruthy();
+    expect(typeof handle.cancel).toBe('function');
+
+    handle.cancel();
+    vi.runAllTimers();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('runs the deferred callback when not cancelled (fallback path)', () => {
+    const fn = vi.fn();
+    afterPaint(fn);
+    vi.runAllTimers();
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels a pending rAF + timeout chain before either stage runs', () => {
+    const raf = stubWindowRaf();
+    const fn = vi.fn();
+    const handle = afterPaint(fn);
+
+    handle.cancel();
+    raf.flush(); // even if the rAF fires late, the guard must skip the timeout
+    vi.runAllTimers();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('cancels the inner timeout after the rAF stage has already run', () => {
+    const raf = stubWindowRaf();
+    const fn = vi.fn();
+    const handle = afterPaint(fn);
+
+    raf.flush(); // rAF done; the setTimeout(fn, 0) is now armed
+    handle.cancel();
+    vi.runAllTimers();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('cancelPendingTopology clears the handle the view stores from afterPaint', () => {
+    const fn = vi.fn();
+    graphState.pendingTopologyTimer = afterPaint(fn);
+
+    cancelPendingTopology();
+    vi.runAllTimers();
+
+    expect(fn).not.toHaveBeenCalled();
+    expect(graphState.pendingTopologyTimer).toBeNull();
   });
 });
