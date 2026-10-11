@@ -13,7 +13,7 @@
  * Generated controls carry IDs/tags as DOM data, not inline JavaScript.
  */
 
-import { bookmarks, sourceFiles, activeFolder, activeTag } from '../core/state.js';
+import { bookmarks, sourceFiles, setActiveFolder, activeFolder, activeTag } from '../core/state.js';
 import {
   sidebarAllFolderBtnClass,
   sidebarFolderItemClass,
@@ -43,6 +43,12 @@ export function renderSidebarFolders() {
   const active = bookmarks.filter((b) => !b.deleted_at);
   const trashedCount = bookmarks.length - active.length;
 
+  // Falling back to the All-Items view: with an empty trash, the TRASH
+  // pseudo-row shows nothing, and the sidebar must not sit on a dead row.
+  if (activeFolder === 'TRASH' && trashedCount === 0) {
+    setActiveFolder('ALL');
+  }
+
   if (totalSourceCount) totalSourceCount.innerText = String(sourceFiles.size);
   if (allCountBadge) allCountBadge.innerText = String(active.length);
   if (trashCountBadge) trashCountBadge.innerText = String(trashedCount);
@@ -52,7 +58,7 @@ export function renderSidebarFolders() {
     allFolderBtn.className = sidebarAllFolderBtnClass(isAllActive);
   }
   if (trashFolderBtn) {
-    trashFolderBtn.className = sidebarTrashBtnClass();
+    trashFolderBtn.className = sidebarTrashBtnClass(activeFolder === 'TRASH');
     // Applied after the className reset above, which would otherwise drop it.
     trashFolderBtn.classList.toggle('hidden', trashedCount === 0);
   }

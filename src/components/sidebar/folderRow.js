@@ -44,10 +44,8 @@ export function sidebarFolderItemClass(isActive) {
  * @param {boolean} isActive
  * @returns {string}
  */
-export function sidebarTrashBtnClass() {
-  return `folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between border transition {
-    'text-slate-300 border-transparent hover:bg-slate-700/50'
-  }`;
+export function sidebarTrashBtnClass(isActive) {
+  return `folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between border transition ${isActive ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30' : 'text-slate-300 border-transparent hover:bg-slate-700/50'}`;
 }
 
 /**
