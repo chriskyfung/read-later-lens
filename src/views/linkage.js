@@ -238,8 +238,14 @@ export function renderConceptLinkageGraph(focusId = null) {
   };
 
   function dragstarted(event, d) {
-    if (!simRef.current || !event.active) return;
-    simRef.current.alphaTarget(0.3).restart();
+    // d3-drag reports `active` as the gesture count BEFORE incrementing, so it
+    // is 0 on the first drag's start — the moment to re-heat the simulation.
+    // (fa6439a bailed whenever `event.active` was 0, i.e. always, so a settled
+    // simulation was never reheated and dragged nodes froze.)
+    // The reheat needs a simulation: Frame A of a focused render has none yet,
+    // so skip only that part — the pin is still seeded, and Frame B's new
+    // simulation starts hot (alpha 1), which keeps a drag in flight moving.
+    if (simRef.current && !event.active) simRef.current.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
   }
