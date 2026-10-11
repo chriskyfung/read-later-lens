@@ -232,6 +232,28 @@ describe('focus & camera API', () => {
     expect(document.getElementById('toastMsg').innerText).toContain('不在目前的關聯圖中');
   });
 
+  it('paints the link layer under the node layer after Frame B lands', async () => {
+    setBookmarks([BM(10, 'alpha beta gamma'), BM(20, 'alpha beta gamma')]);
+    openLinkageForBookmark('10');
+
+    // Frame A paints only the focused node (no links yet); the link layer is
+    // created with the rest of the graph in Frame B.
+    const canvas = document.getElementById('d3GraphCanvas');
+    await waitForTopology(canvas, 2);
+    expect(canvas.querySelectorAll('line').length).toBeGreaterThan(0);
+
+    // The regression this pins: fa6439a appended Frame B's link <g> as a
+    // sibling AFTER the eager node wrapper, so links crossed over circles.
+    const root = canvas.querySelector('svg > g');
+    const linkLayer = [...root.children].find((k) => k.querySelector('line'));
+    const nodeLayer = canvas.querySelector('g.nodes');
+    expect(linkLayer).toBeTruthy();
+    expect(nodeLayer).toBeTruthy();
+    expect(
+      linkLayer.compareDocumentPosition(nodeLayer) & window.Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('pins the focused node in place, like the focused-render path does', () => {
     setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
     renderConceptLinkageGraph();

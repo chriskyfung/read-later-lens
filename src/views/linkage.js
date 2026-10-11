@@ -138,8 +138,10 @@ export function renderConceptLinkageGraph(focusId = null) {
 
   // The zoomable svg scaffold and the per-node layer (drag, circle, label,
   // hover) both live in ./linkage/scene.js; Frame B appends into the same
-  // wrapper this returns, so every node stays under one element.
-  const { g, nodeWrapper } = createScene(width, height);
+  // wrapper this returns, so every node stays under one element. The returned
+  // linkWrapper is the pre-ordered UNDER layer — links go there, never as a
+  // fresh sibling of nodeWrapper, or they paint over the circles.
+  const { linkWrapper, nodeWrapper } = createScene(width, height);
   const { appendNodeGroups, decorateNodes } = createNodeLayer({
     nodeWrapper,
     colorScale,
@@ -166,7 +168,7 @@ export function renderConceptLinkageGraph(focusId = null) {
     graphState.simulation = simulation;
     simRef.current = simulation;
 
-    linkRef.current = createLinkSelection(g, links);
+    linkRef.current = createLinkSelection(linkWrapper, links);
 
     const rest = appendNodeGroups(freshNodes.filter((n) => n !== focusNode));
     decorateNodes(rest);
@@ -225,7 +227,7 @@ export function renderConceptLinkageGraph(focusId = null) {
   graphState.simulation = simulation;
   simRef.current = simulation;
 
-  linkRef.current = createLinkSelection(g, links);
+  linkRef.current = createLinkSelection(linkWrapper, links);
 
   const node = appendNodeGroups(nodesList);
   graphState.nodes = nodesList;

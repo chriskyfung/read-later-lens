@@ -96,7 +96,8 @@ export function gatherTooltipRefs() {
  * @param {number} width
  * @param {number} height
  * @returns {{ svg: import('d3').Selection, g: import('d3').Selection,
- *   zoom: import('d3').ZoomBehavior, nodeWrapper: import('d3').Selection }}
+ *   zoom: import('d3').ZoomBehavior, linkWrapper: import('d3').Selection,
+ *   nodeWrapper: import('d3').Selection }}
  */
 export function createScene(width, height) {
   const svg = d3
@@ -119,13 +120,17 @@ export function createScene(width, height) {
   graphState.zoom = zoom;
 
   /**
-   * The single node wrapper for this render, created once. Frame B appends its
-   * nodes into this same wrapper, so every node stays under one element and the
-   * emphasis/tick handlers can reach all of them with one selection.
+   * Layer wrappers for one render, in PAINT ORDER: SVG stacks siblings in
+   * document order, so the links group comes first (underneath) and the node
+   * group second (on top) — the pre-fa6439a visual contract where node
+   * circles cover link strokes at intersections. Both render paths append
+   * into these pre-ordered wrappers; neither may append content directly to
+   * `g`, or the stacking order silently reverts.
    */
+  const linkWrapper = g.append('g').attr('class', 'links');
   const nodeWrapper = g.append('g').attr('class', 'nodes');
 
-  return { svg, g, zoom, nodeWrapper };
+  return { svg, g, zoom, linkWrapper, nodeWrapper };
 }
 
 /**

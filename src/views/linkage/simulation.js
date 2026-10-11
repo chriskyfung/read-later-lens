@@ -69,8 +69,10 @@ export function createForceSimulation(nodes, links, width, height) {
 }
 
 /**
- * Append one `<line>` per link into a new `<g>` under `parent`, in the resting
- * style the hover handlers dim and re-emphasise from.
+ * Append one `<line>` per link into a new `<g>` under `parent` (the scene's
+ * pre-ordered link layer, which sits UNDER the node layer so circles cover
+ * link strokes), in the resting style the hover handlers dim and re-emphasise
+ * from.
  *
  * @param {d3.Selection} parent The zoomable `<g>`.
  * @param {{ source: string|object, target: string|object, value: number }[]} links

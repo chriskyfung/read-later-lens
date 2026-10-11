@@ -69,6 +69,28 @@ describe('renderConceptLinkageGraph guards and render path', () => {
     expect(canvas.querySelectorAll('line')).toHaveLength(0);
   });
 
+  it('paints the link layer under the node layer', async () => {
+    const canvas = createCanvas();
+    // Identical token sets guarantee a link above the threshold, so there is
+    // at least one <line> whose stacking against the circles matters.
+    setBookmarks([BM(1, 'alpha beta gamma'), BM(2, 'alpha beta gamma')]);
+    renderConceptLinkageGraph();
+
+    expect(canvas.querySelectorAll('line').length).toBeGreaterThan(0);
+    // SVG stacks siblings in document order (no z-index): whichever layer is
+    // appended FIRST paints underneath. Nodes must be on top — the pre-fa6439a
+    // visual contract (node circles cover link strokes at intersections).
+    const root = canvas.querySelector('svg > g'); // the zoom transform root
+    const linkLayer = [...root.children].find((k) => k.querySelector('line'));
+    const nodeLayer = canvas.querySelector('g.nodes');
+    expect(linkLayer).toBeTruthy();
+    expect(nodeLayer).toBeTruthy();
+    // nodeLayer must FOLLOW linkLayer, i.e. paint after (on top of) it.
+    expect(
+      linkLayer.compareDocumentPosition(nodeLayer) & window.Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('positions the single node via the simulation tick', async () => {
     const canvas = createCanvas();
     setBookmarks([BM(1, 'ticking node')]);
