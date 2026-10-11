@@ -131,3 +131,25 @@ export function resetFocus() {
   graphState.focusedNodeId = null;
   graphState.pendingFocusCenter = false;
 }
+
+/**
+ * The focus-camera hooks both render paths pass to `wireSimulationHandlers`.
+ *
+ * The tick hook re-centres every frame while a re-centre is armed; the settle
+ * hook arms one final re-centre on the finished layout (the target is pinned,
+ * so the others settle around it). Arming on every tick would re-centre
+ * mid-animation, so only `onSettled` sets the flag.
+ *
+ * @returns {{ onTick: () => void, onSettled: () => void }}
+ */
+export function focusSimulationHooks() {
+  return {
+    onTick: () => centerFocusedNode(),
+    onSettled: () => {
+      if (graphState.focusedNodeId != null) {
+        graphState.pendingFocusCenter = true;
+        centerFocusedNode();
+      }
+    },
+  };
+}
