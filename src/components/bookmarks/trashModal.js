@@ -49,11 +49,11 @@ export function trashItemHtml(bookmark) {
         <p class="text-[10px] text-slate-500 truncate">📁 ${escapeHtml(bookmark.source_file_name || '未知')} ｜ 刪除於 ${escapeHtml(formatDeletedAt(bookmark.deleted_at))}</p>
       </div>
       <div class="flex shrink-0 gap-2">
-        <button data-restore-bookmark
+        <button data-restore-bookmark="${escapeHtml(bookmark.id)}"
           class="text-xs bg-emerald-600/80 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition">
           還原
         </button>
-        <button data-purge-bookmark
+        <button data-purge-bookmark="${escapeHtml(bookmark.id)}"
           class="text-xs bg-slate-700 hover:bg-rose-600 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg font-medium transition">
           永久刪除
         </button>
