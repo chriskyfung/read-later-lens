@@ -18,6 +18,12 @@
  * been moved to src/components/linkage/graph.js to keep components pure; this
  * file now handles only D3 rendering, DOM creation, and delegates those two
  * snippets via helpers from ../components/linkage/graph.js.
+ *
+ * The pieces that carried real rules are extracted alongside, so this file is
+ * left with render orchestration alone: ./linkage/nodes.js (sizing),
+ * ./linkage/topology.js (focus pinning and the Frame A/Frame B merge),
+ * ./linkage/simulation.js (force config, link elements, tick wiring),
+ * ./linkage/focus.js (camera and node emphasis).
  */
 
 import * as d3 from 'd3';
@@ -27,41 +33,35 @@ import { openReaderModal } from './readerModal.js';
 import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../components/linkage/graph.js';
 import { activateTab } from './tabs.js';
 import { showToast } from '../utils/dom.js';
+import { nodeRadius, nodeLabelOffsetX, truncateNodeLabel } from './linkage/nodes.js';
+import {
+  createForceSimulation,
+  createLinkSelection,
+  linkStrokeWidth,
+  refreshNodeRadii,
+  wireSimulationHandlers,
+} from './linkage/simulation.js';
+import { prepareFocusedTopology, resolveFocusTarget } from './linkage/topology.js';
+import {
+  graphState,
+  cancelPendingTopology,
+  clearRenderState,
+  isCurrentGeneration,
+  nextRenderGeneration,
+  resolveCanvasSize,
+} from './linkage/state.js';
+import {
+  FOCUS_ZOOM,
+  applyFocusStyles,
+  centerFocusedNode,
+  clearFocusStyles,
+  resetFocus,
+  setFocusCamera,
+} from './linkage/focus.js';
 
-let currentSvg = null;
-let currentZoom = null;
-let currentSimulation = null;
-let currentNodes = null;
-let currentNodeSelection = null;
-let currentWidth = 0;
-let currentHeight = 0;
-let focusedNodeId = null;
-let pendingFocusCenter = false;
-
-/** Zoom factor applied when focusing a node. Shared by both camera paths. */
-export const FOCUS_ZOOM = 1.6;
-
-/**
- * Multiplier on d3's origin spiral for the not-yet-positioned nodes of a
- * focused render. d3 seeds them in a tight ~10px spiral around the origin,
- * which on a focused graph means heavily overlapping `forceCollide` radii and
- * an explosive first tick. Spreading them lets the graph grow outward from the
- * centred bookmark instead.
- */
-const INITIAL_SPREAD = 2.5;
-
-/** Monotonic id of the most recent render; lets a deferred frame self-cancel. */
-let renderGeneration = 0;
-
-/** Handle of a deferred (Frame B) topology build, so it can be cancelled. */
-let pendingTopologyTimer = null;
-
-/** Cancel a deferred topology build, if one is outstanding. */
-function cancelPendingTopology() {
-  if (pendingTopologyTimer == null) return;
-  clearTimeout(pendingTopologyTimer);
-  pendingTopologyTimer = null;
-}
+// FOCUS_ZOOM is re-exported so the module's public surface is unchanged for
+// callers that imported it from here rather than from ./linkage/focus.js.
+export { FOCUS_ZOOM };
 
 /**
  * Run `fn` after the browser has had a chance to paint.
@@ -93,19 +93,15 @@ function afterPaint(fn) {
  *   container, or when nothing matches the active filters).
  */
 export function renderConceptLinkageGraph(focusId = null) {
-  if (currentSimulation) currentSimulation.stop();
+  if (graphState.simulation) graphState.simulation.stop();
   // Clear render + focus state first, so an early return (no container, or an
   // empty library) cannot leave stale references for the focus API below.
-  currentSimulation = null;
-  currentSvg = null;
-  currentZoom = null;
-  currentNodes = null;
-  currentNodeSelection = null;
+  clearRenderState();
   resetFocus();
   // Any topology still owed by a previous render belongs to a graph that is
   // about to be replaced, and running it would append nodes twice.
   cancelPendingTopology();
-  const generation = ++renderGeneration;
+  const generation = nextRenderGeneration();
 
   const container = document.getElementById('d3GraphCanvas');
   if (!container) return false;
@@ -122,10 +118,9 @@ export function renderConceptLinkageGraph(focusId = null) {
     return false;
   }
 
-  const width = container.clientWidth || 800;
-  const height = container.clientHeight || 500;
-  currentWidth = width;
-  currentHeight = height;
+  const { width, height } = resolveCanvasSize(container);
+  graphState.width = width;
+  graphState.height = height;
 
   // ---- Frame A scaffolding ------------------------------------------------
   // Node records and the domain set are the cheap half of the graph build, so
@@ -142,17 +137,10 @@ export function renderConceptLinkageGraph(focusId = null) {
   // report it so the caller can toast.
   let focusNode = null;
   if (focusId != null) {
-    focusNode = nodesList.find((d) => d.id === focusId) || null;
-    if (focusNode) {
-      // Pin to the canvas centre. d3's initializeNodes() copies fx/fy onto
-      // x/y, and every tick() restores x = fx after the forces run, so this
-      // position holds for the lifetime of the simulation.
-      focusNode.fx = width / 2;
-      focusNode.fy = height / 2;
-      focusNode.x = width / 2;
-      focusNode.y = height / 2;
-      focusedNodeId = focusNode.id;
-    }
+    // Pins the node to the canvas centre (see ./linkage/topology.js), which is
+    // what lets the camera be placed on it in this same call.
+    focusNode = resolveFocusTarget(nodesList, focusId, width, height);
+    if (focusNode) graphState.focusedNodeId = focusNode.id;
   }
 
   const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(domains);
@@ -180,8 +168,8 @@ export function renderConceptLinkageGraph(focusId = null) {
 
   svg.call(zoom);
 
-  currentSvg = svg;
-  currentZoom = zoom;
+  graphState.svg = svg;
+  graphState.zoom = zoom;
 
   /**
    * The single node wrapper for this render, created once. Frame B appends its
@@ -203,7 +191,7 @@ export function renderConceptLinkageGraph(focusId = null) {
   const decorateNodes = (node) => {
     node
       .append('circle')
-      .attr('r', (d) => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
+      .attr('r', (d) => nodeRadius(d.degree))
       .attr('fill', (d) => colorScale(d.domain))
       .attr('stroke', '#0f172a')
       .attr('stroke-width', 2)
@@ -211,8 +199,8 @@ export function renderConceptLinkageGraph(focusId = null) {
 
     node
       .append('text')
-      .text((d) => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
-      .attr('x', (d) => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
+      .text((d) => truncateNodeLabel(d.title))
+      .attr('x', (d) => nodeLabelOffsetX(d.degree))
       .attr('y', 4)
       .attr('fill', '#94a3b8')
       .attr('font-size', '10px')
@@ -242,7 +230,7 @@ export function renderConceptLinkageGraph(focusId = null) {
         linkRef.current
           .style('stroke', '#334155')
           .style('stroke-opacity', 0.6)
-          .style('stroke-width', (l) => Math.min(4, Math.max(1, l.weight)));
+          .style('stroke-width', (l) => linkStrokeWidth(l.weight));
       })
       .on('click', (event, d) => {
         openReaderModal(d.id);
@@ -271,53 +259,19 @@ export function renderConceptLinkageGraph(focusId = null) {
   const buildRestOfGraph = () => {
     const { nodes: freshNodes, links } = buildLinkageGraph(filtered);
 
-    // Keep OUR object in the array — the DOM already holds it as __data__ — and
-    // adopt the degree the link pass computed for it. Substituting the fresh
-    // copy would orphan the painted node: d3's data binding, forceLink's id
-    // lookup and the tick handler must all agree on the same object.
-    const idx = freshNodes.findIndex((n) => n.id === focusId);
-    if (idx !== -1) {
-      focusNode.degree = freshNodes[idx].degree;
-      freshNodes[idx] = focusNode;
-    }
+    // Keep OUR object in the array — the DOM already holds it as __data__ —
+    // adopting the degree the link pass computed, and spread the
+    // as-yet-unpositioned nodes out from the centred bookmark so the graph
+    // grows away from it instead of piling onto one spot. See
+    // ./linkage/topology.js for why object identity matters here.
+    prepareFocusedTopology(freshNodes, focusNode, width, height);
 
-    // Spread the as-yet-unpositioned nodes out from the centred bookmark so the
-    // graph grows away from it, instead of every node piling onto one spot and
-    // being flung apart by forceCollide on the first tick.
-    freshNodes.forEach((n) => {
-      if (n === focusNode) return;
-      n.x = width / 2 + (n.x || 0) * INITIAL_SPREAD;
-      n.y = height / 2 + (n.y || 0) * INITIAL_SPREAD;
-    });
+    const simulation = createForceSimulation(freshNodes, links, width, height);
 
-    const simulation = d3
-      .forceSimulation(freshNodes)
-      .force(
-        'link',
-        d3
-          .forceLink(links)
-          .id((d) => d.id)
-          .distance(120),
-      )
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force(
-        'collide',
-        d3.forceCollide().radius((d) => Math.max(12, 6 + d.degree * 2)),
-      );
-
-    currentSimulation = simulation;
+    graphState.simulation = simulation;
     simRef.current = simulation;
 
-    linkRef.current = g
-      .append('g')
-      .selectAll('line')
-      .data(links)
-      .enter()
-      .append('line')
-      .attr('stroke', '#334155')
-      .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', (d) => Math.min(4, Math.max(1, d.weight)));
+    linkRef.current = createLinkSelection(g, links);
 
     const rest = appendNodeGroups(freshNodes.filter((n) => n !== focusNode));
     decorateNodes(rest);
@@ -325,43 +279,34 @@ export function renderConceptLinkageGraph(focusId = null) {
 
     // Every node is on screen now, so the emphasis covers all of them (the
     // newcomers are dimmed) and the tick handler can move them all.
-    currentNodes = freshNodes;
-    currentNodeSelection = nodeWrapper.selectAll('g');
+    graphState.nodes = freshNodes;
+    graphState.nodeSelection = nodeWrapper.selectAll('g');
     applyFocusStyles();
     // The target's radius only became knowable once the link pass gave it a
     // degree, so refresh it here rather than leaving the Frame A placeholder.
-    currentNodeSelection
-      .select('circle')
-      .attr('r', (d) => Math.max(8, 4 + Math.sqrt(d.degree) * 4));
+    refreshNodeRadii(graphState.nodeSelection);
 
-    simulation.on('tick', () => {
-      linkRef.current
-        .attr('x1', (d) => d.source.x)
-        .attr('y1', (d) => d.source.y)
-        .attr('x2', (d) => d.target.x)
-        .attr('y2', (d) => d.target.y);
-
-      currentNodeSelection.attr('transform', (d) => `translate(${d.x},${d.y})`);
-
-      centerFocusedNode();
-    });
-
-    simulation.on('end', () => {
-      if (focusedNodeId != null) {
-        // The first-tick centering used early coordinates; re-center once on
-        // the final layout. The target is pinned, so this settles the others
-        // around it rather than moving the target.
-        pendingFocusCenter = true;
-        centerFocusedNode();
-      }
+    wireSimulationHandlers(simulation, {
+      getNodes: () => graphState.nodeSelection,
+      getLinks: () => linkRef.current,
+      onTick: () => centerFocusedNode(),
+      onSettled: () => {
+        if (graphState.focusedNodeId != null) {
+          // The first-tick centering used early coordinates; re-center once on
+          // the final layout. The target is pinned, so this settles the others
+          // around it rather than moving the target.
+          graphState.pendingFocusCenter = true;
+          centerFocusedNode();
+        }
+      },
     });
   };
 
   // ---- Frame A: the focused bookmark, in this very call -------------------
   if (focusNode) {
     const node = appendNodeGroups([focusNode]);
-    currentNodes = nodesList;
-    currentNodeSelection = node;
+    graphState.nodes = nodesList;
+    graphState.nodeSelection = node;
     // The tick handler writes this same attribute; seed it now so the node is
     // visible at the centre on the first paint instead of flashing at (0,0).
     node.attr('transform', (d) => `translate(${d.x},${d.y})`);
@@ -369,11 +314,11 @@ export function renderConceptLinkageGraph(focusId = null) {
     setFocusCamera();
     applyFocusStyles();
 
-    pendingTopologyTimer = afterPaint(() => {
+    graphState.pendingTopologyTimer = afterPaint(() => {
       // A newer render (another click, resetGraphZoom, a tab switch) has
       // replaced this graph, so its topology is no longer wanted.
-      if (generation !== renderGeneration) return;
-      pendingTopologyTimer = null;
+      if (!isCurrentGeneration(generation)) return;
+      graphState.pendingTopologyTimer = null;
       buildRestOfGraph();
     });
 
@@ -389,51 +334,25 @@ export function renderConceptLinkageGraph(focusId = null) {
   domains = built.domains;
   colorScale.domain(domains);
 
-  const simulation = d3
-    .forceSimulation(nodesList)
-    .force(
-      'link',
-      d3
-        .forceLink(links)
-        .id((d) => d.id)
-        .distance(120),
-    )
-    .force('charge', d3.forceManyBody().strength(-300))
-    .force('center', d3.forceCenter(width / 2, height / 2))
-    .force(
-      'collide',
-      d3.forceCollide().radius((d) => Math.max(12, 6 + d.degree * 2)),
-    );
+  const simulation = createForceSimulation(nodesList, links, width, height);
 
-  currentSimulation = simulation;
+  graphState.simulation = simulation;
   simRef.current = simulation;
 
-  const link = g
-    .append('g')
-    .selectAll('line')
-    .data(links)
-    .enter()
-    .append('line')
-    .attr('stroke', '#334155')
-    .attr('stroke-opacity', 0.6)
-    .attr('stroke-width', (d) => Math.min(4, Math.max(1, d.weight)));
+  linkRef.current = createLinkSelection(g, links);
 
   const node = appendNodeGroups(nodesList);
-  currentNodes = nodesList;
-  currentNodeSelection = node;
+  graphState.nodes = nodesList;
+  graphState.nodeSelection = node;
 
   // Append Circles
   node
     .append('circle')
-    .attr('r', (d) => Math.max(8, 4 + Math.sqrt(d.degree) * 4))
+    .attr('r', (d) => nodeRadius(d.degree))
     .attr('fill', (d) => colorScale(d.domain))
     .attr('stroke', '#0f172a')
     .attr('stroke-width', 2)
     .attr('class', 'cursor-pointer transition-all duration-200');
-
-  // Node emphasis goes here, not above: it styles the circles, which only
-  // exist once they have been appended.
-  if (focusNode) applyFocusStyles();
 
   // Paint the nodes at their initial positions NOW rather than leaving them
   // unpositioned until the first tick. The tick handler writes this same
@@ -445,8 +364,8 @@ export function renderConceptLinkageGraph(focusId = null) {
   // Append Labels
   node
     .append('text')
-    .text((d) => d.title.substring(0, 10) + (d.title.length > 10 ? '...' : ''))
-    .attr('x', (d) => Math.max(10, 6 + Math.sqrt(d.degree) * 4))
+    .text((d) => truncateNodeLabel(d.title))
+    .attr('x', (d) => nodeLabelOffsetX(d.degree))
     .attr('y', 4)
     .attr('fill', '#94a3b8')
     .attr('font-size', '10px')
@@ -460,7 +379,7 @@ export function renderConceptLinkageGraph(focusId = null) {
       ttDomain.innerText = d.domain;
       ttTags.innerHTML = linkageTooltipTagsHtml(d.tags);
 
-      link
+      linkRef.current
         .style('stroke', (l) =>
           l.source.id === d.id || l.target.id === d.id ? '#6366f1' : '#334155',
         )
@@ -473,105 +392,31 @@ export function renderConceptLinkageGraph(focusId = null) {
     })
     .on('mouseout', () => {
       tooltip.style.opacity = '0';
-      link
+      linkRef.current
         .style('stroke', '#334155')
         .style('stroke-opacity', 0.6)
-        .style('stroke-width', (d) => Math.min(4, Math.max(1, d.weight)));
+        .style('stroke-width', (d) => linkStrokeWidth(d.weight));
     })
     .on('click', (event, d) => {
       openReaderModal(d.id);
     });
 
-  simulation.on('tick', () => {
-    link
-      .attr('x1', (d) => d.source.x)
-      .attr('y1', (d) => d.source.y)
-      .attr('x2', (d) => d.target.x)
-      .attr('y2', (d) => d.target.y);
-
-    node.attr('transform', (d) => `translate(${d.x},${d.y})`);
-
-    centerFocusedNode();
+  wireSimulationHandlers(simulation, {
+    getNodes: () => graphState.nodeSelection,
+    getLinks: () => linkRef.current,
+    onTick: () => centerFocusedNode(),
+    onSettled: () => {
+      if (graphState.focusedNodeId != null) {
+        // The first-tick centering used early coordinates; re-center once on
+        // the final layout so the focused node is truly centered after
+        // settling.
+        graphState.pendingFocusCenter = true;
+        centerFocusedNode();
+      }
+    },
   });
 
-  simulation.on('end', () => {
-    if (focusedNodeId != null) {
-      // The first-tick centering used early coordinates; re-center once on the
-      // final layout so the focused node is truly centered after settling.
-      pendingFocusCenter = true;
-      centerFocusedNode();
-    }
-  });
-
-  return focusNode != null;
-}
-
-/**
- * Place the camera on the focused node with NO transition — used when the
- * node is already pinned (i.e. by the render that requested the focus), where
- * a first paint that is already centred is the whole point.
- *
- * The transform maps node (x, y) to the viewport centre at scale FOCUS_ZOOM.
- */
-function setFocusCamera() {
-  const node = currentNodes ? currentNodes.find((d) => d.id === focusedNodeId) : null;
-  if (!node || !currentSvg || !currentZoom) return;
-  const dx = currentWidth / 2 - node.x * FOCUS_ZOOM;
-  const dy = currentHeight / 2 - node.y * FOCUS_ZOOM;
-  currentSvg.call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(FOCUS_ZOOM));
-}
-
-/**
- * Apply the current node emphasis to the rendered selection: the focused
- * bookmark's circle gains an indigo ring (stroke-width 4) and every other node
- * dims to 40% opacity. No-op when nothing is focused.
- */
-function applyFocusStyles() {
-  if (currentNodeSelection == null || focusedNodeId == null) return;
-  currentNodeSelection.attr('opacity', (d) => (d.id === focusedNodeId ? 1 : 0.4));
-  currentNodeSelection
-    .select('circle')
-    .attr('stroke', (d) => (d.id === focusedNodeId ? '#6366f1' : '#0f172a'))
-    .attr('stroke-width', (d) => (d.id === focusedNodeId ? 4 : 2));
-}
-
-/** Remove any emphasis, restoring every node to its default appearance. */
-function clearFocusStyles() {
-  if (currentNodeSelection == null) return;
-  currentNodeSelection.attr('opacity', 1);
-  currentNodeSelection.select('circle').attr('stroke', '#0f172a').attr('stroke-width', 2);
-}
-
-/**
- * Center the viewport on the focused bookmark (animated, zoom k=FOCUS_ZOOM) so
- * the user always sees exactly which node is highlighted. Idempotent — repeated
- * calls mid-animation are ignored; the centering is re-applied when the
- * simulation settles (the 'end' event).
- */
-function centerFocusedNode() {
-  if (focusedNodeId == null || pendingFocusCenter === false) return;
-  const node = currentNodes ? currentNodes.find((d) => d.id === focusedNodeId) : null;
-  if (!node || !currentSvg || !currentZoom) {
-    pendingFocusCenter = false;
-    return;
-  }
-  const dx = currentWidth / 2 - node.x * FOCUS_ZOOM;
-  const dy = currentHeight / 2 - node.y * FOCUS_ZOOM;
-  currentSvg
-    .transition()
-    .duration(450)
-    .call(currentZoom.transform, d3.zoomIdentity.translate(dx, dy).scale(FOCUS_ZOOM));
-  pendingFocusCenter = false;
-}
-
-/**
- * Clear the node emphasis (graph re-rendered or view reset), restoring the
- * default view with no highlighted bookmark.
- */
-function resetFocus() {
-  clearFocusStyles();
-  focusedNodeId = null;
-  pendingFocusCenter = false;
+  return false;
 }
 
 /**
@@ -580,15 +425,16 @@ function resetFocus() {
  * @param {number} factor
  */
 export function zoomGraphBy(factor) {
-  if (currentSvg && currentZoom) currentSvg.transition().call(currentZoom.scaleBy, factor);
+  const { svg, zoom } = graphState;
+  if (svg && zoom) svg.transition().call(zoom.scaleBy, factor);
 }
 
 /**
  * Reset the graph view to the identity transform and re-render (monolith parity).
  */
 export function resetGraphZoom() {
-  if (currentSvg && currentZoom)
-    currentSvg.transition().call(currentZoom.transform, d3.zoomIdentity);
+  const { svg, zoom } = graphState;
+  if (svg && zoom) svg.transition().call(zoom.transform, d3.zoomIdentity);
   resetFocus();
   renderConceptLinkageGraph();
 }
@@ -602,18 +448,19 @@ export function resetGraphZoom() {
  * @returns {boolean} whether a node was found and focused
  */
 export function focusLinkageNode(id) {
-  const node = currentNodes ? currentNodes.find((d) => d.id === id) : null;
+  const node = graphState.nodes ? graphState.nodes.find((d) => d.id === id) : null;
   if (!node) {
     clearFocusStyles();
     resetFocus();
     return false;
   }
-  focusedNodeId = id;
+  graphState.focusedNodeId = id;
   applyFocusStyles();
-  pendingFocusCenter = true;
+  graphState.pendingFocusCenter = true;
   // A settled simulation will not tick again, so center immediately in that
   // case; otherwise the tick handler centers on the first repositioned frame.
-  if (!currentSimulation || currentSimulation.alpha() <= currentSimulation.alphaMin()) {
+  const simulation = graphState.simulation;
+  if (!simulation || simulation.alpha() <= simulation.alphaMin()) {
     centerFocusedNode();
   }
   return true;
