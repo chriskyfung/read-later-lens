@@ -2,55 +2,22 @@
 
 /** @fileoverview Tests for the linkage graph view's guards and D3 render path.
 
- * The graph topology rules are covered by tests/linkage.test.js. This file
- * exercises the view's DOM-facing guards and the D3 render path against a REAL
- * DOM (jsdom) so that "renders a single node" is a meaningful claim - the old
- * file deliberately stubbed the document.
+ * The graph topology rules are covered by tests/linkage.test.js, and the pure
+ * sizing/focus rules extracted from the view by
+ * tests/views-linkage-helpers.test.js. This file exercises the view's
+ * DOM-facing guards and the D3 render path against a REAL DOM (jsdom) so that
+ * "renders a single node" is a meaningful claim - the old file deliberately
+ * stubbed the document.
  *
- * Render tests run before the reset-graph tests below, because those drive the
- * module-private zoom state (`currentSvg`/`currentZoom`); its presence turns
- * `zoomGraphBy` from a no-op into a real transition.
+ * The focus & camera API has its own suite in
+ * tests/views-linkage-focus.test.js. Shared DOM fixtures and wait helpers live
+ * in tests/helpers/linkage.js.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from '../src/views/linkage.js';
 import { setBookmarks } from '../src/core/state.js';
-
-const BM = (id, title = `t${id}`, url = `https://example.com/${id}`) => ({
-  id: String(id),
-  title,
-  url,
-  article_preview: '',
-  content: '',
-  instapaper_url: `https://www.instapaper.com/read/${id}`,
-  detected_language: 'en',
-  tags: [],
-  source_file_id: 'f1',
-  source_file_name: 'a.csv',
-});
-
-/** Appends a real canvas to the document and returns it. */
-function createCanvas() {
-  const canvas = document.createElement('div');
-  canvas.id = 'd3GraphCanvas';
-  canvas.className = 'flex-1';
-  document.body.appendChild(canvas);
-  return canvas;
-}
-
-/** Stop any running simulation and clear the document between tests. */
-function resetModuleState() {
-  // The view stops the simulation only when a canvas is present, so add a
-  // throwaway one to drive the stop, then remove it with everything else.
-  const canvas = document.createElement('div');
-  canvas.id = 'd3GraphCanvas';
-  document.body.appendChild(canvas);
-  setBookmarks([]);
-  renderConceptLinkageGraph();
-  while (document.body.firstChild) {
-    document.body.removeChild(document.body.firstChild);
-  }
-}
+import { BM, createCanvas, resetModuleState } from './helpers/linkage.js';
 
 afterEach(() => {
   resetModuleState();
@@ -100,6 +67,28 @@ describe('renderConceptLinkageGraph guards and render path', () => {
 
     expect(canvas.querySelectorAll('circle')).toHaveLength(2);
     expect(canvas.querySelectorAll('line')).toHaveLength(0);
+  });
+
+  it('paints the link layer under the node layer', async () => {
+    const canvas = createCanvas();
+    // Identical token sets guarantee a link above the threshold, so there is
+    // at least one <line> whose stacking against the circles matters.
+    setBookmarks([BM(1, 'alpha beta gamma'), BM(2, 'alpha beta gamma')]);
+    renderConceptLinkageGraph();
+
+    expect(canvas.querySelectorAll('line').length).toBeGreaterThan(0);
+    // SVG stacks siblings in document order (no z-index): whichever layer is
+    // appended FIRST paints underneath. Nodes must be on top — the pre-fa6439a
+    // visual contract (node circles cover link strokes at intersections).
+    const root = canvas.querySelector('svg > g'); // the zoom transform root
+    const linkLayer = [...root.children].find((k) => k.querySelector('line'));
+    const nodeLayer = canvas.querySelector('g.nodes');
+    expect(linkLayer).toBeTruthy();
+    expect(nodeLayer).toBeTruthy();
+    // nodeLayer must FOLLOW linkLayer, i.e. paint after (on top of) it.
+    expect(
+      linkLayer.compareDocumentPosition(nodeLayer) & window.Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('positions the single node via the simulation tick', async () => {

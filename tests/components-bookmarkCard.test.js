@@ -76,11 +76,14 @@ describe('bookmarkCardHtml', () => {
     expect(html).toContain('title="於 Instapaper 開啟"');
   });
 
-  it('renders the delete and similarity buttons (reader opens on card click)', () => {
+  it('renders the delete, similarity and linkage buttons (reader opens on card click)', () => {
     const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
     expect(html).toContain('data-delete-bookmark');
     expect(html).toContain('open-similarity-btn');
     expect(html).toContain('⚡ 相似');
+    expect(html).toContain('open-linkage-btn');
+    expect(html).toContain('🕸️ 關聯');
+    expect(html).toContain('title="在概念關聯圖中檢視"');
     expect(html).not.toContain('open-reader-btn');
     expect(html).not.toContain('📖 閱讀');
   });

@@ -33,11 +33,28 @@ export function buildLinkageGraph(bookmarks, options = {}) {
   const threshold = options.threshold ?? LINKAGE_THRESHOLD;
   const selected = bookmarks.slice(0, limit);
 
-  const { nodes, domains } = buildNodes(selected);
+  const { nodes, domains } = buildGraphNodes(selected);
   const freqs = selected.map(bookmarkTokenFreq); // one tokenizing pass per document
   const links = buildLinks(nodes, freqs, threshold);
 
   return { nodes, links, domains };
+}
+
+/**
+ * Derive node records and the domain set from a selection — the cheap half of
+ * the graph build (one `extractDomain` per document, no tokenizing and no
+ * pairwise scoring).
+ *
+ * Exposed separately so the linkage view can paint a focused node before
+ * paying for the O(n^2) link pass. `degree` is 0 here; only the link pass
+ * (which the caller runs later) can know the real values.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} selected
+ *   Already-limited selection — this function does NOT re-apply `LINKAGE_LIMIT`.
+ * @returns {{ nodes: { id: string, title: string, url: string, domain: string, degree: number, tags: string[] }[], domains: Set<string> }}
+ */
+export function buildGraphNodes(selected) {
+  return buildNodes(selected);
 }
 
 /** Derive node records and the domain set from a filtered selection. */

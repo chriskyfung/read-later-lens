@@ -44,10 +44,16 @@ export function readerModalHtml() {
       </div>
       <!-- Modal Footer -->
       <div class="px-6 py-3 border-t border-slate-700 bg-slate-900/50 flex justify-between items-center">
-        <button id="readerSimilarityBtn" title="查看相似文章"
-          class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
-          <span>⚡ 相似</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="readerSimilarityBtn" title="查看相似文章"
+            class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
+            <span>⚡ 相似</span>
+          </button>
+          <button id="readerLinkageBtn" title="在概念關聯圖中檢視"
+            class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
+            <span>🕸️ 關聯</span>
+          </button>
+        </div>
         <div class="flex items-center gap-2">
           <a id="readerInstapaperBtn" href="#" target="_blank"
             class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-4 py-2 rounded-lg font-medium flex items-center gap-1">

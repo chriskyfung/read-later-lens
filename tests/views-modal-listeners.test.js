@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+// The reader's linkage button navigates to the graph; the graph behaviour
+// itself is covered by tests/views-linkage.test.js. Mock it so this file stays
+// a wiring test and does not pull d3 into the node environment.
+vi.mock('../src/views/linkage.js', () => ({
+  openLinkageForBookmark: vi.fn(() => true),
+}));
 import { registerModalListeners } from '../src/views/modalListeners.js';
+import { openLinkageForBookmark } from '../src/views/linkage.js';
 import { openReaderModal, getReaderBookmarkId } from '../src/views/readerModal.js';
 import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/exporter.js';
@@ -126,6 +133,7 @@ beforeEach(() => {
     'confirm',
     vi.fn(() => true),
   );
+  vi.mocked(openLinkageForBookmark).mockClear();
   for (const k of Object.keys(els)) delete els[k];
   created.length = 0;
   globalThis.document._doc = {};
@@ -394,5 +402,32 @@ describe('nested modal layers', () => {
     // The evicted reader retired its own state, so the id cannot go stale.
     expect(getReaderBookmarkId()).toBeNull();
     warn.mockRestore();
+  });
+});
+
+describe('reader linkage shortcut', () => {
+  it('closes every overlay and navigates to the focused node', async () => {
+    registerModalListeners();
+    openReaderModal('1');
+    el('readerSimilarityBtn').dispatch('click'); // stack a drawer on top
+    expect(stackDepth()).toBe(2);
+
+    await el('readerLinkageBtn').dispatch('click');
+
+    // Navigating means leaving the reader, so the whole stack drains and the
+    // graph tab underneath is actually visible.
+    expect(stackDepth()).toBe(0);
+    expect(el('readerModal').classList.contains('hidden')).toBe(true);
+    expect(openLinkageForBookmark).toHaveBeenCalledTimes(1);
+    expect(openLinkageForBookmark).toHaveBeenCalledWith('1');
+  });
+
+  it('does not navigate when no bookmark is open', async () => {
+    registerModalListeners();
+
+    await el('readerLinkageBtn').dispatch('click');
+
+    expect(openLinkageForBookmark).not.toHaveBeenCalled();
+    expect(stackDepth()).toBe(0);
   });
 });
