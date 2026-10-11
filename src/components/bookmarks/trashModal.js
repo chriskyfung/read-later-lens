@@ -19,17 +19,12 @@ export const trashItemColumns = [
 ];
 
 /**
- * Row-level CSS class for a static trash row (kept for parity with the
- * old panel-side class builder).
+ * Card shell for one trashed row — the monolith's panel-side class restored
+ * verbatim, so each bookmark renders as a bordered card that isolates it from
+ * its neighbours. The exact string is pinned by tests.
  */
-export function trashItemClass(isSelected) {
-  return [
-    'flex items-center gap-2 px-3 py-2',
-    'rounded-lg transition-colors text-xs',
-    'text-slate-300 cursor-pointer',
-    'hover:bg-slate-700/60',
-    isSelected ? 'bg-slate-700/40' : '',
-  ].join(' ');
+export function trashItemClass() {
+  return 'bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between gap-3 transition';
 }
 
 /**
@@ -56,7 +51,7 @@ function escapeHtml(value) {
  */
 export function trashItemHtml(bookmark) {
   return `
-    <div class="flex items-center gap-3">
+    <div class="${trashItemClass()}">
       <div class="flex-1 min-w-0">
         <h3 class="font-bold text-sm text-slate-100 truncate">${escapeHtml(bookmark.title)}</h3>
         <p class="text-xs text-slate-400 line-clamp-2 mb-1">${escapeHtml(bookmark.article_preview || '無預覽內容')}</p>
@@ -113,7 +108,7 @@ export function trashModalHtml() {
         </header>
 
         <div class="px-5 py-4 overflow-y-auto flex-1">
-          <div id="trashList" class="space-y-2"></div>
+          <div id="trashList" class="space-y-3"></div>
 
           <div id="trashEmptyState" class="hidden flex flex-col items-center justify-center py-6 text-center">
             <div class="bg-slate-800/80 p-4 rounded-full text-slate-500 mb-3">
