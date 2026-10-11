@@ -24,7 +24,7 @@ import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';
 import { trashModalHtml } from './bookmarks/trashModal.js';
-import { toastNotificationHtml } from './toast.js';
+import { toastHtml } from './toast.js';
 
 /**
  * Append all overlay markup to the end of <body> (monolith order preserved).
@@ -38,6 +38,6 @@ export function mountModals() {
       importModalHtml() +
       duplicateModalHtml() +
       trashModalHtml() +
-      toastNotificationHtml(),
+      toastHtml(),
   );
 }
