@@ -70,13 +70,14 @@ describe('renderAll', () => {
     expect(renderBookmarkCards).toHaveBeenCalledTimes(4);
     for (const render of Object.values(analytics)) expect(render).toHaveBeenCalledTimes(1);
   });
-  it('renders the trash view instead of the grid while the trash folder is active', () => {
+  it('does not hide the grid while the trash folder is active', () => {
     setActiveFolder('TRASH');
     renderAll();
 
-    expect(renderTrashView).toHaveBeenCalledExactlyOnceWith();
-    expect(renderBookmarkCards).not.toHaveBeenCalled();
-
-    setActiveFolder('ALL');
+    // The trash view is NOT rendered here — it owns the dedicated modal
+    // (openTrashModal() from the sidebar row), so the grid stays mounted.
+    expect(renderSidebar).toHaveBeenCalledTimes(1);
+    expect(renderBookmarkCards).toHaveBeenCalledTimes(1);
+    expect(renderTrashView).not.toHaveBeenCalled();
   });
 });
