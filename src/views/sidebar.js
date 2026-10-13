@@ -13,7 +13,7 @@
  * Generated controls carry IDs/tags as DOM data, not inline JavaScript.
  */
 
-import { bookmarks, sourceFiles, activeFolder, activeTag, setActiveFolder } from '../core/state.js';
+import { bookmarks, sourceFiles, setActiveFolder, activeFolder, activeTag } from '../core/state.js';
 import {
   sidebarAllFolderBtnClass,
   sidebarFolderItemClass,
@@ -43,9 +43,9 @@ export function renderSidebarFolders() {
   const active = bookmarks.filter((b) => !b.deleted_at);
   const trashedCount = bookmarks.length - active.length;
 
-  // If the last trashed bookmark was purged while the user sat in the trash
-  // view, fall back to the All-Items view — the trash row is about to hide.
-  if (trashedCount === 0 && activeFolder === 'TRASH') {
+  // Falling back to the All-Items view: with an empty trash, the TRASH
+  // pseudo-row shows nothing, and the sidebar must not sit on a dead row.
+  if (activeFolder === 'TRASH' && trashedCount === 0) {
     setActiveFolder('ALL');
   }
 

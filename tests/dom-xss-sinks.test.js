@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { bookmarkCardHtml } from '../src/components/bookmarks/card.js';
-import { trashItemHtml } from '../src/components/bookmarks/trashPanel.js';
+import { trashItemHtml } from '../src/components/bookmarks/trashModal.js';
 import { domainBarHtml } from '../src/components/domains/bar.js';
 import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';
 import { linkageTooltipTagsHtml } from '../src/components/linkage/graph.js';
@@ -24,6 +24,10 @@ import { setSourceFiles } from '../src/core/state.js';
 
 const HOSTILE = '<img src=x onerror=alert(1)>';
 const HOSTILE_NAME = `">${HOSTILE}.csv`;
+// A single-quote-first payload: it only breaks out of a single-quoted
+// attribute, so it exercises the `'` -> `&#39;` escape that the double-quote
+// payload above cannot reach.
+const HOSTILE_SINGLE_QUOTE = "' autofocus onfocus=alert(1)";
 
 const hostileBookmark = {
   id: '1',
@@ -44,6 +48,15 @@ const REGISTRY = [
     () => bookmarkCardHtml({ bookmark: hostileBookmark, domain: 'example.com', isSelected: false }),
   ],
   ['trashItemHtml', () => trashItemHtml(hostileBookmark)],
+  [
+    'trashItemHtml (single-quote payload)',
+    () =>
+      trashItemHtml({
+        ...hostileBookmark,
+        title: HOSTILE_SINGLE_QUOTE,
+        source_file_name: HOSTILE_SINGLE_QUOTE,
+      }),
+  ],
   ['domainBarHtml', () => domainBarHtml({ domain: HOSTILE, count: 3, pct: 10 })],
   [
     'sidebarFolderItemHtml',
@@ -68,6 +81,20 @@ describe('data-fed markup builders (registry audit)', () => {
     expect(host.querySelector('[onerror]')).toBeNull();
     // The payload still reaches the user — as TEXT, not as markup.
     expect(host.textContent).toContain('alert(1)');
+  });
+
+  it('escapes a single quote to an entity, so a single-quoted attribute cannot break out', () => {
+    const html = trashItemHtml({
+      ...hostileBookmark,
+      title: HOSTILE_SINGLE_QUOTE,
+      source_file_name: HOSTILE_SINGLE_QUOTE,
+    });
+
+    // Byte-level pin: the raw payload never survives as a bare quote; it is
+    // rendered through the &#39; entity. This is the assertion the
+    // element-creation checks above cannot make.
+    expect(html).not.toContain(HOSTILE_SINGLE_QUOTE);
+    expect(html).toContain('&#39; autofocus onfocus=alert(1)');
   });
 });
 

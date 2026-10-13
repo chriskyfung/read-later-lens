@@ -7,6 +7,7 @@
  */
 
 import * as state from '../core/state.js';
+import { openTrashModal } from './trash.js';
 import { getStorageUsage } from '../core/store.js';
 import { stateStillFresh } from '../core/guard.js';
 import { showToast } from '../utils/dom.js';
@@ -123,11 +124,11 @@ export function registerSidebarListeners() {
     deps.render();
   });
 
-  // Trash (回收桶) pseudo-folder row — the trash view itself is rendered by
-  // src/views/trash.js, which also owns its row/purge actions.
+  // Trash (回收桶) row — opens the dedicated trash modal instead of switching
+  // the pseudo-folder (the grid behind it stays mounted). See src/views/trash.js.
   document.getElementById('trashFolderBtn')?.addEventListener('click', () => {
-    state.setActiveFolder('TRASH');
-    deps.render();
+    // The modal opens on top of whatever is on screen.
+    openTrashModal();
   });
 
   // Language filter pill click delegation

@@ -19,7 +19,7 @@ const FOCUSABLE_SELECTOR =
   '[tabindex]:not([tabindex="-1"])';
 
 /** Base z-index for overlays (the markup ships with Tailwind `z-50`). */
-const MODAL_Z_BASE = 50;
+export const MODAL_Z_BASE = 50;
 
 /**
  * Runaway guard for the layer stack. Real navigation (reader <-> similarity)
@@ -308,7 +308,8 @@ export function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
