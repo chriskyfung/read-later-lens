@@ -58,7 +58,6 @@ export function renderTrashView() {
 
   const trashed = getTrashedBookmarks();
 
-  list.innerHTML = '';
   summary.textContent = `共 ${trashed.length} 筆`;
 
   if (trashed.length === 0) {
@@ -113,7 +112,7 @@ export async function restoreBookmark(id) {
  * @returns {Promise<boolean>} True when the record was purged.
  */
 export async function purgeBookmark(id) {
-  const bookmark = state.bookmarks.find((b) => b.id === id);
+  const bookmark = state.bookmarks.find((b) => b.id === id && b.deleted_at);
   if (!bookmark) return false;
 
   // Purging is irreversible, so this is the most expensive place to act on a
@@ -135,8 +134,14 @@ export async function purgeBookmark(id) {
  * @returns {Promise<boolean>} True when the record was purged.
  */
 export async function confirmPurgeBookmark(id) {
-  const bookmark = state.bookmarks.find((b) => b.id === id);
-  if (!confirm(`確定要永久刪除書籤「${bookmark ? bookmark.title : ''}」嗎？此動作無法復原。`)) {
+  const bookmark = state.bookmarks.find((b) => b.id === id && b.deleted_at);
+  if (!bookmark) return false;
+
+  // Gate before the prompt: this is irreversible, so never ask the user to
+  // confirm a delete this tab cannot honour. purgeBookmark re-gates.
+  if (!(await stateStillFresh())) return false;
+
+  if (!confirm(`確定要永久刪除書籤「${bookmark.title}」嗎？此動作無法復原。`)) {
     return false;
   }
   return purgeBookmark(id);
@@ -169,6 +174,11 @@ export async function emptyTrash() {
 export async function confirmEmptyTrash() {
   const count = getTrashedBookmarks().length;
   if (count === 0) return false;
+
+  // Gate before the prompt so the count asked about is the count this tab can
+  // still honour; emptyTrash re-gates.
+  if (!(await stateStillFresh())) return false;
+
   if (!confirm(`確定要永久刪除回收桶中的 ${count} 筆書籤嗎？此動作無法復原。`)) {
     return false;
   }

@@ -154,6 +154,16 @@ describe('purgeBookmark', () => {
     expect(await purgeBookmark('missing')).toBe(false);
     expect(persistFn).not.toHaveBeenCalled();
   });
+
+  it('refuses to purge a live (un-trashed) bookmark', async () => {
+    setBookmarks([live('2', 'Active')]);
+
+    // purgeBookmark only ever targets trashed records; a live id must not be
+    // permanently deleted, mirroring restoreBookmark's deleted_at guard.
+    expect(await purgeBookmark('2')).toBe(false);
+    expect(bookmarks.map((b) => b.id)).toEqual(['2']);
+    expect(persistFn).not.toHaveBeenCalled();
+  });
 });
 
 describe('confirmPurgeBookmark', () => {
@@ -173,6 +183,22 @@ describe('confirmPurgeBookmark', () => {
 
     expect(bookmarks).toHaveLength(1);
     expect(persistFn).not.toHaveBeenCalled();
+  });
+
+  it('never prompts once the tab is stale, so nothing is lost', async () => {
+    const confirmSpy = vi.fn(() => true);
+    globalThis.confirm = confirmSpy;
+    setBookmarks([trashed('1', 'Older', OLDER)]);
+    gate.fresh = false;
+
+    // The gate runs before the prompt: a stale tab must not ask the user to
+    // confirm a permanent delete it cannot honour.
+    expect(await confirmPurgeBookmark('1')).toBe(false);
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(bookmarks).toHaveLength(1);
+    expect(persistFn).not.toHaveBeenCalled();
+    expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
   });
 });
 
@@ -317,7 +343,7 @@ describe('cross-tab stale gate', () => {
     expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
   });
 
-  it('refuses the purge even once the confirm is accepted, so nothing is lost', async () => {
+  it('never prompts once the tab is stale, so nothing is lost', async () => {
     const confirmSpy = vi.fn(() => true);
     globalThis.confirm = confirmSpy;
     setBookmarks([trashed('1', 'Older', OLDER)]);
@@ -325,8 +351,9 @@ describe('cross-tab stale gate', () => {
 
     expect(await confirmEmptyTrash()).toBe(false);
 
-    // The prompt is asked first; the destructive step behind it is what refuses.
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    // The gate runs before the prompt now: a stale tab never asks the user to
+    // confirm a destructive action it cannot honour.
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(bookmarks).toHaveLength(1);
     expect(persistFn).not.toHaveBeenCalled();
     expect(el('toastMsg').innerText).toBe(STALE_STATE_MESSAGE);
