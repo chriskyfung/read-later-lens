@@ -10,6 +10,13 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    rolldownOptions: {
+      // Required for the lazy `import('compromise')` in src/analytics/keywords.js
+      // to become its own chunk. Without it the bundler inlines the dynamic
+      // import back into the entry chunk, defeating the lazy load (verified in
+      // the adoption spike: identical 531 kB entry chunk with and without).
+      output: { codeSplitting: true },
+    },
   },
   test: {
     globals: true,

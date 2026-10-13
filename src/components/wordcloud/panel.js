@@ -12,7 +12,7 @@ export function panelWordcloudHtml() {
         <div id="panelWordcloud" class="tab-panel hidden h-full flex flex-col">
           <div class="bg-slate-800/60 border border-slate-700/70 rounded-xl p-5 mb-4">
             <h3 class="text-sm font-semibold text-indigo-300 mb-1">☁️ 關鍵字文字雲 (Word Cloud Analytics)</h3>
-            <p class="text-xs text-slate-400">系統自動整合擴充版英文 Stopwords 停用詞過濾與詞幹還原，並對中日文內文進行 N-Gram 斷詞分析。點擊任意關鍵字可立即進行全局搜尋。
+            <p class="text-xs text-slate-400">系統以詞性標記擷取英文名詞與名詞片語主題（如 "machine learning"），依詞形（lemma）歸納同義變化，並以原始字面顯示；中日文內文則維持 N-Gram 斷詞分析。點擊任意關鍵字可立即進行全局搜尋。
             </p>
           </div>
           <div id="wordCloudContainer"
