@@ -39,13 +39,17 @@ export function initWordCloud(injectedDeps) {
 export function renderWordCloud() {
   const container = document.getElementById('wordCloudContainer');
 
-  if (needsKeywordEngine(getFilteredBookmarks())) {
+  // The filtered list is expensive (relevance scoring, sorting) and needed
+  // twice below, so compute it once per render rather than once per check.
+  const filtered = getFilteredBookmarks();
+
+  if (needsKeywordEngine(filtered)) {
     container.innerHTML = '<span class="text-slate-500 text-xs">正在載入關鍵字分析引擎…</span>';
     loadKeywordsEngine().then(() => deps.render());
     return;
   }
 
-  const items = wordCloudItems(wordCloudFrequencies(getFilteredBookmarks()));
+  const items = wordCloudItems(wordCloudFrequencies(filtered));
 
   if (items.length === 0) {
     container.innerHTML = wordCloudEmptyStateHtml();

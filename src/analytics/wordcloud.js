@@ -19,20 +19,101 @@
  */
 
 import { bookmarkText, tokenizeFrequency } from './tokenize.js';
-import { detectLanguage } from './detectLanguage.js';
-import { extractKeywordTerms, keywordsReady } from './keywords.js';
+import { extractKeywordTerms, keywordsReady, documentLanguage } from './keywords.js';
+
+/**
+ * Per-record memo of the extracted terms, keyed on the bookmark object itself.
+ *
+ * The word cloud recomputes on every `renderAll` (tab switch, filter change,
+ * debounced keystroke), and the extraction — a full compromise POS parse per
+ * English document — is the dominant cost (~0.6–0.8 ms/doc measured). Memoizing
+ * per record turns repeated renders into lookups.
+ *
+ * A WeakMap (not a text-keyed Map) because it cannot outlive its key: a
+ * re-import replaces the record objects wholesale, so stale entries are
+ * collected instead of pinned in memory with their full preview text. This is
+ * safe only because no code mutates `title`/`article_preview` in place — every
+ * mutation path (import, trash, restore) builds new record objects.
+ *
+ * Entries record which path produced them (`engine` vs `legacy`), because the
+ * two disagree: an entry computed through the legacy tokenizer while the
+ * engine was unloaded must not be served after the engine arrives (the
+ * `failed → ready` transition is the real case), and vice versa.
+ *
+ * @type {WeakMap<object, { path: 'engine'|'legacy', terms: object[] }>}
+ */
+const termsMemo = new WeakMap();
+
+/**
+ * Stable, unique-per-record token, assigned once per bookmark object.
+ *
+ * The aggregate memo is keyed on the filtered list, but an id sequence is not
+ * a content fingerprint: a re-import replaces the record objects, so the same
+ * ids can carry different text (a re-imported, edited CSV is the realistic
+ * case). Serializing the record *objects* rather than their ids makes the key
+ * self-invalidating — a new record object is a new serial, so a stale
+ * aggregate can never be served.
+ *
+ * @type {WeakMap<object, number>}
+ */
+const recordSerial = new WeakMap();
+
+/** @type {number} */
+let nextSerial = 1;
+
+/**
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @returns {number} the record's serial, assigned on first sight
+ */
+function serialOf(b) {
+  let serial = recordSerial.get(b);
+  if (serial === undefined) {
+    serial = nextSerial;
+    nextSerial += 1;
+    recordSerial.set(b, serial);
+  }
+  return serial;
+}
+
+/** @returns {'engine'|'legacy'} The path that must produce terms right now. */
+function activePath() {
+  return keywordsReady() ? 'engine' : 'legacy';
+}
+
+/**
+ * Terms for one bookmark, memoized per record and per extraction path.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @returns {object[]} engine path: `{ key, display, count }[]`;
+ *   legacy path: `[term, count][]` entries.
+ */
+function termsFor(b) {
+  const path = activePath();
+  const cached = termsMemo.get(b);
+  if (cached && cached.path === path) return cached.terms;
+
+  let terms;
+  if (path === 'engine' && documentLanguage(b) === 'en') {
+    terms = extractKeywordTerms(bookmarkText(b));
+  } else {
+    // CJK path (and English documents when the engine is not loaded) —
+    // surface forms only, grouped by the token itself.
+    terms = [...tokenizeFrequency(bookmarkText(b))];
+  }
+  termsMemo.set(b, { path, terms });
+  return terms;
+}
 
 /**
  * Aggregate one document's terms into the running maps.
  *
  * @param {{ lemmas: Map<string, {count: number,
  *   surfaces: Map<string, number>}>, plain: Map<string, number> }} acc
- * @param {string} text
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  */
-function accumulate(acc, text) {
-  const lang = detectLanguage(text);
-  if (lang === 'en' && keywordsReady()) {
-    for (const { key, display, count } of extractKeywordTerms(text)) {
+function accumulate(acc, b) {
+  if (activePath() === 'engine' && documentLanguage(b) === 'en') {
+    for (const { key, display, count } of termsFor(b)) {
       let group = acc.lemmas.get(key);
       if (!group) {
         group = { count: 0, surfaces: new Map() };
@@ -42,9 +123,7 @@ function accumulate(acc, text) {
       group.surfaces.set(display, (group.surfaces.get(display) || 0) + count);
     }
   } else {
-    // CJK path (and English documents when the engine has not loaded) —
-    // surface forms only, grouped by the token itself.
-    for (const [t, n] of tokenizeFrequency(text)) {
+    for (const [t, n] of termsFor(b)) {
       acc.plain.set(t, (acc.plain.get(t) || 0) + n);
     }
   }
@@ -70,23 +149,44 @@ function displayFor(surfaces) {
 }
 
 /**
+ * Memo of the aggregated result, keyed on the filtered list's record serials.
+ *
+ * The aggregation itself is cheap next to extraction, but it runs on every
+ * `renderAll` even when nothing that feeds it changed (tab away and back,
+ * selection-only updates). The key carries the active path too, so an engine
+ * arriving never serves a legacy aggregate.
+ *
+ * @type {{ key: string, entries: Array<[string, number]> } | null}
+ */
+let aggregateMemo = null;
+
+/** @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list */
+function aggregateKey(list) {
+  return `${activePath()}|${list.map(serialOf).join(',')}`;
+}
+
+/**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
  * @returns {Array<[string, number]>} sorted desc by count, capped at 60.
  *   The term is the display form (a verbatim substring of the source text).
  */
 export function wordCloudFrequencies(list) {
+  const key = aggregateKey(list);
+  if (aggregateMemo && aggregateMemo.key === key) return aggregateMemo.entries.slice();
+
   const acc = { lemmas: new Map(), plain: new Map() };
 
   for (const b of list) {
-    accumulate(acc, bookmarkText(b));
+    accumulate(acc, b);
   }
 
   const entries = [
     ...[...acc.lemmas].map(([, group]) => [displayFor(group.surfaces), group.count]),
     ...[...acc.plain],
-  ];
+  ].sort((a, b) => b[1] - a[1]);
 
-  return entries.sort((a, b) => b[1] - a[1]).slice(0, 60);
+  aggregateMemo = { key, entries: entries.slice(0, 60) };
+  return aggregateMemo.entries.slice();
 }
 
 /**

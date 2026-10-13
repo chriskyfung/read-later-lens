@@ -74,6 +74,34 @@ export function keywordsReady() {
 }
 
 /**
+ * Per-record memo of `detectLanguage`, keyed on the bookmark object itself.
+ *
+ * A WeakMap (not a text-keyed Map) because it cannot outlive its key: a
+ * re-import replaces the record objects wholesale, so stale entries are
+ * collected instead of pinned in memory with their full preview text. This is
+ * safe only because no code mutates `title`/`article_preview` in place —
+ * trash/restore and imports all build new record objects.
+ *
+ * @type {WeakMap<object, string>}
+ */
+const languageMemo = new WeakMap();
+
+/**
+ * Detected language of a bookmark's analysis text, memoized per record.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @returns {string}
+ */
+export function documentLanguage(b) {
+  let lang = languageMemo.get(b);
+  if (lang === undefined) {
+    lang = detectLanguage(bookmarkText(b));
+    languageMemo.set(b, lang);
+  }
+  return lang;
+}
+
+/**
  * Whether the given bookmarks need the (lazily loaded) engine at all: only
  * English-routed documents do. A CJK-only library never downloads the chunk
  * and renders through the legacy bigram path.
@@ -83,7 +111,7 @@ export function keywordsReady() {
  */
 export function needsKeywordEngine(list) {
   if (engineState === 'ready' || engineState === 'failed') return false;
-  return list.some((b) => detectLanguage(bookmarkText(b)) === 'en');
+  return list.some((b) => documentLanguage(b) === 'en');
 }
 
 /** Strips everything a term must not keep: punctuation, spaces, CJK runs. */

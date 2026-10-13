@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import {
   extractKeywordTerms,
   loadKeywordsEngine,
   keywordsReady,
   needsKeywordEngine,
+  documentLanguage,
 } from '../src/analytics/keywords.js';
+import * as keywordsModule from '../src/analytics/keywords.js';
 import { wordCloudFrequencies } from '../src/analytics/wordcloud.js';
 
 // The engine is lazy: every test in this file needs it loaded first, which is
@@ -175,5 +177,105 @@ describe('wordCloudFrequencies (English engine path)', () => {
   it('returns [] for empty or stopword-only input', () => {
     expect(wordCloudFrequencies([])).toEqual([]);
     expect(wordCloudFrequencies([{ id: 'x', title: '  the ', article_preview: '' }])).toEqual([]);
+  });
+});
+
+// ---- Caching (per-record memo + aggregate memo) -------------------------
+//
+// The extraction is the dominant cost (~0.6–0.8 ms/doc), so repeated renders
+// must not re-parse. These tests pin that the memo actually skips the work
+// AND that it never serves a stale result.
+describe('wordCloudFrequencies — caching', () => {
+  it('skips re-extraction when the same records are re-aggregated', () => {
+    const docs = [
+      { id: '1', title: 'Machine Learning Tutorials', article_preview: 'deep learning frameworks' },
+      { id: '2', title: 'Climate Change Reports', article_preview: 'new climate change studies' },
+    ];
+
+    const first = wordCloudFrequencies(docs);
+    const spy = vi.spyOn(keywordsModule, 'extractKeywordTerms');
+    try {
+      const second = wordCloudFrequencies(docs);
+      // Identical output, and the expensive extraction never ran.
+      expect(second).toEqual(first);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('reuses per-record terms but re-aggregates a different filtered set', () => {
+    const docs = [
+      { id: '1', title: 'Machine Learning Tutorials', article_preview: '' },
+      { id: '2', title: 'Climate Change Reports', article_preview: '' },
+    ];
+    const both = wordCloudFrequencies(docs);
+
+    // Narrowing the filter reuses each record's memoized terms (no
+    // re-extraction) but must still re-aggregate over the new subset — the
+    // per-record memo is what makes this cheap, not skipped work.
+    const spy = vi.spyOn(keywordsModule, 'extractKeywordTerms');
+    try {
+      const narrowed = wordCloudFrequencies([docs[1]]);
+      expect(spy).not.toHaveBeenCalled();
+      expect(narrowed).not.toEqual(both);
+      expect(new Map(narrowed).get('climate')).toBe(1);
+      expect(new Map(narrowed).get('machine')).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('returns an independent array each call (memo is not shared state)', () => {
+    const docs = [{ id: '1', title: 'Machine Learning', article_preview: '' }];
+    const a = wordCloudFrequencies(docs);
+    const b = wordCloudFrequencies(docs);
+    expect(a).not.toBe(b); // a caller mutating the result must not corrupt the cache
+    expect(a).toEqual(b);
+  });
+
+  it('returns equal results for fresh record objects with equal text', () => {
+    // The memo is keyed on record identity, so a re-import (new objects, same
+    // text) recomputes — but must produce the same answer.
+    const before = wordCloudFrequencies([
+      { id: '1', title: 'Machine Learning Tutorials', article_preview: '' },
+    ]);
+    const after = wordCloudFrequencies([
+      { id: '1', title: 'Machine Learning Tutorials', article_preview: '' },
+    ]);
+    expect(after).toEqual(before);
+  });
+
+  it('never serves stale terms when the same id carries different text', () => {
+    // The aggregate key fingerprints the record objects, not their ids: a
+    // re-imported (edited) library reuses ids with new text, and an id-only
+    // key would serve the previous cloud. This is the collision that keying
+    // on `list.map(b => b.id)` caused.
+    const first = wordCloudFrequencies([
+      { id: '1', title: 'Machine Learning', article_preview: '' },
+    ]);
+    expect(new Map(first).get('machine learning')).toBe(1);
+
+    // Same id, completely different document.
+    const second = wordCloudFrequencies([
+      { id: '1', title: 'Climate Change Reports', article_preview: '' },
+    ]);
+    const map = new Map(second);
+    expect(map.get('machine learning')).toBeUndefined();
+    expect(map.get('climate')).toBe(1);
+  });
+});
+
+describe('documentLanguage — memo', () => {
+  it('returns a stable answer for the same record', () => {
+    const doc = { id: '1', title: 'Machine Learning', article_preview: '' };
+    expect(documentLanguage(doc)).toBe('en');
+    expect(documentLanguage(doc)).toBe('en');
+  });
+
+  it('classifies CJK records', () => {
+    expect(documentLanguage({ id: '1', title: '如何學好英文寫作', article_preview: '' })).toBe(
+      'zh',
+    );
   });
 });
