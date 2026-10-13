@@ -10,7 +10,7 @@
  * instead, keeping the stub file focused on handler-level tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderTrashView } from '../src/views/trash.js';
+import { renderTrashView, initTrash, emptyTrash } from '../src/views/trash.js';
 import { setBookmarks, setSelectedIds } from '../src/core/state.js';
 
 // The cross-tab gate is transparent for these observations.
@@ -41,6 +41,7 @@ beforeEach(() => {
   mountTrashDom();
   setBookmarks([]);
   setSelectedIds(new Set());
+  initTrash({ persist: vi.fn(), render: vi.fn() });
   vi.clearAllMocks();
 });
 
@@ -70,6 +71,38 @@ describe('renderTrashView (real DOM)', () => {
     setBookmarks([live('live', 'Active')]);
 
     renderTrashView();
+
+    const list = document.getElementById('trashList');
+    expect(list.children).toHaveLength(0);
+    expect(document.getElementById('trashEmptyState').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('trashSummary').textContent).toBe('共 0 筆');
+  });
+
+  it('clears previously rendered rows once the trash is emptied', () => {
+    setBookmarks([trashed('0', 'Older', OLDER), trashed('1', 'Newer', NEWER)]);
+    renderTrashView();
+    expect(document.getElementById('trashList').children).toHaveLength(2);
+
+    // After the last purge the projection is empty: the rows must not linger
+    // behind the empty-state banner.
+    setBookmarks([]);
+    renderTrashView();
+
+    const list = document.getElementById('trashList');
+    expect(list.children).toHaveLength(0);
+    expect(document.getElementById('trashEmptyState').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('trashSummary').textContent).toBe('共 0 筆');
+  });
+
+  it('removes the rows from the DOM after emptyTrash() purges them', async () => {
+    setBookmarks([trashed('0', 'Older', OLDER), trashed('1', 'Newer', NEWER)]);
+    renderTrashView();
+    expect(document.getElementById('trashList').children).toHaveLength(2);
+
+    // The reported 清空回收桶 flow: the button's handler is confirmEmptyTrash ->
+    // emptyTrash -> renderTrashView, so asserting on emptyTrash() pins the
+    // click-to-DOM path the confirm wrapper only gates.
+    expect(await emptyTrash()).toBe(true);
 
     const list = document.getElementById('trashList');
     expect(list.children).toHaveLength(0);

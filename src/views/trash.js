@@ -60,6 +60,11 @@ export function renderTrashView() {
 
   summary.textContent = `共 ${trashed.length} 筆`;
 
+  // Clear on every render so the list always mirrors the projection, including
+  // the empty case (清空回收桶 / last purge) — otherwise the previous rows
+  // would linger behind the empty-state banner.
+  list.innerHTML = '';
+
   if (trashed.length === 0) {
     emptyState.classList.remove('hidden');
     return;
