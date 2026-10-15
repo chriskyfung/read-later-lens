@@ -32,6 +32,7 @@ The app is a Vite-powered single-page app with bundled npm dependencies. There i
 
 - [Node.js](https://nodejs.org/) >= 24.0.0
 - [pnpm](https://pnpm.io/) >= 12.0.0
+- Browser floor: Chrome/Edge 87+, Firefox 125+, Safari 14.1+ (iOS 14.5+) — older browsers degrade gracefully, see [docs/browser-support.md](docs/browser-support.md)
 
 ### Quick start
 
