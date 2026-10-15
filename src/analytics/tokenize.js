@@ -1,9 +1,13 @@
 /**
  * @fileoverview Light-weight tokenizer — CJK bigrams + English stemming.
  *
- * Mirrors the original `tokenizeText` / `simpleStem` exactly so word-cloud and
- * similarity results remain identical after the refactor. The character sets
- * and token-policy constants live in `constants.js`.
+ * The LEGACY text-analysis path. The word cloud routes English documents
+ * through `keywords.js` (compromise) and CJK documents through
+ * `segmentZh.js` (Intl.Segmenter) once the keyword engine is loaded, and
+ * falls back to this tokenizer otherwise — engine not loaded, or the
+ * runtime lacks Intl.Segmenter. TF-IDF similarity (`similarity.js`) still
+ * uses it exclusively. Behaviour here is pinned by tests/analytics.test.js
+ * and must stay byte-compatible with the original monolith.
  */
 
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
