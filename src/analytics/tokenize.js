@@ -1,13 +1,22 @@
 /**
- * @fileoverview Light-weight tokenizer — CJK bigrams + English stemming.
+ * @fileoverview Legacy text-analysis path — the DECLARED FALLBACK splitter
+ * and the home of `simpleStem`.
  *
- * The LEGACY text-analysis path. The word cloud routes English documents
- * through `keywords.js` (compromise) and CJK documents through
- * `segmentZh.js` (Intl.Segmenter) once the keyword engine is loaded, and
- * falls back to this tokenizer otherwise — engine not loaded, or the
- * runtime lacks Intl.Segmenter. TF-IDF similarity (`similarity.js`) still
- * uses it exclusively. Behaviour here is pinned by tests/analytics.test.js
- * and must stay byte-compatible with the original monolith.
+ * Declared roles (the universal `Intl.Segmenter` splitter in
+ * `segmentZh.js` took over the primary path):
+ * - Fallback for runtimes without `Intl.Segmenter`: the word cloud falls
+ *   back to this tokenizer for every language when the built-in API is
+ *   absent, and CJK documents also land here after a compromise chunk
+ *   failure so plain-path keys stay coherent across languages.
+ * - TF-IDF similarity (`similarity.js`) still uses it exclusively. Its
+ *   scores are pinned by tests/analytics.test.js, so migrating similarity
+ *   onto the universal splitter is a deliberate, separately-tested change
+ *   with re-baselined fixtures — not a cleanup to fold into another PR.
+ *   Deleting anything in this file before that migration is premature.
+ *
+ * Behaviour here must stay byte-compatible with the original monolith
+ * until then; `simpleStem` additionally survives any such migration (see
+ * its JSDoc below).
  */
 
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
@@ -22,6 +31,14 @@ import {
 
 /**
  * Light English stemmer (original behaviour, preserved).
+ *
+ * LOAD-BEARING — do not delete this alongside the legacy splitter. It is
+ * the grouping key for Latin runs inside CJK documents before the
+ * compromise engine arrives (`latinKeyFor` in keywords.js) and the
+ * key = display contract of the English plain path
+ * (`extractPlainEnglishTerms`), where the universal splitter provides the
+ * word boundaries but this stemmer still provides the grouping. Pinned by
+ * tests/tokenize-legacy.test.js.
  *
  * @param {string} word
  * @returns {string}
