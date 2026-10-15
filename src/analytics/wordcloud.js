@@ -11,14 +11,16 @@
  * - English documents go through `keywords.js` (compromise): nouns and
  *   noun-phrase topics, grouped by lemma, displayed by their most frequent
  *   surface form — once the engine is loaded; until then (or after a load
- *   failure) they use the legacy stem path.
+ *   failure) they use the universal `Intl.Segmenter` splitter with the
+ *   legacy stem key (`extractPlainEnglishTerms`), falling back to the
+ *   legacy tokenizer only when the runtime lacks the API.
  * - CJK documents segment into words via `Intl.Segmenter`
  *   (`segmentZh.js`) whenever the API exists — NO engine chunk required,
  *   so a Chinese-only library renders segmented words with zero downloads.
  *   Latin runs inside them group with the engine's lemma (the legacy
  *   stemmer until the chunk arrives). A failed chunk load degrades every
- *   language to the legacy bigram/stem path together; a runtime without
- *   Intl.Segmenter only affects CJK documents.
+ *   language to the plain path together; a runtime without
+ *   Intl.Segmenter falls back to the legacy tokenizer for every language.
  *
  * Whatever path produced a term, the final aggregation merges both
  * namespaces on the display form, so each word renders exactly once.
@@ -31,12 +33,13 @@
 import { bookmarkText, tokenizeFrequency } from './tokenize.js';
 import {
   extractKeywordTerms,
+  extractPlainEnglishTerms,
   extractCjkKeywordTerms,
   keywordsReady,
   keywordsFailed,
   documentLanguage,
 } from './keywords.js';
-import { zhSegmentationAvailable } from './segmentZh.js';
+import { segmentationAvailable } from './segmentZh.js';
 
 /**
  * Per-record memo of the extracted terms, keyed on the bookmark object itself.
@@ -117,7 +120,7 @@ function activePath() {
  * @returns {{ path: 'engine'|'legacy', segmenting: boolean }}
  */
 function gating() {
-  return { path: activePath(), segmenting: zhSegmentationAvailable() && !keywordsFailed() };
+  return { path: activePath(), segmenting: segmentationAvailable('zh') && !keywordsFailed() };
 }
 
 /**
@@ -165,8 +168,15 @@ function termsFor(b) {
         ? extractKeywordTerms(bookmarkText(b))
         : extractCjkKeywordTerms(bookmarkText(b), lang);
   } else {
-    // Legacy path: surface forms only, grouped by the token itself.
-    terms = [...tokenizeFrequency(bookmarkText(b))];
+    // Plain path: surface forms grouped by the token itself. English
+    // documents use the universal splitter when the runtime has it
+    // (whole ICU words, legacy stem key); CJK documents only land here
+    // without Intl.Segmenter or after a chunk failure, on the legacy
+    // tokenizer — which is also what similarity.js uses.
+    terms =
+      lang === 'en' && segmentationAvailable('en')
+        ? extractPlainEnglishTerms(bookmarkText(b))
+        : [...tokenizeFrequency(bookmarkText(b))];
   }
   const entry = { path: gate.path, mode, terms };
   termsMemo.set(b, entry);
