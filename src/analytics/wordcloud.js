@@ -99,26 +99,40 @@ function activePath() {
 }
 
 /**
- * Grouping mode for one document — cheap (memoized language, memoized
- * segmenter, O(1) engine state), so it is safe to evaluate per record on
- * every aggregate and to fold into the cache keys below.
+ * The two GLOBAL extraction gates, evaluated together and threaded through
+ * the per-document branching below so they never hide inside it:
+ *
+ * - `path` — the engine chunk state (`activePath()`).
+ * - `segmenting` — `Intl.Segmenter` exists AND the engine has not failed.
+ *   A chunk failure degrades every language to the legacy path together,
+ *   because an English document on the plain path shows stem displays
+ *   ('runn') while a CJK document on the grouped path would show surface
+ *   displays ('running') — splitting one word into two rows again.
+ *   Segmentation itself needs NO engine chunk: a Chinese-only library
+ *   segments while the compromise download stays at zero.
+ *
+ * Both operands are cheap (memoized segmenter, O(1) engine state), so
+ * evaluating this once per record and once per aggregate is fine.
+ *
+ * @returns {{ path: 'engine'|'legacy', segmenting: boolean }}
+ */
+function gating() {
+  return { path: activePath(), segmenting: zhSegmentationAvailable() && !keywordsFailed() };
+}
+
+/**
+ * Grouping mode for one document.
  *
  * - English documents group only when the engine is loaded.
- * - CJK documents group whenever `Intl.Segmenter` exists — NO engine chunk
- *   required, so a Chinese-only library segments while the compromise
- *   download stays at zero.
- * - EXCEPT after a chunk failure: everything degrades to the legacy path
- *   together, because an English document on the plain path shows stem
- *   displays ('runn') while a CJK document on the grouped path would show
- *   surface displays ('running') — splitting one word into two rows again.
+ * - CJK documents group while `gate.segmenting` holds (see `gating()`).
  *
  * @param {string} lang `documentLanguage(b)`
- * @param {'engine'|'legacy'} path `activePath()`
+ * @param {{ path: 'engine'|'legacy', segmenting: boolean }} gate `gating()`
  * @returns {'grouped'|'plain'}
  */
-function modeFor(lang, path) {
-  if (lang === 'en') return path === 'engine' ? 'grouped' : 'plain';
-  return zhSegmentationAvailable() && !keywordsFailed() ? 'grouped' : 'plain';
+function modeFor(lang, gate) {
+  if (lang === 'en') return gate.path === 'engine' ? 'grouped' : 'plain';
+  return gate.segmenting ? 'grouped' : 'plain';
 }
 
 /**
@@ -135,11 +149,11 @@ function modeFor(lang, path) {
  *   Intl.Segmenter or after a failure).
  */
 function termsFor(b) {
-  const path = activePath();
+  const gate = gating();
   const lang = documentLanguage(b);
-  const mode = modeFor(lang, path);
+  const mode = modeFor(lang, gate);
   const cached = termsMemo.get(b);
-  if (cached && cached.path === path && cached.mode === mode) return cached;
+  if (cached && cached.path === gate.path && cached.mode === mode) return cached;
 
   let terms;
   if (mode === 'grouped') {
@@ -154,7 +168,7 @@ function termsFor(b) {
     // Legacy path: surface forms only, grouped by the token itself.
     terms = [...tokenizeFrequency(bookmarkText(b))];
   }
-  const entry = { path, mode, terms };
+  const entry = { path: gate.path, mode, terms };
   termsMemo.set(b, entry);
   return entry;
 }
@@ -218,12 +232,12 @@ let aggregateMemo = null;
 
 /** @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list */
 function aggregateKey(list) {
-  const path = activePath();
+  const gate = gating();
   // Each record's serial carries its grouping mode too: a chunk failure
   // flips CJK documents from 'grouped' to 'plain' WITHOUT changing
-  // activePath (both are 'legacy'), and a mode-blind key would serve the
+  // gate.path (both are 'legacy'), and a mode-blind key would serve the
   // pre-failure aggregate with the stale terms.
-  return `${path}|${list.map((b) => `${serialOf(b)}:${modeFor(documentLanguage(b), path)}`).join(',')}`;
+  return `${gate.path}|${list.map((b) => `${serialOf(b)}:${modeFor(documentLanguage(b), gate)}`).join(',')}`;
 }
 
 /**
