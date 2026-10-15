@@ -63,7 +63,10 @@ export function segmentationAvailable(lang) {
 
 /**
  * Whether the runtime can segment Chinese at all — thin locale-specific
- * alias of `segmentationAvailable`, kept for CJK call sites and tests.
+ * alias of `segmentationAvailable`. NO production callers (the word cloud
+ * uses `segmentationAvailable(lang)` directly); kept only for the
+ * `segment-zh` and `segment-words` suites, so retiring it means updating
+ * those two imports — a separate, deliberate cleanup.
  *
  * @returns {boolean}
  */
