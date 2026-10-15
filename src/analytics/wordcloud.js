@@ -180,10 +180,22 @@ export function wordCloudFrequencies(list) {
     accumulate(acc, b);
   }
 
-  const entries = [
+  // One row per display form, across BOTH namespaces. An English document
+  // contributes lemma groups while a CJK document contributes plain tokens,
+  // so a Latin word that occurs in both ('ai', 'google') would otherwise
+  // render twice with its count split between the two rows (#51 regression).
+  // Merging on the (lowercased) display keeps the click-to-search contract:
+  // the surviving label is still a verbatim substring of some source text.
+  const merged = new Map();
+  for (const [display, count] of [
     ...[...acc.lemmas].map(([, group]) => [displayFor(group.surfaces), group.count]),
-    ...[...acc.plain],
-  ].sort((a, b) => b[1] - a[1]);
+    ...acc.plain,
+  ]) {
+    const word = display.toLowerCase();
+    merged.set(word, (merged.get(word) || 0) + count);
+  }
+
+  const entries = [...merged].sort((a, b) => b[1] - a[1]);
 
   aggregateMemo = { key, entries: entries.slice(0, 60) };
   return aggregateMemo.entries.slice();

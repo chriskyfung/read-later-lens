@@ -180,6 +180,29 @@ describe('wordCloudFrequencies (English engine path)', () => {
   });
 });
 
+// The #51 regression: an English document routes through the lemma namespace
+// while a Chinese document routes through the plain-token namespace, so a
+// Latin word that occurs in both (e.g. 'ai', 'google') used to be rendered
+// twice — once per namespace — with its count split across the two rows.
+describe('wordCloudFrequencies — one row per display across languages', () => {
+  const en = () => ({ id: '1', title: 'Google AI research', article_preview: '' });
+  const zh = () => ({ id: '2', title: 'Google 的 AI 應用研究', article_preview: '' });
+
+  it('never lists the same display form twice in a mixed-language library', () => {
+    const displays = wordCloudFrequencies([en(), zh()]).map(([w]) => w);
+    expect(new Set(displays).size).toBe(displays.length);
+  });
+
+  it('merges counts so each row equals the per-language sum', () => {
+    const mixed = wordCloudFrequencies([en(), zh()]);
+    const enOnly = new Map(wordCloudFrequencies([en()]));
+    const zhOnly = new Map(wordCloudFrequencies([zh()]));
+    for (const [word, count] of mixed) {
+      expect(count, `count of "${word}"`).toBe((enOnly.get(word) || 0) + (zhOnly.get(word) || 0));
+    }
+  });
+});
+
 // ---- Caching (per-record memo + aggregate memo) -------------------------
 //
 // The extraction is the dominant cost (~0.6–0.8 ms/doc), so repeated renders
