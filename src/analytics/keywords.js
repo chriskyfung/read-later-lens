@@ -37,7 +37,7 @@
 
 import { bookmarkText, simpleStem } from './tokenize.js';
 import { detectLanguage } from './detectLanguage.js';
-import { ENGLISH_STOPWORDS } from './stopwords.js';
+import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
 import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
 import { segmentCjkWords, segmentWords, LATIN_WORD } from './segmentZh.js';
 
@@ -261,34 +261,56 @@ function latinKeyFor(word) {
 }
 
 /**
- * Plain-path terms for an English document — the universal splitter
- * (`segmentWords`) plus the shared noise policy and the legacy stem key.
+ * Plain-path terms — the universal splitter (`segmentWords`) plus the
+ * shared noise policy and the legacy stem key. THE tokenizer behind both
+ * the word-cloud English plain path and TF-IDF similarity (every
+ * language, routed by `documentLanguage`).
  *
- * Used while the compromise engine is unavailable (not requested yet, or a
- * failed load): same grouping contract as `tokenizeFrequency` — key =
- * display = `simpleStem(word)` — but ICU word boundaries instead of the
- * legacy regex mangling. Contraction example: "don't" stays whole and the
- * stopword policy drops it, where INVALID_CHARS invented a phantom 'don'
- * token. A possessive "'s" is stripped first so "Google's" keeps the legacy
- * token identity ('google', not a trailing-apostrophe stem).
+ * Grouping contract, same as `tokenizeFrequency` before it: key =
+ * display. Latin words key on `simpleStem`; CJK words key on themselves.
+ * A possessive "'s" is stripped first so "Google's" keeps its legacy
+ * token identity ('google', not a trailing-apostrophe stem). Policy per
+ * script:
+ * - Latin: `isNoise` (length, digits, English stopwords) — ICU keeps
+ *   contractions whole, so "don't" is dropped by the stopword list where
+ *   the legacy regex invented a phantom 'don' token.
+ * - CJK: `MIN_TOKEN_LENGTH` + `CJK_STOPWORDS`, mirroring `segmentCjkWords`.
  *
- * The caller must have checked `segmentationAvailable('en')` first; without
- * the API it falls back to `tokenizeFrequency` (see `wordcloud.js`).
+ * Callers without `Intl.Segmenter` fall back to `tokenizeFrequency`
+ * (see `wordcloud.js`).
+ *
+ * @param {string} text
+ * @param {string} lang 'en' (default) | 'zh' | 'ja'
+ * @returns {[string, number][]} [term, count] pairs in first-seen order
+ */
+export function extractPlainTerms(text, lang = 'en') {
+  if (!text) return [];
+
+  const freq = new Map();
+  for (const raw of segmentWords(text, lang)) {
+    const word = raw.replace(/'s$/, '');
+    if (!word) continue;
+    if (LATIN_WORD.test(word)) {
+      if (isNoise(word)) continue;
+      const term = simpleStem(word);
+      freq.set(term, (freq.get(term) || 0) + 1);
+    } else {
+      if (word.length < MIN_TOKEN_LENGTH || CJK_STOPWORDS.has(word)) continue;
+      freq.set(word, (freq.get(word) || 0) + 1);
+    }
+  }
+  return [...freq];
+}
+
+/**
+ * English shorthand for `extractPlainTerms(text, 'en')` — the word-cloud
+ * plain path's entry point. See `extractPlainTerms` for the full contract.
  *
  * @param {string} text
  * @returns {[string, number][]} [term, count] pairs in first-seen order
  */
 export function extractPlainEnglishTerms(text) {
-  if (!text) return [];
-
-  const freq = new Map();
-  for (const raw of segmentWords(text, 'en')) {
-    const word = raw.replace(/'s$/, '');
-    if (!word || isNoise(word)) continue;
-    const term = simpleStem(word);
-    freq.set(term, (freq.get(term) || 0) + 1);
-  }
-  return [...freq];
+  return extractPlainTerms(text, 'en');
 }
 
 /**
