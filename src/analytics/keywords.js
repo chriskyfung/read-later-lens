@@ -23,15 +23,19 @@
  * substring matcher in `src/core/filters.js`. The lemma is only ever an
  * internal grouping key; it must never reach the DOM (see `wordcloud.js`).
  *
- * CJK documents are NOT handled here: `compromise` is English-only and treats
- * a CJK run as one giant noun, so language routing happens upstream in
- * `wordcloud.js` and CJK text keeps its existing bigram path in `tokenize.js`.
+ * CJK documents are routed here too, but never through `compromise` (which
+ * is English-only and treats a CJK run as one giant noun): they go through
+ * `extractCjkKeywordTerms`, which segments words with `Intl.Segmenter`
+ * (`segmentZh.js`) and folds any Latin run into the same lemma namespace
+ * below, so one word can never render twice in the cloud. Language routing
+ * happens upstream in `wordcloud.js`.
  */
 
 import { bookmarkText } from './tokenize.js';
 import { detectLanguage } from './detectLanguage.js';
 import { ENGLISH_STOPWORDS } from './stopwords.js';
 import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
+import { segmentCjkWords, LATIN_WORD } from './segmentZh.js';
 
 /** Engine lifecycle state — see the fileoverview. */
 let engineState = 'idle';
@@ -223,4 +227,32 @@ function lemmaOf(word) {
     lemmaCache.set(word, lemma);
   }
   return lemma || word;
+}
+
+/**
+ * Extract keyword terms from CJK-routed text.
+ *
+ * Words come from `Intl.Segmenter` (see `segmentZh.js`), so the display
+ * forms are verbatim, lowercased substrings of the source text — the
+ * click-to-search contract holds. Two routes:
+ * - **Latin runs** ('ai', 'google' inside a Chinese document) group under
+ *   the compromise lemma, merging with the same word from English
+ *   documents — one cloud row per word, one summed count.
+ * - **CJK words** group under themselves: Chinese has no inflectional
+ *   lemma for compromise's English-only normalizer, and the surface form
+ *   is already the topic the reader expects to see.
+ *
+ * @param {string} text
+ * @param {string} locale 'zh' (default) or 'ja'
+ * @returns {{ key: string, display: string, count: number }[]}
+ */
+export function extractCjkKeywordTerms(text, locale = 'zh') {
+  if (!nlp || !text) return [];
+
+  const terms = [];
+  for (const word of segmentCjkWords(text, locale)) {
+    if (isNoise(word)) continue;
+    terms.push({ key: LATIN_WORD.test(word) ? lemmaOf(word) : word, display: word, count: 1 });
+  }
+  return terms;
 }

@@ -133,14 +133,16 @@ describe('wordCloudFrequencies (English engine path)', () => {
     expect(map.get('learning')).toBe(3);
   });
 
-  it('keeps the CJK bigram path for CJK documents', () => {
+  it('keeps a CJK-only path for CJK documents (no English-lemma rows)', () => {
+    // With the engine loaded this is the Intl.Segmenter path: words, not
+    // bigrams. Either way the rows must stay CJK-only for a CJK document —
+    // Latin runs are exercised by the cross-language tests below.
     const freq = wordCloudFrequencies([
       { id: '1', title: '如何學好英文寫作', article_preview: '說明一下' },
     ]);
     const map = new Map(freq);
     expect(map.get('如何')).toBe(1);
     expect(map.get('說明')).toBe(1);
-    // No English-lemma rows appear for a CJK document.
     expect(freq.every(([w]) => /[\u3040-\u30ff\u4e00-\u9fa5]/.test(w))).toBe(true);
   });
 
@@ -199,6 +201,53 @@ describe('wordCloudFrequencies — one row per display across languages', () => 
     const zhOnly = new Map(wordCloudFrequencies([zh()]));
     for (const [word, count] of mixed) {
       expect(count, `count of "${word}"`).toBe((enOnly.get(word) || 0) + (zhOnly.get(word) || 0));
+    }
+  });
+});
+
+// The CJK path used to emit overlapping character bigrams. With the engine
+// loaded, CJK documents now segment into words (Intl.Segmenter): real terms
+// like '深度' / '學習' — never the meaningless bigram fragments '度學' /
+// '工智' the legacy path produced.
+describe('wordCloudFrequencies — Chinese word segmentation', () => {
+  it('emits dictionary words, never overlapping bigram fragments', () => {
+    const map = new Map(
+      wordCloudFrequencies([{ id: '1', title: '機器學習與深度學習的比較', article_preview: '' }]),
+    );
+    // The segmenter cuts compounds at dictionary-word boundaries: 深度 +
+    // 學習, both real keywords — unlike the legacy overlapping fragments
+    // '度學' / '工智' that carried no meaning.
+    expect(map.get('深度')).toBe(1);
+    expect(map.get('學習')).toBe(2); // once in 機器學習, once in 深度學習
+    expect(map.get('度學')).toBeUndefined();
+  });
+
+  it('groups a Latin word in a Chinese document with its English lemma', () => {
+    // 'running' in the Chinese document must land in the same lemma group as
+    // 'running' in the English one — one row, summed count, surface display.
+    // (The English fixture uses predicative 'running' because compromise
+    // tags the attributive form in 'running shoes' as an adjective.)
+    const freq = wordCloudFrequencies([
+      { id: '1', title: 'daily running', article_preview: '' },
+      { id: '2', title: 'running 的應用研究', article_preview: '' },
+    ]);
+    const map = new Map(freq);
+    expect(map.get('running')).toBe(2);
+    // The legacy stemmer's 'runn' must not reappear as its own row.
+    expect(map.get('runn')).toBeUndefined();
+    expect(freq.filter(([w]) => w === 'running')).toHaveLength(1);
+  });
+
+  it('returns display forms that are verbatim substrings of the source text', () => {
+    const docs = [
+      { id: '1', title: 'Google 的 AI 應用研究', article_preview: '機器學習與深度學習' },
+    ];
+    const haystack = docs.map((d) => `${d.title} ${d.article_preview}`.toLowerCase());
+    for (const [term] of wordCloudFrequencies(docs)) {
+      expect(
+        haystack.some((h) => h.includes(term)),
+        `"${term}" must occur in the source text`,
+      ).toBe(true);
     }
   });
 });

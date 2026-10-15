@@ -11,7 +11,14 @@
  * - English documents go through `keywords.js` (compromise): nouns and
  *   noun-phrase topics, grouped by lemma, displayed by their most frequent
  *   surface form.
- * - CJK documents keep the legacy bigram path (`tokenize.js`), unchanged.
+ * - CJK documents segment into words via `Intl.Segmenter`
+ *   (`segmentZh.js`), with Latin runs grouped under the same lemma
+ *   namespace as English documents. Runtimes without `Intl.Segmenter`
+ *   (and the engine-not-loaded state) keep the legacy bigram/stem path
+ *   (`tokenize.js`).
+ *
+ * Whatever path produced a term, the final aggregation merges both
+ * namespaces on the display form, so each word renders exactly once.
  *
  * The returned list carries `[[display, count], …]` — never a raw lemma — so
  * the click-to-search round-trip in the view always issues a verbatim
@@ -19,7 +26,13 @@
  */
 
 import { bookmarkText, tokenizeFrequency } from './tokenize.js';
-import { extractKeywordTerms, keywordsReady, documentLanguage } from './keywords.js';
+import {
+  extractKeywordTerms,
+  extractCjkKeywordTerms,
+  keywordsReady,
+  documentLanguage,
+} from './keywords.js';
+import { zhSegmentationAvailable } from './segmentZh.js';
 
 /**
  * Per-record memo of the extracted terms, keyed on the bookmark object itself.
@@ -40,7 +53,8 @@ import { extractKeywordTerms, keywordsReady, documentLanguage } from './keywords
  * engine was unloaded must not be served after the engine arrives (the
  * `failed → ready` transition is the real case), and vice versa.
  *
- * @type {WeakMap<object, { path: 'engine'|'legacy', terms: object[] }>}
+ * @type {WeakMap<object, { path: 'engine'|'legacy',
+ *   mode: 'grouped'|'plain', terms: object[] }>}
  */
 const termsMemo = new WeakMap();
 
@@ -84,24 +98,38 @@ function activePath() {
  * Terms for one bookmark, memoized per record and per extraction path.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
- * @returns {object[]} engine path: `{ key, display, count }[]`;
- *   legacy path: `[term, count][]` entries.
+ * @returns {{ mode: 'grouped'|'plain', terms: object[] }} `grouped`:
+ *   `{ key, display, count }[]` (English via compromise, CJK via
+ *   Intl.Segmenter — both grouped in the lemma namespace); `plain`:
+ *   `[term, count][]` surface entries (engine not loaded, or no
+ *   Intl.Segmenter available at runtime).
  */
 function termsFor(b) {
   const path = activePath();
   const cached = termsMemo.get(b);
-  if (cached && cached.path === path) return cached.terms;
+  if (cached && cached.path === path) return cached;
 
+  const lang = documentLanguage(b);
+  let mode;
   let terms;
-  if (path === 'engine' && documentLanguage(b) === 'en') {
-    terms = extractKeywordTerms(bookmarkText(b));
+  if (path === 'engine' && (lang === 'en' || zhSegmentationAvailable())) {
+    // Grouped namespace: English documents go through compromise; CJK
+    // documents segment into words, with Latin runs lemma-grouped so they
+    // merge with the same word from English documents.
+    mode = 'grouped';
+    terms =
+      lang === 'en'
+        ? extractKeywordTerms(bookmarkText(b))
+        : extractCjkKeywordTerms(bookmarkText(b), lang);
   } else {
-    // CJK path (and English documents when the engine is not loaded) —
-    // surface forms only, grouped by the token itself.
+    // Legacy path — engine not loaded, or the runtime lacks
+    // Intl.Segmenter: surface forms only, grouped by the token itself.
+    mode = 'plain';
     terms = [...tokenizeFrequency(bookmarkText(b))];
   }
-  termsMemo.set(b, { path, terms });
-  return terms;
+  const entry = { path, mode, terms };
+  termsMemo.set(b, entry);
+  return entry;
 }
 
 /**
@@ -112,8 +140,9 @@ function termsFor(b) {
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  */
 function accumulate(acc, b) {
-  if (activePath() === 'engine' && documentLanguage(b) === 'en') {
-    for (const { key, display, count } of termsFor(b)) {
+  const { mode, terms } = termsFor(b);
+  if (mode === 'grouped') {
+    for (const { key, display, count } of terms) {
       let group = acc.lemmas.get(key);
       if (!group) {
         group = { count: 0, surfaces: new Map() };
@@ -123,7 +152,7 @@ function accumulate(acc, b) {
       group.surfaces.set(display, (group.surfaces.get(display) || 0) + count);
     }
   } else {
-    for (const [t, n] of termsFor(b)) {
+    for (const [t, n] of terms) {
       acc.plain.set(t, (acc.plain.get(t) || 0) + n);
     }
   }
