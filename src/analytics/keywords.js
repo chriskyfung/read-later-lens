@@ -23,15 +23,21 @@
  * substring matcher in `src/core/filters.js`. The lemma is only ever an
  * internal grouping key; it must never reach the DOM (see `wordcloud.js`).
  *
- * CJK documents are NOT handled here: `compromise` is English-only and treats
- * a CJK run as one giant noun, so language routing happens upstream in
- * `wordcloud.js` and CJK text keeps its existing bigram path in `tokenize.js`.
+ * CJK documents are routed here too, but never through `compromise` (which
+ * is English-only and treats a CJK run as one giant noun): they go through
+ * `extractCjkKeywordTerms`, which segments words with `Intl.Segmenter`
+ * (`segmentZh.js`) and folds any Latin run into the same lemma namespace
+ * below, so one word can never render twice in the cloud. That path needs
+ * NO engine chunk — a Chinese-only library segments with the built-in API
+ * while the compromise download stays at zero; only English documents
+ * require the engine. Language routing happens upstream in `wordcloud.js`.
  */
 
-import { bookmarkText } from './tokenize.js';
+import { bookmarkText, simpleStem } from './tokenize.js';
 import { detectLanguage } from './detectLanguage.js';
 import { ENGLISH_STOPWORDS } from './stopwords.js';
 import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
+import { segmentCjkWords, LATIN_WORD } from './segmentZh.js';
 
 /** Engine lifecycle state — see the fileoverview. */
 let engineState = 'idle';
@@ -74,6 +80,17 @@ export function keywordsReady() {
 }
 
 /**
+ * @returns {boolean} True once the engine chunk failed to load. Callers
+ *   treat it as "degrade to the legacy tokenizer" for EVERY language —
+ *   English and CJK documents must then share one namespace, because their
+ *   stem and lemma keys disagree on some words ('runn' vs 'run') and would
+ *   split one word back into two cloud rows.
+ */
+export function keywordsFailed() {
+  return engineState === 'failed';
+}
+
+/**
  * Per-record memo of `detectLanguage`, keyed on the bookmark object itself.
  *
  * A WeakMap (not a text-keyed Map) because it cannot outlive its key: a
@@ -103,8 +120,9 @@ export function documentLanguage(b) {
 
 /**
  * Whether the given bookmarks need the (lazily loaded) engine at all: only
- * English-routed documents do. A CJK-only library never downloads the chunk
- * and renders through the legacy bigram path.
+ * English-routed documents do. A CJK-only library never downloads the
+ * chunk — it segments with the built-in `Intl.Segmenter` instead (see
+ * `extractCjkKeywordTerms`) — so `loadKeywordsEngine()` stays untouched.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
  * @returns {boolean}
@@ -223,4 +241,50 @@ function lemmaOf(word) {
     lemmaCache.set(word, lemma);
   }
   return lemma || word;
+}
+
+/**
+ * Grouping key for a Latin run inside a CJK document: the compromise lemma
+ * once the engine is loaded, the legacy stemmer until then (a CJK-only
+ * library has no English rows to disagree with, and the cloud view blocks a
+ * MIXED list behind the loading placeholder). The caller's memo is keyed on
+ * the extraction mode, so entries recompute when the engine arrives and the
+ * key switches; the display merge hides any transient seam.
+ *
+ * @param {string} word lowercased surface form
+ * @returns {string}
+ */
+function latinKeyFor(word) {
+  return nlp ? lemmaOf(word) : simpleStem(word);
+}
+
+/**
+ * Extract keyword terms from CJK-routed text.
+ *
+ * Works with or without the loaded compromise engine — it only needs the
+ * built-in `Intl.Segmenter` (see `segmentZh.js`), so a Chinese-only library
+ * never pays for the English chunk. Display forms are verbatim, lowercased
+ * substrings of the source text, so the click-to-search contract holds.
+ * Two routes:
+ * - **Latin runs** ('ai', 'google' inside a Chinese document) group under
+ *   the compromise lemma (the legacy stemmer before the engine arrives),
+ *   merging with the same word from English documents — one cloud row per
+ *   word, one summed count.
+ * - **CJK words** group under themselves: Chinese has no inflectional
+ *   lemma for compromise's English-only normalizer, and the surface form
+ *   is already the topic the reader expects to see.
+ *
+ * @param {string} text
+ * @param {string} locale 'zh' (default) or 'ja'
+ * @returns {{ key: string, display: string, count: number }[]}
+ */
+export function extractCjkKeywordTerms(text, locale = 'zh') {
+  if (!text) return [];
+
+  const terms = [];
+  for (const word of segmentCjkWords(text, locale)) {
+    if (isNoise(word)) continue;
+    terms.push({ key: LATIN_WORD.test(word) ? latinKeyFor(word) : word, display: word, count: 1 });
+  }
+  return terms;
 }

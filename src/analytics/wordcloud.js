@@ -10,8 +10,18 @@
  * Term extraction is routed per document by `detectLanguage`:
  * - English documents go through `keywords.js` (compromise): nouns and
  *   noun-phrase topics, grouped by lemma, displayed by their most frequent
- *   surface form.
- * - CJK documents keep the legacy bigram path (`tokenize.js`), unchanged.
+ *   surface form — once the engine is loaded; until then (or after a load
+ *   failure) they use the legacy stem path.
+ * - CJK documents segment into words via `Intl.Segmenter`
+ *   (`segmentZh.js`) whenever the API exists — NO engine chunk required,
+ *   so a Chinese-only library renders segmented words with zero downloads.
+ *   Latin runs inside them group with the engine's lemma (the legacy
+ *   stemmer until the chunk arrives). A failed chunk load degrades every
+ *   language to the legacy bigram/stem path together; a runtime without
+ *   Intl.Segmenter only affects CJK documents.
+ *
+ * Whatever path produced a term, the final aggregation merges both
+ * namespaces on the display form, so each word renders exactly once.
  *
  * The returned list carries `[[display, count], …]` — never a raw lemma — so
  * the click-to-search round-trip in the view always issues a verbatim
@@ -19,7 +29,14 @@
  */
 
 import { bookmarkText, tokenizeFrequency } from './tokenize.js';
-import { extractKeywordTerms, keywordsReady, documentLanguage } from './keywords.js';
+import {
+  extractKeywordTerms,
+  extractCjkKeywordTerms,
+  keywordsReady,
+  keywordsFailed,
+  documentLanguage,
+} from './keywords.js';
+import { zhSegmentationAvailable } from './segmentZh.js';
 
 /**
  * Per-record memo of the extracted terms, keyed on the bookmark object itself.
@@ -40,7 +57,8 @@ import { extractKeywordTerms, keywordsReady, documentLanguage } from './keywords
  * engine was unloaded must not be served after the engine arrives (the
  * `failed → ready` transition is the real case), and vice versa.
  *
- * @type {WeakMap<object, { path: 'engine'|'legacy', terms: object[] }>}
+ * @type {WeakMap<object, { path: 'engine'|'legacy',
+ *   mode: 'grouped'|'plain', terms: object[] }>}
  */
 const termsMemo = new WeakMap();
 
@@ -81,27 +99,78 @@ function activePath() {
 }
 
 /**
- * Terms for one bookmark, memoized per record and per extraction path.
+ * The two GLOBAL extraction gates, evaluated together and threaded through
+ * the per-document branching below so they never hide inside it:
+ *
+ * - `path` — the engine chunk state (`activePath()`).
+ * - `segmenting` — `Intl.Segmenter` exists AND the engine has not failed.
+ *   A chunk failure degrades every language to the legacy path together,
+ *   because an English document on the plain path shows stem displays
+ *   ('runn') while a CJK document on the grouped path would show surface
+ *   displays ('running') — splitting one word into two rows again.
+ *   Segmentation itself needs NO engine chunk: a Chinese-only library
+ *   segments while the compromise download stays at zero.
+ *
+ * Both operands are cheap (memoized segmenter, O(1) engine state), so
+ * evaluating this once per record and once per aggregate is fine.
+ *
+ * @returns {{ path: 'engine'|'legacy', segmenting: boolean }}
+ */
+function gating() {
+  return { path: activePath(), segmenting: zhSegmentationAvailable() && !keywordsFailed() };
+}
+
+/**
+ * Grouping mode for one document.
+ *
+ * - English documents group only when the engine is loaded.
+ * - CJK documents group while `gate.segmenting` holds (see `gating()`).
+ *
+ * @param {string} lang `documentLanguage(b)`
+ * @param {{ path: 'engine'|'legacy', segmenting: boolean }} gate `gating()`
+ * @returns {'grouped'|'plain'}
+ */
+function modeFor(lang, gate) {
+  if (lang === 'en') return gate.path === 'engine' ? 'grouped' : 'plain';
+  return gate.segmenting ? 'grouped' : 'plain';
+}
+
+/**
+ * Terms for one bookmark, memoized per record, extraction path, AND
+ * grouping mode — the mode can flip without a path change (a chunk failure
+ * moves CJK documents from 'grouped' to 'plain' while both states are
+ * 'legacy'), so the cache must compare it explicitly.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
- * @returns {object[]} engine path: `{ key, display, count }[]`;
- *   legacy path: `[term, count][]` entries.
+ * @returns {{ mode: 'grouped'|'plain', terms: object[] }} `grouped`:
+ *   `{ key, display, count }[]` (English via compromise once loaded, CJK
+ *   via Intl.Segmenter); `plain`: `[term, count][]` surface entries
+ *   (English before the engine arrives or after a failure, CJK without
+ *   Intl.Segmenter or after a failure).
  */
 function termsFor(b) {
-  const path = activePath();
+  const gate = gating();
+  const lang = documentLanguage(b);
+  const mode = modeFor(lang, gate);
   const cached = termsMemo.get(b);
-  if (cached && cached.path === path) return cached.terms;
+  if (cached && cached.path === gate.path && cached.mode === mode) return cached;
 
   let terms;
-  if (path === 'engine' && documentLanguage(b) === 'en') {
-    terms = extractKeywordTerms(bookmarkText(b));
+  if (mode === 'grouped') {
+    // English documents go through compromise; CJK documents segment into
+    // words with Latin runs lemma-grouped (stem-keyed until the engine
+    // arrives), so one word never renders twice.
+    terms =
+      lang === 'en'
+        ? extractKeywordTerms(bookmarkText(b))
+        : extractCjkKeywordTerms(bookmarkText(b), lang);
   } else {
-    // CJK path (and English documents when the engine is not loaded) —
-    // surface forms only, grouped by the token itself.
+    // Legacy path: surface forms only, grouped by the token itself.
     terms = [...tokenizeFrequency(bookmarkText(b))];
   }
-  termsMemo.set(b, { path, terms });
-  return terms;
+  const entry = { path: gate.path, mode, terms };
+  termsMemo.set(b, entry);
+  return entry;
 }
 
 /**
@@ -112,8 +181,9 @@ function termsFor(b) {
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  */
 function accumulate(acc, b) {
-  if (activePath() === 'engine' && documentLanguage(b) === 'en') {
-    for (const { key, display, count } of termsFor(b)) {
+  const { mode, terms } = termsFor(b);
+  if (mode === 'grouped') {
+    for (const { key, display, count } of terms) {
       let group = acc.lemmas.get(key);
       if (!group) {
         group = { count: 0, surfaces: new Map() };
@@ -123,7 +193,7 @@ function accumulate(acc, b) {
       group.surfaces.set(display, (group.surfaces.get(display) || 0) + count);
     }
   } else {
-    for (const [t, n] of termsFor(b)) {
+    for (const [t, n] of terms) {
       acc.plain.set(t, (acc.plain.get(t) || 0) + n);
     }
   }
@@ -162,7 +232,12 @@ let aggregateMemo = null;
 
 /** @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list */
 function aggregateKey(list) {
-  return `${activePath()}|${list.map(serialOf).join(',')}`;
+  const gate = gating();
+  // Each record's serial carries its grouping mode too: a chunk failure
+  // flips CJK documents from 'grouped' to 'plain' WITHOUT changing
+  // gate.path (both are 'legacy'), and a mode-blind key would serve the
+  // pre-failure aggregate with the stale terms.
+  return `${gate.path}|${list.map((b) => `${serialOf(b)}:${modeFor(documentLanguage(b), gate)}`).join(',')}`;
 }
 
 /**
@@ -180,10 +255,22 @@ export function wordCloudFrequencies(list) {
     accumulate(acc, b);
   }
 
-  const entries = [
+  // One row per display form, across BOTH namespaces. An English document
+  // contributes lemma groups while a CJK document contributes plain tokens,
+  // so a Latin word that occurs in both ('ai', 'google') would otherwise
+  // render twice with its count split between the two rows (#51 regression).
+  // Merging on the (lowercased) display keeps the click-to-search contract:
+  // the surviving label is still a verbatim substring of some source text.
+  const merged = new Map();
+  for (const [display, count] of [
     ...[...acc.lemmas].map(([, group]) => [displayFor(group.surfaces), group.count]),
-    ...[...acc.plain],
-  ].sort((a, b) => b[1] - a[1]);
+    ...acc.plain,
+  ]) {
+    const word = display.toLowerCase();
+    merged.set(word, (merged.get(word) || 0) + count);
+  }
+
+  const entries = [...merged].sort((a, b) => b[1] - a[1]);
 
   aggregateMemo = { key, entries: entries.slice(0, 60) };
   return aggregateMemo.entries.slice();
