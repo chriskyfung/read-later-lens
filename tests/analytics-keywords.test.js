@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import {
   extractKeywordTerms,
+  extractPlainEnglishTerms,
   loadKeywordsEngine,
   keywordsReady,
   needsKeywordEngine,
@@ -8,6 +9,7 @@ import {
 } from '../src/analytics/keywords.js';
 import * as keywordsModule from '../src/analytics/keywords.js';
 import { wordCloudFrequencies } from '../src/analytics/wordcloud.js';
+import { tokenizeText, tokenizeFrequency } from '../src/analytics/tokenize.js';
 
 // The engine is lazy: every test in this file needs it loaded first, which is
 // exactly the contract the word-cloud view relies on. The un-loaded fallback
@@ -108,6 +110,40 @@ describe('extractKeywordTerms', () => {
 
   it('emits nothing for CJK text — that path stays in tokenize.js', () => {
     expect(extractKeywordTerms('如何學好英文寫作')).toEqual([]);
+  });
+});
+
+describe('extractPlainEnglishTerms (universal splitter, engine-independent)', () => {
+  it('diverges from the legacy tokenizer exactly where ICU beats the regex', () => {
+    // Legacy reality: INVALID_CHARS turns the apostrophe into a boundary,
+    // so "don't" becomes a phantom 'don' token that survives the filters.
+    expect(tokenizeText("don't")).toEqual(['don']);
+    // Splitter path: the contraction stays whole and the stopword policy
+    // drops it — no phantom row, no invented word.
+    expect(extractPlainEnglishTerms("don't")).toEqual([]);
+    expect(extractPlainEnglishTerms("don't stop")).toEqual([['stop', 1]]);
+  });
+
+  it('keeps the legacy stem-grouping contract (key = display = simpleStem)', () => {
+    // 'shoes' → 'sho' is the legacy stemmer's quirk (es-strip), preserved
+    // on purpose: the plain path must group exactly as tokenizeFrequency does.
+    expect(extractPlainEnglishTerms('running shoes running')).toEqual([
+      ['runn', 2],
+      ['sho', 1],
+    ]);
+    // Same terms as the legacy tokenizer for text where the two agree.
+    const fixture = 'plain english text machine learning';
+    expect(extractPlainEnglishTerms(fixture)).toEqual([...tokenizeFrequency(fixture)]);
+  });
+
+  it("strips the possessive 's so 'Google's' keeps the legacy token identity", () => {
+    expect(extractPlainEnglishTerms("Google's guide")).toEqual([
+      ['google', 1],
+      ['guide', 1],
+    ]);
+    expect(extractPlainEnglishTerms("Google's guide")).toEqual([
+      ...tokenizeFrequency("Google's guide"),
+    ]);
   });
 });
 

@@ -14,8 +14,10 @@
  * - idle: not requested yet
  * - loading: chunk in flight
  * - ready: extraction works
- * - failed: the chunk could not load; English documents then fall back to the
- *   legacy tokenizer (`tokenize.js`) rather than spinning on a loading state
+ * - failed: the chunk could not load; English documents then degrade to the
+ *   plain splitter path (the universal `Intl.Segmenter` splitter when the
+ *   runtime has it, the legacy tokenizer `tokenize.js` otherwise) rather
+ *   than spinning on a loading state
  *
  * Extraction contract — every term carries a display form that is a verbatim
  * (case-insensitive, edge-trimmed) substring of the source text, so the
@@ -37,7 +39,7 @@ import { bookmarkText, simpleStem } from './tokenize.js';
 import { detectLanguage } from './detectLanguage.js';
 import { ENGLISH_STOPWORDS } from './stopwords.js';
 import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
-import { segmentCjkWords, LATIN_WORD } from './segmentZh.js';
+import { segmentCjkWords, segmentWords, LATIN_WORD } from './segmentZh.js';
 
 /** Engine lifecycle state — see the fileoverview. */
 let engineState = 'idle';
@@ -256,6 +258,37 @@ function lemmaOf(word) {
  */
 function latinKeyFor(word) {
   return nlp ? lemmaOf(word) : simpleStem(word);
+}
+
+/**
+ * Plain-path terms for an English document — the universal splitter
+ * (`segmentWords`) plus the shared noise policy and the legacy stem key.
+ *
+ * Used while the compromise engine is unavailable (not requested yet, or a
+ * failed load): same grouping contract as `tokenizeFrequency` — key =
+ * display = `simpleStem(word)` — but ICU word boundaries instead of the
+ * legacy regex mangling. Contraction example: "don't" stays whole and the
+ * stopword policy drops it, where INVALID_CHARS invented a phantom 'don'
+ * token. A possessive "'s" is stripped first so "Google's" keeps the legacy
+ * token identity ('google', not a trailing-apostrophe stem).
+ *
+ * The caller must have checked `segmentationAvailable('en')` first; without
+ * the API it falls back to `tokenizeFrequency` (see `wordcloud.js`).
+ *
+ * @param {string} text
+ * @returns {[string, number][]} [term, count] pairs in first-seen order
+ */
+export function extractPlainEnglishTerms(text) {
+  if (!text) return [];
+
+  const freq = new Map();
+  for (const raw of segmentWords(text, 'en')) {
+    const word = raw.replace(/'s$/, '');
+    if (!word || isNoise(word)) continue;
+    const term = simpleStem(word);
+    freq.set(term, (freq.get(term) || 0) + 1);
+  }
+  return [...freq];
 }
 
 /**
