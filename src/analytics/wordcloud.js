@@ -10,12 +10,15 @@
  * Term extraction is routed per document by `detectLanguage`:
  * - English documents go through `keywords.js` (compromise): nouns and
  *   noun-phrase topics, grouped by lemma, displayed by their most frequent
- *   surface form.
+ *   surface form — once the engine is loaded; until then (or after a load
+ *   failure) they use the legacy stem path.
  * - CJK documents segment into words via `Intl.Segmenter`
- *   (`segmentZh.js`), with Latin runs grouped under the same lemma
- *   namespace as English documents. Runtimes without `Intl.Segmenter`
- *   (and the engine-not-loaded state) keep the legacy bigram/stem path
- *   (`tokenize.js`).
+ *   (`segmentZh.js`) whenever the API exists — NO engine chunk required,
+ *   so a Chinese-only library renders segmented words with zero downloads.
+ *   Latin runs inside them group with the engine's lemma (the legacy
+ *   stemmer until the chunk arrives). A failed chunk load degrades every
+ *   language to the legacy bigram/stem path together; a runtime without
+ *   Intl.Segmenter only affects CJK documents.
  *
  * Whatever path produced a term, the final aggregation merges both
  * namespaces on the display form, so each word renders exactly once.
@@ -30,6 +33,7 @@ import {
   extractKeywordTerms,
   extractCjkKeywordTerms,
   keywordsReady,
+  keywordsFailed,
   documentLanguage,
 } from './keywords.js';
 import { zhSegmentationAvailable } from './segmentZh.js';
@@ -95,36 +99,59 @@ function activePath() {
 }
 
 /**
- * Terms for one bookmark, memoized per record and per extraction path.
+ * Grouping mode for one document — cheap (memoized language, memoized
+ * segmenter, O(1) engine state), so it is safe to evaluate per record on
+ * every aggregate and to fold into the cache keys below.
+ *
+ * - English documents group only when the engine is loaded.
+ * - CJK documents group whenever `Intl.Segmenter` exists — NO engine chunk
+ *   required, so a Chinese-only library segments while the compromise
+ *   download stays at zero.
+ * - EXCEPT after a chunk failure: everything degrades to the legacy path
+ *   together, because an English document on the plain path shows stem
+ *   displays ('runn') while a CJK document on the grouped path would show
+ *   surface displays ('running') — splitting one word into two rows again.
+ *
+ * @param {string} lang `documentLanguage(b)`
+ * @param {'engine'|'legacy'} path `activePath()`
+ * @returns {'grouped'|'plain'}
+ */
+function modeFor(lang, path) {
+  if (lang === 'en') return path === 'engine' ? 'grouped' : 'plain';
+  return zhSegmentationAvailable() && !keywordsFailed() ? 'grouped' : 'plain';
+}
+
+/**
+ * Terms for one bookmark, memoized per record, extraction path, AND
+ * grouping mode — the mode can flip without a path change (a chunk failure
+ * moves CJK documents from 'grouped' to 'plain' while both states are
+ * 'legacy'), so the cache must compare it explicitly.
  *
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {{ mode: 'grouped'|'plain', terms: object[] }} `grouped`:
- *   `{ key, display, count }[]` (English via compromise, CJK via
- *   Intl.Segmenter — both grouped in the lemma namespace); `plain`:
- *   `[term, count][]` surface entries (engine not loaded, or no
- *   Intl.Segmenter available at runtime).
+ *   `{ key, display, count }[]` (English via compromise once loaded, CJK
+ *   via Intl.Segmenter); `plain`: `[term, count][]` surface entries
+ *   (English before the engine arrives or after a failure, CJK without
+ *   Intl.Segmenter or after a failure).
  */
 function termsFor(b) {
   const path = activePath();
-  const cached = termsMemo.get(b);
-  if (cached && cached.path === path) return cached;
-
   const lang = documentLanguage(b);
-  let mode;
+  const mode = modeFor(lang, path);
+  const cached = termsMemo.get(b);
+  if (cached && cached.path === path && cached.mode === mode) return cached;
+
   let terms;
-  if (path === 'engine' && (lang === 'en' || zhSegmentationAvailable())) {
-    // Grouped namespace: English documents go through compromise; CJK
-    // documents segment into words, with Latin runs lemma-grouped so they
-    // merge with the same word from English documents.
-    mode = 'grouped';
+  if (mode === 'grouped') {
+    // English documents go through compromise; CJK documents segment into
+    // words with Latin runs lemma-grouped (stem-keyed until the engine
+    // arrives), so one word never renders twice.
     terms =
       lang === 'en'
         ? extractKeywordTerms(bookmarkText(b))
         : extractCjkKeywordTerms(bookmarkText(b), lang);
   } else {
-    // Legacy path — engine not loaded, or the runtime lacks
-    // Intl.Segmenter: surface forms only, grouped by the token itself.
-    mode = 'plain';
+    // Legacy path: surface forms only, grouped by the token itself.
     terms = [...tokenizeFrequency(bookmarkText(b))];
   }
   const entry = { path, mode, terms };
@@ -191,7 +218,12 @@ let aggregateMemo = null;
 
 /** @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list */
 function aggregateKey(list) {
-  return `${activePath()}|${list.map(serialOf).join(',')}`;
+  const path = activePath();
+  // Each record's serial carries its grouping mode too: a chunk failure
+  // flips CJK documents from 'grouped' to 'plain' WITHOUT changing
+  // activePath (both are 'legacy'), and a mode-blind key would serve the
+  // pre-failure aggregate with the stale terms.
+  return `${path}|${list.map((b) => `${serialOf(b)}:${modeFor(documentLanguage(b), path)}`).join(',')}`;
 }
 
 /**

@@ -141,7 +141,7 @@ A responsive card grid with select-all, batch delete, and per-card actions inclu
 
 ### Word cloud (☁️ 文字雲)
 
-Keyword terms are extracted from titles and previews using an **extended English stopword list** and the [compromise](https://github.com/spencermountain/compromise) NLP library: English text yields **lemmatized nouns and noun-phrase topics** (e.g. _machine learning_), grouped by lemma and displayed as the most frequent surface word, while **Chinese/Japanese text is segmented into words** with the browser's built-in [Intl.Segmenter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter) — so a word shared across languages (e.g. _AI_) renders as a single merged row. Each term's size reflects its frequency. **Click any keyword to run a global search for it.**
+Keyword terms are extracted from titles and previews using an **extended English stopword list** and the [compromise](https://github.com/spencermountain/compromise) NLP library: English text yields **lemmatized nouns and noun-phrase topics** (e.g. _machine learning_), grouped by lemma and displayed as the most frequent surface word, while **Chinese/Japanese text is segmented into words** with the browser's built-in [Intl.Segmenter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter) — so a word shared across languages (e.g. _AI_) renders as a single merged row, and a Chinese-only library never downloads the English engine. Each term's size reflects its frequency. **Click any keyword to run a global search for it.**
 
 ### Domain analytics (📊 域名統計)
 
