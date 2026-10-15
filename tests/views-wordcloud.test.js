@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { renderWordCloud, initWordCloud } from '../src/views/wordcloud.js';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state.js';
+import { loadKeywordsEngine } from '../src/analytics/keywords.js';
 
 function makeEl() {
   return {
@@ -44,7 +45,7 @@ const tabStubs = [
 ];
 const panelStubs = {};
 
-beforeAll(() => {
+beforeAll(async () => {
   globalThis.document = globalThis.document || {};
   globalThis.document.getElementById = (id) => {
     if (!els[id]) els[id] = makeEl();
@@ -79,6 +80,9 @@ beforeAll(() => {
       source_file_name: 'a.csv',
     },
   ]);
+  // The English keyword engine loads lazily; these synchronous render tests
+  // must run with it already available (the unloaded path has its own tests).
+  await loadKeywordsEngine();
 });
 
 describe('renderWordCloud', () => {
@@ -101,7 +105,9 @@ describe('renderWordCloud', () => {
 
   it('click flow sets search, activates the bookmarks tab, renders', () => {
     let renderCount = 0;
-    const renderCb = () => { renderCount += 1; };
+    const renderCb = () => {
+      renderCount += 1;
+    };
     setSearchQuery('');
 
     initWordCloud({ render: renderCb });
@@ -134,5 +140,80 @@ describe('renderWordCloud', () => {
     expect(els.wordCloudContainer.innerHTML).toBe(
       '<span class="text-slate-500 text-xs">尚無文字資料可分析</span>',
     );
+  });
+});
+
+// The lazy engine-load branch needs a fresh module registry, so it lives in
+// its own describe with dynamically imported modules.
+describe('renderWordCloud — lazy engine load', () => {
+  it('renders a loading state first, then the terms once the engine arrives', async () => {
+    vi.resetModules();
+    const keywords = await import('../src/analytics/keywords.js');
+    const view = await import('../src/views/wordcloud.js');
+    const state = await import('../src/core/state.js');
+
+    state.setSearchQuery('');
+    state.setBookmarks([
+      { id: '1', title: 'apple pie recipe', article_preview: 'pie text', detected_language: 'en' },
+    ]);
+
+    let renders = 0;
+    // The real renderAll() re-invokes renderWordCloud; the injected dep here
+    // does the same so the post-load repaint is observable.
+    view.initWordCloud({
+      render: () => {
+        renders += 1;
+        view.renderWordCloud();
+      },
+    });
+
+    created.length = 0;
+    view.renderWordCloud();
+    // First pass: engine unloaded — placeholder text, no spans yet.
+    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
+    expect(created).toHaveLength(0);
+
+    await keywords.loadKeywordsEngine();
+    // The load resolved and the view re-rendered itself via the injected dep.
+    await vi.waitFor(() => expect(renders).toBe(1));
+    expect(created.length).toBeGreaterThan(0);
+    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
+  });
+
+  it('falls back to the legacy tokenizer when the engine chunk fails to load', async () => {
+    vi.resetModules();
+    // Force the dynamic import to reject: the view must still render terms.
+    vi.doMock('compromise', () => {
+      throw new Error('chunk load failed');
+    });
+    const keywords = await import('../src/analytics/keywords.js');
+    const view = await import('../src/views/wordcloud.js');
+    const state = await import('../src/core/state.js');
+
+    state.setSearchQuery('');
+    state.setBookmarks([
+      { id: '1', title: 'apple pie recipe', article_preview: 'pie text', detected_language: 'en' },
+    ]);
+
+    created.length = 0;
+    view.renderWordCloud();
+    // needsKeywordEngine is true on the first pass (loading placeholder).
+    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
+
+    const engine = await keywords.loadKeywordsEngine();
+    expect(engine).toBeNull();
+    expect(keywords.keywordsReady()).toBe(false);
+
+    // After the failure, needsKeywordEngine() reports false — the legacy path
+    // renders instead of looping on the loading state.
+    created.length = 0;
+    view.renderWordCloud();
+    expect(created.length).toBeGreaterThan(0);
+    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
+    // Legacy tokenizer output: surface forms, no lemmatization.
+    expect(created[0].innerText).toMatch(/\(\d+\)$/);
+
+    vi.doUnmock('compromise');
+    vi.resetModules();
   });
 });

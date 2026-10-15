@@ -243,6 +243,10 @@ describe('entry-point feature wiring', () => {
   ])('wires %s clicks opened through tab navigation', async (tab, container) => {
     await start();
     const state = await import('../src/core/state.js');
+    // The word-cloud view loads its keyword engine lazily; the click-to-search
+    // assertion needs the rendered terms, so warm the engine first.
+    const keywords = await import('../src/analytics/keywords.js');
+    await keywords.loadKeywordsEngine();
     state.setBookmarks([
       bookmark('1', 'Apple orchard', 'https://apple.com'),
       bookmark('2', 'Banana garden', 'https://banana.com'),
