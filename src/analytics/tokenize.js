@@ -25,7 +25,7 @@
  * pinned by tests/analytics.test.js and tests/tokenize-legacy.test.js.
  */
 
-import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
+import { CLOUD_EN, CJK_STOPWORDS } from './stopwords.js';
 import {
   INVALID_CHARS,
   CJK_CHAR,
@@ -76,7 +76,7 @@ export function tokenizeText(text) {
 
     // English-like token
     if (ENGLISH_TOKEN.test(word)) {
-      if (!ENGLISH_STOPWORDS.has(word) && !DIGITS_ONLY.test(word)) {
+      if (!CLOUD_EN.has(word) && !DIGITS_ONLY.test(word)) {
         tokens.push(simpleStem(word));
       }
     } else if (CJK_CHAR.test(word)) {

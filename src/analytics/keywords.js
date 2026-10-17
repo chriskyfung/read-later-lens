@@ -37,7 +37,7 @@
 
 import { bookmarkText, simpleStem } from './tokenize.js';
 import { detectLanguage } from './detectLanguage.js';
-import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
+import { BASE_EN, CLOUD_EN, cjkStopsetFor } from './stopwords.js';
 import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
 import { segmentCjkWords, segmentWords, LATIN_WORD } from './segmentZh.js';
 
@@ -151,16 +151,18 @@ function cleanWord(word) {
 
 /**
  * @param {string} word
+ * @param {ReadonlySet<string>} stopset which noise policy to apply
  * @returns {boolean} True when the word is too short, numeric, or a stopword.
  */
-function isNoise(word) {
-  return word.length < MIN_TOKEN_LENGTH || DIGITS_ONLY.test(word) || ENGLISH_STOPWORDS.has(word);
+function isNoise(word, stopset) {
+  return word.length < MIN_TOKEN_LENGTH || DIGITS_ONLY.test(word) || stopset.has(word);
 }
 
 /**
  * Clean a match's words and trim noise from both edges. Interior stopwords
  * are deliberately kept: the display form must stay a verbatim substring of
- * the source text for click-to-search to round-trip.
+ * the source text for click-to-search to round-trip. Uses the CLOUD set —
+ * this only runs on the compromise (word-cloud) path.
  *
  * @param {string[]} words
  * @returns {string[]}
@@ -168,8 +170,8 @@ function isNoise(word) {
 function trimEdges(words) {
   let start = 0;
   let end = words.length;
-  while (start < end && isNoise(words[start])) start++;
-  while (end > start && isNoise(words[end - 1])) end--;
+  while (start < end && isNoise(words[start], CLOUD_EN)) start++;
+  while (end > start && isNoise(words[end - 1], CLOUD_EN)) end--;
   return words.slice(start, end);
 }
 
@@ -262,28 +264,37 @@ function latinKeyFor(word) {
 
 /**
  * Plain-path terms — the universal splitter (`segmentWords`) plus the
- * shared noise policy and the legacy stem key. THE tokenizer behind both
- * the word-cloud English plain path and TF-IDF similarity (every
- * language, routed by `documentLanguage`).
+ * caller-selected noise policy and the legacy stem key. THE tokenizer
+ * behind both the word-cloud English plain path and TF-IDF similarity
+ * (every language, routed by `documentLanguage`).
+ *
+ * Two stopsets, one code path:
+ * - **Scorer default (`BASE_EN`)** — similarity/linkage keep content-ish
+ *   words ('time', 'new', 'way') because two docs sharing "time
+ *   management" ARE similar.
+ * - **Cloud (`CLOUD_EN` via `extractPlainEnglishTerms`)** — the aesthetic
+ *   overlay hides those words from the display.
  *
  * Grouping contract, same as `tokenizeFrequency` before it: key =
  * display. Latin words key on `simpleStem`; CJK words key on themselves.
  * A possessive "'s" is stripped first so "Google's" keeps its legacy
  * token identity ('google', not a trailing-apostrophe stem). Policy per
  * script:
- * - Latin: `isNoise` (length, digits, English stopwords) — ICU keeps
+ * - Latin: `isNoise` (length, digits, `stopset`) — ICU keeps
  *   contractions whole, so "don't" is dropped by the stopword list where
  *   the legacy regex invented a phantom 'don' token.
- * - CJK: `MIN_TOKEN_LENGTH` + `CJK_STOPWORDS`, mirroring `segmentCjkWords`.
+ * - CJK: `MIN_TOKEN_LENGTH` + `cjkStopsetFor(lang)`, mirroring
+ *   `segmentCjkWords`.
  *
  * Callers without `Intl.Segmenter` fall back to `tokenizeFrequency`
  * (see `wordcloud.js`).
  *
  * @param {string} text
  * @param {string} lang 'en' (default) | 'zh' | 'ja'
+ * @param {ReadonlySet<string>} [stopset=BASE_EN] Latin-word noise policy
  * @returns {[string, number][]} [term, count] pairs in first-seen order
  */
-export function extractPlainTerms(text, lang = 'en') {
+export function extractPlainTerms(text, lang = 'en', stopset = BASE_EN) {
   if (!text) return [];
 
   const freq = new Map();
@@ -291,11 +302,11 @@ export function extractPlainTerms(text, lang = 'en') {
     const word = raw.replace(/'s$/, '');
     if (!word) continue;
     if (LATIN_WORD.test(word)) {
-      if (isNoise(word)) continue;
+      if (isNoise(word, stopset)) continue;
       const term = simpleStem(word);
       freq.set(term, (freq.get(term) || 0) + 1);
     } else {
-      if (word.length < MIN_TOKEN_LENGTH || CJK_STOPWORDS.has(word)) continue;
+      if (word.length < MIN_TOKEN_LENGTH || cjkStopsetFor(lang).has(word)) continue;
       freq.set(word, (freq.get(word) || 0) + 1);
     }
   }
@@ -303,14 +314,15 @@ export function extractPlainTerms(text, lang = 'en') {
 }
 
 /**
- * English shorthand for `extractPlainTerms(text, 'en')` — the word-cloud
- * plain path's entry point. See `extractPlainTerms` for the full contract.
+ * English shorthand for the word-cloud plain path — `extractPlainTerms`
+ * with the CLOUD stopset, so aesthetic words stay hidden in the display.
+ * See `extractPlainTerms` for the full contract.
  *
  * @param {string} text
  * @returns {[string, number][]} [term, count] pairs in first-seen order
  */
 export function extractPlainEnglishTerms(text) {
-  return extractPlainTerms(text, 'en');
+  return extractPlainTerms(text, 'en', CLOUD_EN);
 }
 
 /**
@@ -338,7 +350,9 @@ export function extractCjkKeywordTerms(text, locale = 'zh') {
 
   const terms = [];
   for (const word of segmentCjkWords(text, locale)) {
-    if (isNoise(word)) continue;
+    // Latin-run noise check uses the CLOUD set: this path feeds the
+    // word-cloud display only.
+    if (isNoise(word, CLOUD_EN)) continue;
     terms.push({ key: LATIN_WORD.test(word) ? latinKeyFor(word) : word, display: word, count: 1 });
   }
   return terms;
