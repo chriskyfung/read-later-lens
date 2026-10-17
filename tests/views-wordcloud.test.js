@@ -143,10 +143,13 @@ describe('renderWordCloud', () => {
   });
 });
 
-// The lazy engine-load branch needs a fresh module registry, so it lives in
-// its own describe with dynamically imported modules.
-describe('renderWordCloud — lazy engine load', () => {
-  it('renders a loading state first, then the terms once the engine arrives', async () => {
+// The engine-loading path needs a fresh module registry, so it lives in its
+// own describe with dynamically imported modules. The view is two-stage:
+// stage 1 paints the plain path instantly (never a placeholder), stage 2
+// upgrades to lemma grouping when the chunk arrives — or settles back on the
+// plain path when it fails.
+describe('renderWordCloud — two-stage engine load', () => {
+  it('paints plain terms immediately, then upgrades to lemmas once the engine arrives', async () => {
     vi.resetModules();
     const keywords = await import('../src/analytics/keywords.js');
     const view = await import('../src/views/wordcloud.js');
@@ -158,8 +161,8 @@ describe('renderWordCloud — lazy engine load', () => {
     ]);
 
     let renders = 0;
-    // The real renderAll() re-invokes renderWordCloud; the injected dep here
-    // does the same so the post-load repaint is observable.
+    // The real renderAll() re-invokes renderWordCloud when the tab is open;
+    // the injected dep does the same so the post-load upgrade is observable.
     view.initWordCloud({
       render: () => {
         renders += 1;
@@ -169,18 +172,24 @@ describe('renderWordCloud — lazy engine load', () => {
 
     created.length = 0;
     view.renderWordCloud();
-    // First pass: engine unloaded — placeholder text, no spans yet.
-    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
-    expect(created).toHaveLength(0);
+    // Stage 1: real spans NOW — the plain path never waits for the chunk,
+    // and the old blocking placeholder must never come back.
+    expect(created.length).toBeGreaterThan(0);
+    expect(created[0].innerText).toMatch(/\(\d+\)$/);
+    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
+    // The pending lemma upgrade is hinted natively, not as a blocking state.
+    expect(els.wordCloudContainer.title).toContain('優化');
 
     await keywords.loadKeywordsEngine();
-    // The load resolved and the view re-rendered itself via the injected dep.
+    // The load resolved and the view re-rendered itself via the injected dep —
+    // exactly once, no matter how many stage-1 passes saw the pending load.
     await vi.waitFor(() => expect(renders).toBe(1));
     expect(created.length).toBeGreaterThan(0);
-    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
+    // Settled on the grouped path: the pending hint is gone.
+    expect(els.wordCloudContainer.title).toBe('');
   });
 
-  it('falls back to the legacy tokenizer when the engine chunk fails to load', async () => {
+  it('settles on the plain path when the engine chunk fails to load', async () => {
     vi.resetModules();
     // Force the dynamic import to reject: the view must still render terms.
     vi.doMock('compromise', () => {
@@ -197,21 +206,23 @@ describe('renderWordCloud — lazy engine load', () => {
 
     created.length = 0;
     view.renderWordCloud();
-    // needsKeywordEngine is true on the first pass (loading placeholder).
-    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
+    // Stage 1 paints plain terms even though the chunk is doomed — never a
+    // dead loading state, never an empty container.
+    expect(created.length).toBeGreaterThan(0);
+    expect(created[0].innerText).toMatch(/\(\d+\)$/);
+    expect(els.wordCloudContainer.title).toContain('優化');
 
     const engine = await keywords.loadKeywordsEngine();
     expect(engine).toBeNull();
     expect(keywords.keywordsReady()).toBe(false);
 
-    // After the failure, needsKeywordEngine() reports false — the legacy path
-    // renders instead of looping on the loading state.
+    // After the failure, needsKeywordEngine() reports false — the view keeps
+    // painting the plain path instead of looping on a pending upgrade.
     created.length = 0;
     view.renderWordCloud();
     expect(created.length).toBeGreaterThan(0);
-    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
-    // Legacy tokenizer output: surface forms, no lemmatization.
     expect(created[0].innerText).toMatch(/\(\d+\)$/);
+    expect(els.wordCloudContainer.title).toBe('');
 
     vi.doUnmock('compromise');
     vi.resetModules();

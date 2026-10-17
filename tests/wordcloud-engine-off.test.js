@@ -55,9 +55,9 @@ describe('transition when the engine arrives', () => {
       { id: '2', title: 'running 的應用研究', article_preview: '' },
     ];
 
-    // Populate the per-record and aggregate memos in the pre-load state.
-    // The view blocks a MIXED list behind the loading placeholder, so only
-    // the Chinese document's segmentation is observable here.
+    // Populate the per-record and aggregate memos in the pre-load state —
+    // the same engine-off pass a two-stage render paints as its stage 1
+    // while the chunk is still in flight.
     const before = new Map(wordCloudFrequencies(docs));
     expect(keywords.keywordsReady()).toBe(false);
     expect(before.get('running')).toBe(1); // segmented + lowercased, no chunk
@@ -71,5 +71,31 @@ describe('transition when the engine arrives', () => {
     const after = new Map(wordCloudFrequencies(docs));
     expect(after.get('running')).toBe(2);
     expect(after.get('runn')).toBeUndefined();
+  });
+
+  it('converges on identical rows whether the chunk lands before or after aggregation', async () => {
+    const docs = [
+      { id: '1', title: 'daily running', article_preview: '' },
+      { id: '2', title: 'running 的應用研究', article_preview: '' },
+    ];
+
+    // Path A — the two-stage view: aggregate first (stage 1), the engine
+    // arrives, and the SAME record objects re-aggregate (stage 2).
+    const a = await freshModules();
+    const stage1 = a.wordCloudFrequencies(docs);
+    await a.keywords.loadKeywordsEngine();
+    const upgraded = a.wordCloudFrequencies(docs);
+
+    // Path B — prefetch-first: the chunk is resident before any aggregation
+    // ever runs (the idle/intent prefetch case).
+    vi.resetModules();
+    const b = await freshModules();
+    await b.keywords.loadKeywordsEngine();
+    const direct = b.wordCloudFrequencies(docs);
+
+    expect(upgraded).toEqual(direct);
+    // Stage 1 really was a different (stem-keyed) rendering of the same data,
+    // so the equality above proves convergence, not a shared stale memo.
+    expect(stage1).not.toEqual(upgraded);
   });
 });

@@ -42,7 +42,7 @@ Every `Intl.Segmenter` use is feature-detected
 | Missing capability              | Effect                                                                                                                                                          |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Intl.Segmenter`                | Word cloud falls back to the legacy tokenizer for **every** language (regex words + CJK bigrams). Similarity always uses it anyway. Everything else unaffected. |
-| `compromise` chunk load failure | All languages degrade to the plain path together (stems/surfaces); the view never loops on the loading state.                                                   |
+| `compromise` chunk load failure | All languages degrade to the plain path together (stems/surfaces); the two-stage view keeps painting and never blocks or loops on a loading state.              |
 
 Browsers below the floor are **untested** — the contract is "degrades,
 never crashes", not a support commitment.
