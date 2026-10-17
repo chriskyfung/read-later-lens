@@ -144,14 +144,15 @@ describe('renderWordCloud', () => {
 });
 
 // The engine-loading path needs a fresh module registry, so it lives in its
-// own describe with dynamically imported modules. The view is two-stage:
-// stage 1 paints the plain path instantly (never a placeholder), stage 2
-// upgrades to lemma grouping when the chunk arrives — or settles back on the
-// plain path when it fails.
-describe('renderWordCloud — two-stage engine load', () => {
-  it('paints plain terms immediately, then upgrades to lemmas once the engine arrives', async () => {
+// own describe with dynamically imported modules. Opening the view while the
+// chunk is pending must be FREEZE-FREE: the loader paints synchronously with
+// the click, the filtering + extraction pass runs one macrotask later, and
+// the result then upgrades (or settles) per the engine's fate.
+describe('renderWordCloud — deferred load behind a synchronous loader', () => {
+  it('shows the loader synchronously, defers the heavy pass, then upgrades to lemmas', async () => {
     vi.resetModules();
     const keywords = await import('../src/analytics/keywords.js');
+    const wordcloud = await import('../src/analytics/wordcloud.js');
     const view = await import('../src/views/wordcloud.js');
     const state = await import('../src/core/state.js');
 
@@ -161,32 +162,49 @@ describe('renderWordCloud — two-stage engine load', () => {
     ]);
 
     let renders = 0;
-    // The real renderAll() re-invokes renderWordCloud when the tab is open;
-    // the injected dep does the same so the post-load upgrade is observable.
+    // Count-only dep (no auto-repaint): the upgrade must be observable
+    // WITHOUT re-entering renderWordCloud during the flush window — the
+    // cached chunk can resolve in microtasks, and a re-paint would race the
+    // mid-state assertions below. The real renderAll re-invokes the view
+    // explicitly, which the final step below simulates.
     view.initWordCloud({
       render: () => {
         renders += 1;
-        view.renderWordCloud();
       },
     });
 
+    // Spy BEFORE the first render: proves the heavy pass stays deferred.
+    const spy = vi.spyOn(wordcloud, 'wordCloudFrequencies');
+
     created.length = 0;
     view.renderWordCloud();
-    // Stage 1: real spans NOW — the plain path never waits for the chunk,
-    // and the old blocking placeholder must never come back.
+    // Stage 0, SYNCHRONOUS with the click: loader only — no spans, no
+    // extraction, no filtering (it must never freeze the tab switch).
+    expect(created).toHaveLength(0);
+    expect(spy).not.toHaveBeenCalled();
+    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
+    expect(els.wordCloudContainer.innerHTML).toContain('animate-pulse');
+    expect(els.wordCloudContainer.title).toBe('');
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(spy).toHaveBeenCalledTimes(1);
     expect(created.length).toBeGreaterThan(0);
     expect(created[0].innerText).toMatch(/\(\d+\)$/);
     expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
-    // The pending lemma upgrade is hinted natively, not as a blocking state.
+    // Refinement pending: hinted natively, never as a blocking state.
     expect(els.wordCloudContainer.title).toContain('優化');
 
     await keywords.loadKeywordsEngine();
-    // The load resolved and the view re-rendered itself via the injected dep —
-    // exactly once, no matter how many stage-1 passes saw the pending load.
+    // Exactly one upgrade repaint, however many passes saw the pending load.
     await vi.waitFor(() => expect(renders).toBe(1));
+
+    // renderAll's explicit re-invocation on the settled state: grouped path,
+    // hint cleared.
+    view.renderWordCloud();
     expect(created.length).toBeGreaterThan(0);
-    // Settled on the grouped path: the pending hint is gone.
     expect(els.wordCloudContainer.title).toBe('');
+    spy.mockRestore();
   });
 
   it('settles on the plain path when the engine chunk fails to load', async () => {
@@ -206,8 +224,12 @@ describe('renderWordCloud — two-stage engine load', () => {
 
     created.length = 0;
     view.renderWordCloud();
-    // Stage 1 paints plain terms even though the chunk is doomed — never a
-    // dead loading state, never an empty container.
+    // Synchronous with the click: loader only — never a dead empty state.
+    expect(created).toHaveLength(0);
+    expect(els.wordCloudContainer.innerHTML).toContain('正在載入關鍵字分析引擎');
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Deferred pass paints plain terms and starts the (doomed) load.
     expect(created.length).toBeGreaterThan(0);
     expect(created[0].innerText).toMatch(/\(\d+\)$/);
     expect(els.wordCloudContainer.title).toContain('優化');
@@ -216,13 +238,14 @@ describe('renderWordCloud — two-stage engine load', () => {
     expect(engine).toBeNull();
     expect(keywords.keywordsReady()).toBe(false);
 
-    // After the failure, needsKeywordEngine() reports false — the view keeps
-    // painting the plain path instead of looping on a pending upgrade.
+    // After the failure the gate closes: the fast path paints SYNCHRONOUSLY
+    // with no loader and no pending hint — never a loop on a loading state.
     created.length = 0;
     view.renderWordCloud();
     expect(created.length).toBeGreaterThan(0);
     expect(created[0].innerText).toMatch(/\(\d+\)$/);
     expect(els.wordCloudContainer.title).toBe('');
+    expect(els.wordCloudContainer.innerHTML).not.toContain('正在載入關鍵字分析引擎');
 
     vi.doUnmock('compromise');
     vi.resetModules();

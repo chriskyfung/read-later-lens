@@ -1,5 +1,6 @@
 import {
   wordCloudEmptyStateHtml,
+  wordCloudLoadingHtml,
   wordCloudItemClass,
   wordCloudItemLabel,
 } from '../src/components/wordcloud/item.js';
@@ -27,5 +28,14 @@ describe('wordcloud item helpers', () => {
   it('renders label correctly', () => {
     const label = wordCloudItemLabel({ word: 'test', count: 5 });
     expect(label).toBe('test (5)');
+  });
+
+  it('exports the loading placeholder with the legacy text and a pulse', () => {
+    const result = wordCloudLoadingHtml();
+    // Legacy wording (monolith terminology), a legible pulse, and the same
+    // muted styling as the other placeholders.
+    expect(result).toBe(
+      '<span class="text-slate-500 text-xs animate-pulse">正在載入關鍵字分析引擎…</span>',
+    );
   });
 });

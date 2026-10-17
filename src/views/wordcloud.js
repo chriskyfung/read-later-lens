@@ -15,10 +15,10 @@
 
 import { getFilteredBookmarks } from '../core/filters.js';
 import { wordCloudFrequencies, wordCloudItems } from '../analytics/wordcloud.js';
-import { setSearchQuery } from '../core/state.js';
+import { bookmarks, setSearchQuery } from '../core/state.js';
 import { setSearchInputValue } from './header.js';
 import { activateTab } from './tabs.js';
-import { wordCloudEmptyStateHtml } from '../components/wordcloud/item.js';
+import { wordCloudEmptyStateHtml, wordCloudLoadingHtml } from '../components/wordcloud/item.js';
 import { wordCloudItemClass, wordCloudItemLabel } from '../components/wordcloud/item.js';
 import { needsKeywordEngine, loadKeywordsEngine } from '../analytics/keywords.js';
 
@@ -36,34 +36,65 @@ export function initWordCloud(injectedDeps) {
 }
 
 /**
- * Render the word-cloud tab — two-stage, never blocking on the engine.
+ * Render the word-cloud tab — cheap gate first, heavy work deferred while
+ * the engine is still in flight.
  *
- * Stage 1 always paints immediately with whichever path is current: the
- * lemma-grouped list once the lazily-split `compromise` chunk has arrived
- * (idle/intent prefetch in `main.js` / `workspaceActions.js` usually lands it
- * before this view ever runs), the plain `Intl.Segmenter` path while it is
- * still in flight, and that same plain path for every language after a load
- * failure. Stage 2 is the upgrade: the pending load re-renders this view, the
- * engine-aware memos in `analytics/wordcloud.js` re-key, and the cloud
- * repaints grouped — a refinement the reader perceives, not a wait. The
- * container's native title hint exists only while that upgrade is pending.
+ * Opening the tab must never freeze the main thread: while the lazily-split
+ * `compromise` chunk is pending, only the loading placeholder is written
+ * (microseconds), and the filtering + plain-path extraction pass runs in a
+ * macrotask — after the browser has painted the tab switch and the loader.
+ * (Before the two-stage change, that pass ran INSIDE the click handler and
+ * froze a first open for hundreds of ms on a real-size library.) The
+ * deferred pass then paints whichever path is current: lemma-grouped if the
+ * chunk already arrived (idle/intent prefetch usually wins), the plain
+ * `Intl.Segmenter` path while it is still in flight, and that same plain
+ * path for every language after a load failure. Stage 2 is the upgrade: the
+ * pending load re-renders this view, the engine-aware memos in
+ * `analytics/wordcloud.js` re-key, and the cloud repaints grouped — a
+ * refinement the reader perceives, not a wait.
+ *
+ * Fast path (engine settled, or no English documents in the library):
+ * everything stays synchronous — the memos make it cheap and no loader
+ * flashes.
  */
 export function renderWordCloud() {
   const container = document.getElementById('wordCloudContainer');
 
-  // The filtered list is expensive (relevance scoring, sorting) and needed
-  // by both the paint and the gate, so compute it once per render.
-  const filtered = getFilteredBookmarks();
-  const refining = needsKeywordEngine(filtered);
+  // Cheap gate: the LIVE state binding and memoized per-record language
+  // detection, short-circuiting at the first English document — no
+  // filtering, no extraction. (Gating on `getFilteredBookmarks()` would pay
+  // for the relevance sort just to decide to defer it.)
+  if (needsKeywordEngine(bookmarks)) {
+    container.innerHTML = wordCloudLoadingHtml();
+    container.title = '';
+    setTimeout(() => {
+      const filtered = getFilteredBookmarks();
+      paintWordCloud(container, filtered);
+      refine(container, filtered);
+    }, 0);
+    return;
+  }
 
+  const filtered = getFilteredBookmarks();
   paintWordCloud(container, filtered);
+  refine(container, filtered);
+}
+
+/**
+ * Stage-2 bookkeeping, shared by the sync fast path and the deferred first
+ * paint: surface the pending upgrade natively (container title) and attach
+ * the single continuation that repaints exactly once when the chunk lands —
+ * never a storm of duplicate upgrades, and nothing left dangling after a
+ * failure (the shared promise settles either way and the flag clears first).
+ *
+ * @param {HTMLElement} container
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} filtered
+ */
+function refine(container, filtered) {
+  const refining = needsKeywordEngine(filtered);
   container.title = refining ? '關鍵字分組優化中…' : '';
 
   if (refining && !upgradePending) {
-    // Attach the continuation once: re-renders while the chunk is still in
-    // flight share it, so arrival repaints exactly once — never a storm of
-    // duplicate upgrades, and nothing left dangling after a failure (the
-    // shared promise settles either way and the flag clears first).
     upgradePending = true;
     loadKeywordsEngine().then(() => {
       upgradePending = false;

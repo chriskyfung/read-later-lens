@@ -14,6 +14,19 @@ export function wordCloudEmptyStateHtml() {
 }
 
 /**
+ * Loading placeholder written SYNCHRONOUSLY while the lazily-split engine is
+ * still in flight and the deferred extraction pass has not run yet — the
+ * legacy text (monolith wording) plus a Tailwind pulse so the brief wait is
+ * legible. Not monolith-parity markup (the monolith had no lazy load), so
+ * the byte-for-byte contract does not apply here.
+ *
+ * @returns {string}
+ */
+export function wordCloudLoadingHtml() {
+  return '<span class="text-slate-500 text-xs animate-pulse">正在載入關鍵字分析引擎…</span>';
+}
+
+/**
  * Returns the constant class list for an item span.
  */
 export function wordCloudItemClass() {
