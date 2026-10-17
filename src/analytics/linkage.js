@@ -9,9 +9,16 @@
  * Matches the original monolith: links when the cosine similarity of a pair is
  * strictly greater than the threshold, degree incremented on both endpoints,
  * 'unknown' domain fallback, 'www.' leading prefix stripped.
+ *
+ * One opt-in deviation, default-off: `weighting: 'tfidf'` scales each shared
+ * term by its inverse document frequency (see `buildIdf` /
+ * `cosineScoreWeighted` in similarity.js) before the same threshold. Generic
+ * words that appear in many documents ('ai', 'news') then contribute less,
+ * which collapses hairball clusters while distinctive pairs survive. The
+ * default 'tf' is byte-identical to the monolith.
  */
 
-import { bookmarkTokenFreq, cosineScore } from './similarity.js';
+import { bookmarkTokenFreq, buildIdf, cosineScore, cosineScoreWeighted } from './similarity.js';
 import { extractDomain } from '../utils/url.js';
 
 /** Monolith cap for the graph (top 50 filtered bookmarks). */
@@ -21,7 +28,8 @@ export const LINKAGE_THRESHOLD = 0.15;
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
- * @param {{ limit?: number, threshold?: number }} [options]
+ * @param {{ limit?: number, threshold?: number,
+ *   weighting?: 'tf'|'tfidf' }} [options]
  * @returns {{
  *   nodes: { id: string, title: string, url: string, domain: string, degree: number, tags: string[] }[],
  *   links: { source: string, target: string, value: number }[],
@@ -31,11 +39,13 @@ export const LINKAGE_THRESHOLD = 0.15;
 export function buildLinkageGraph(bookmarks, options = {}) {
   const limit = options.limit ?? LINKAGE_LIMIT;
   const threshold = options.threshold ?? LINKAGE_THRESHOLD;
+  const weighting = options.weighting ?? 'tf';
   const selected = bookmarks.slice(0, limit);
 
   const { nodes, domains } = buildGraphNodes(selected);
   const freqs = selected.map(bookmarkTokenFreq); // one tokenizing pass per document
-  const links = buildLinks(nodes, freqs, threshold);
+  const idf = weighting === 'tfidf' ? buildIdf(freqs) : null;
+  const links = buildLinks(nodes, freqs, threshold, idf);
 
   return { nodes, links, domains };
 }
@@ -68,12 +78,20 @@ function buildNodes(selected) {
   return { nodes, domains };
 }
 
-/** Build pairwise links above the threshold, incrementing both endpoints' degree. */
-function buildLinks(nodes, freqs, threshold) {
+/**
+ * Build pairwise links above the threshold, incrementing both endpoints' degree.
+ *
+ * @param {{ id: string }[]} nodes
+ * @param {Map<string, number>[]} freqs
+ * @param {number} threshold
+ * @param {Map<string, number>|null} idf null → plain TF scoring (monolith)
+ */
+function buildLinks(nodes, freqs, threshold, idf = null) {
+  const score = idf ? cosineScoreWeighted : cosineScore;
   const links = [];
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      const sim = cosineScore(freqs[i], freqs[j]);
+      const sim = idf ? score(freqs[i], freqs[j], idf) : score(freqs[i], freqs[j]);
       if (sim > threshold) {
         links.push({ source: nodes[i].id, target: nodes[j].id, value: sim });
         nodes[i].degree++;

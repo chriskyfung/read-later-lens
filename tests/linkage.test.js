@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildLinkageGraph, LINKAGE_LIMIT, LINKAGE_THRESHOLD } from '../src/analytics/linkage.js';
+import { buildIdf, cosineScore, cosineScoreWeighted } from '../src/analytics/similarity.js';
 
 const bm = (id, over = {}) => ({
   id: String(id),
@@ -123,5 +124,76 @@ describe('buildLinkageGraph', () => {
     expect(nodes[1].degree).toBe(2); // 1-2, 2-4
     expect(nodes[2].degree).toBe(0); // disjoint from all
     expect(nodes[3].degree).toBe(2); // 1-4, 2-4
+  });
+});
+
+describe('TF-IDF weighting (weighting: tfidf)', () => {
+  // The hairball fixture: six docs sharing only the generic pair
+  // {ai, briefing} plus four private words each (0.33 under TF — linked),
+  // and one distinctive pair sharing {quantum, entanglement} (0.67 under
+  // TF). Under TF-IDF the generic pair falls to ~0.10 (below the 0.15
+  // threshold) while the distinctive pair stays ~0.57.
+  const hairball = [
+    bm(1, { title: 'ai briefing zebra giraffe penguin walrus', article_preview: '' }),
+    bm(2, { title: 'ai briefing koala tiger lion horse', article_preview: '' }),
+    bm(3, { title: 'ai briefing mouse rabbit fox bear', article_preview: '' }),
+    bm(4, { title: 'ai briefing goat sheep deer camel', article_preview: '' }),
+    bm(5, { title: 'ai briefing snake eagle hawk owl', article_preview: '' }),
+    bm(6, { title: 'ai briefing shark whale salmon trout', article_preview: '' }),
+    bm(7, { title: 'quantum entanglement paper', article_preview: '' }),
+    bm(8, { title: 'quantum entanglement study', article_preview: '' }),
+  ];
+
+  it('drops generic-word hairball links but keeps distinctive pairs', () => {
+    const tf = buildLinkageGraph(hairball); // default weighting: 'tf'
+    // C(6,2)=15 generic pairs all share {ai, briefing} → linked; plus the
+    // distinctive pair. Cross pairs share nothing.
+    expect(tf.links).toHaveLength(16);
+
+    const tfidf = buildLinkageGraph(hairball, { weighting: 'tfidf' });
+    expect(tfidf.links).toHaveLength(1); // the hairball is gone
+    expect(tfidf.links[0]).toMatchObject({ source: '7', target: '8' });
+    expect(tfidf.links[0].value).toBeGreaterThan(LINKAGE_THRESHOLD);
+  });
+
+  it("weighting: 'tf' (or omitted) is byte-identical to the default", () => {
+    const explicit = buildLinkageGraph(hairball, { weighting: 'tf' });
+    const omitted = buildLinkageGraph(hairball);
+    expect(explicit.links).toEqual(omitted.links);
+  });
+});
+
+describe('buildIdf / cosineScoreWeighted', () => {
+  it('idf falls as document frequency rises (smoothed, never zero)', () => {
+    const freqs = [
+      new Map([
+        ['common', 1],
+        ['rare', 1],
+      ]),
+      new Map([
+        ['common', 1],
+        ['other', 1],
+      ]),
+      new Map([['common', 1]]),
+    ];
+    const idf = buildIdf(freqs);
+    expect(idf.get('common')).toBeLessThan(idf.get('rare'));
+    expect(idf.get('common')).toBeGreaterThan(0); // log(1 + N/(1+df)) is smoothed
+  });
+
+  it('reduces to plain cosine when every idf is 1 (weighting is multiplicative only)', () => {
+    const a = new Map([
+      ['x', 2],
+      ['y', 1],
+    ]);
+    const b = new Map([
+      ['x', 1],
+      ['y', 3],
+    ]);
+    const flat = new Map([
+      ['x', 1],
+      ['y', 1],
+    ]);
+    expect(cosineScoreWeighted(a, b, flat)).toBe(cosineScore(a, b));
   });
 });

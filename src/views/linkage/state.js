@@ -11,6 +11,11 @@
  * `focusedNodeId` and `pendingFocusCenter` belong with the camera that uses
  * them (./focus.js), but they must survive a re-render that replaces the
  * selections, so they are stored here too.
+ *
+ * `weighting` is the graph's scoring mode ('tf' | 'tfidf'), set by the panel
+ * checkbox. Session-scoped like everything else in this file: this app has
+ * no UI-preference persistence layer (IndexedDB holds bookmarks only), so
+ * the toggle resets to 'tf' on reload.
  */
 
 /**
@@ -28,6 +33,7 @@
  * @property {{ cancel: () => void }|null} pendingTopologyTimer Deferred Frame
  *   B handle returned by `afterPaint` (see ./linkage/scene.js); `cancel()`
  *   stops both the rAF and the inner macrotask stage.
+ * @property {'tf'|'tfidf'} weighting Link scoring mode (panel checkbox).
  */
 
 /** @type {GraphState} */
@@ -43,6 +49,7 @@ export const graphState = {
   pendingFocusCenter: false,
   renderGeneration: 0,
   pendingTopologyTimer: null,
+  weighting: 'tf',
 };
 
 /** Resting width/height used when the canvas reports zero (jsdom, or a hidden panel). */

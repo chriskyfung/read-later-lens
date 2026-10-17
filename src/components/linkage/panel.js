@@ -32,6 +32,10 @@ export function panelLinkageHtml() {
                 </svg></button>
               <button id="resetGraphBtn"
                 class="bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 px-3 py-1.5 rounded-lg">重置視圖</button>
+              <label class="text-xs text-slate-300 flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" id="weightingTfidfToggle" class="accent-indigo-500">
+                TF-IDF 權重
+              </label>
             </div>
           </div>
           <div id="d3GraphCanvas"
