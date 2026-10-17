@@ -3,6 +3,7 @@ import {
   extractKeywordTerms,
   extractPlainEnglishTerms,
   loadKeywordsEngine,
+  prefetchKeywordsEngine,
   keywordsReady,
   needsKeywordEngine,
   documentLanguage,
@@ -34,6 +35,54 @@ describe('loadKeywordsEngine', () => {
     // Already loaded here — pins the "settled states never re-request" branch;
     // the unloaded branch is covered by tests/views-wordcloud.test.js.
     expect(needsKeywordEngine([{ id: '1', title: 'apple', article_preview: '' }])).toBe(false);
+  });
+});
+
+describe('prefetchKeywordsEngine', () => {
+  it('never re-requests once the engine has settled', () => {
+    // beforeAll already loaded the engine in this registry — the settled branch.
+    expect(prefetchKeywordsEngine()).toBe(false);
+    expect(keywordsReady()).toBe(true);
+  });
+
+  it('starts the download from an idle engine and reports it', async () => {
+    // Fresh registry: 'idle' is the state only a pre-view prefetch ever sees.
+    vi.resetModules();
+    const fresh = await import('../src/analytics/keywords.js');
+    expect(fresh.keywordsReady()).toBe(false);
+    expect(fresh.prefetchKeywordsEngine()).toBe(true); // started it here
+    expect(fresh.prefetchKeywordsEngine()).toBe(false); // already in flight
+    await fresh.loadKeywordsEngine(); // shares that same single promise
+    expect(fresh.keywordsReady()).toBe(true);
+    expect(fresh.prefetchKeywordsEngine()).toBe(false); // settled
+  });
+
+  it('does not speculatively download when the network asks to save data', async () => {
+    vi.resetModules();
+    vi.stubGlobal('navigator', { connection: { saveData: true, effectiveType: '4g' } });
+    try {
+      const fresh = await import('../src/analytics/keywords.js');
+      // `false` is the documented contract for "did not start the download".
+      expect(fresh.prefetchKeywordsEngine()).toBe(false);
+      expect(fresh.keywordsReady()).toBe(false);
+      // Save-Data gates speculation only: the explicit view load still runs.
+      await fresh.loadKeywordsEngine();
+      expect(fresh.keywordsReady()).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('also skips on a 2g-class connection', async () => {
+    vi.resetModules();
+    vi.stubGlobal('navigator', { connection: { saveData: false, effectiveType: 'slow-2g' } });
+    try {
+      const fresh = await import('../src/analytics/keywords.js');
+      expect(fresh.prefetchKeywordsEngine()).toBe(false);
+      expect(fresh.keywordsReady()).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

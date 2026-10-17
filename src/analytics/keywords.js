@@ -4,11 +4,21 @@
  *
  * This module is the ONLY place that imports `compromise`, and it loads it
  * lazily via `loadKeywordsEngine()` so the library stays out of the initial
- * bundle: the word-cloud view calls `needsKeywordEngine()` first and only
- * pays for the chunk when the visible library actually contains English
- * documents. Lazy loading requires `codeSplitting` in `vite.config.js` —
- * without it the bundler inlines the dynamic import back into the entry
- * chunk.
+ * bundle: callers gate on `needsKeywordEngine()` and only pay for the chunk
+ * when the visible library actually contains English documents. Lazy loading
+ * requires `codeSplitting` in `vite.config.js` — without it the bundler
+ * inlines the dynamic import back into the entry chunk.
+ *
+ * `prefetchKeywordsEngine()` starts that same download speculatively — from
+ * the first idle window after boot (`main.js`) and from hover/focus intent on
+ * the word-cloud tab (`workspaceActions.js`) — so the chunk is usually
+ * resident before the view asks for it. Both callers gate on
+ * `needsKeywordEngine()` first (a Chinese-only library stays at zero
+ * downloads), the prefetch additionally honours the network's Save-Data hint,
+ * and the view never blocks on the load either way (two-stage render,
+ * `views/wordcloud.js`). An explicit `loadKeywordsEngine()` from the open
+ * view deliberately ignores Save-Data: once the user opens the cloud, the
+ * engine IS the feature.
  *
  * Engine states:
  * - idle: not requested yet
@@ -74,6 +84,35 @@ export function loadKeywordsEngine() {
       return null;
     });
   return pending;
+}
+
+/**
+ * Start downloading the engine chunk before anything asks to render it.
+ *
+ * Speculative by design: `main.js` fires this from the first idle window
+ * after boot, and `workspaceActions.js` on hover/focus intent over the
+ * word-cloud tab — both AFTER gating on `needsKeywordEngine()`, so a
+ * Chinese-only library never downloads anything. Shares
+ * `loadKeywordsEngine()`'s single promise (an intent prefetch and a tab-open
+ * are one request), never rejects (a failed load resolves null into the
+ * 'failed' state), and is idempotent: only an engine still at 'idle' starts a
+ * download here.
+ *
+ * The Save-Data / 2g gate applies to THIS speculative path only — see the
+ * fileoverview for why an explicit load from the open view proceeds anyway.
+ *
+ * @returns {boolean} True when this call started the download (state was
+ *   'idle' and the network is not marked save-data); false when there was
+ *   nothing to start or the user asked to save data.
+ */
+export function prefetchKeywordsEngine() {
+  if (engineState !== 'idle') return false;
+  const connection = globalThis.navigator?.connection;
+  if (connection?.saveData === true || /^(slow-)?2g$/.test(connection?.effectiveType ?? '')) {
+    return false;
+  }
+  loadKeywordsEngine();
+  return true;
 }
 
 /** @returns {boolean} True once the engine is loaded and usable. */
@@ -248,10 +287,11 @@ function lemmaOf(word) {
 /**
  * Grouping key for a Latin run inside a CJK document: the compromise lemma
  * once the engine is loaded, the legacy stemmer until then (a CJK-only
- * library has no English rows to disagree with, and the cloud view blocks a
- * MIXED list behind the loading placeholder). The caller's memo is keyed on
- * the extraction mode, so entries recompute when the engine arrives and the
- * key switches; the display merge hides any transient seam.
+ * library has no English rows to disagree with, and a MIXED list is painted
+ * on this plain path first, then re-grouped when the chunk arrives — the
+ * view's two-stage render). The caller's memo is keyed on the extraction
+ * mode, so entries recompute when the engine arrives and the key switches;
+ * the display merge hides any transient seam.
  *
  * @param {string} word lowercased surface form
  * @returns {string}
