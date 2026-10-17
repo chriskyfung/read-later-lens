@@ -31,6 +31,7 @@ export function similarityModalHtml() {
         <div class="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl">
           <span class="text-xs text-indigo-400 font-semibold block mb-1">目標文章:</span>
           <p id="simTargetTitle" class="text-sm font-bold text-white"></p>
+          <p id="simRankingMode" class="text-[10px] text-slate-400"></p>
         </div>
         <div class="space-y-3">
           <h4 class="text-xs font-bold uppercase text-slate-400">關聯度最高的文章列表：</h4>
