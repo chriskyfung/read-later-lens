@@ -3,20 +3,26 @@
  * and the home of `simpleStem`.
  *
  * Declared roles (the universal `Intl.Segmenter` splitter in
- * `segmentZh.js` took over the primary path):
+ * `segmentZh.js` took over every primary path):
  * - Fallback for runtimes without `Intl.Segmenter`: the word cloud falls
  *   back to this tokenizer for every language when the built-in API is
  *   absent, and CJK documents also land here after a compromise chunk
  *   failure so plain-path keys stay coherent across languages.
- * - TF-IDF similarity (`similarity.js`) still uses it exclusively. Its
- *   scores are pinned by tests/analytics.test.js, so migrating similarity
- *   onto the universal splitter is a deliberate, separately-tested change
- *   with re-baselined fixtures — not a cleanup to fold into another PR.
- *   Deleting anything in this file before that migration is premature.
+ * - `simpleStem` additionally survives as the pre-engine / plain-path
+ *   grouping key (see its JSDoc).
  *
- * Behaviour here must stay byte-compatible with the original monolith
- * until then; `simpleStem` additionally survives any such migration (see
- * its JSDoc below).
+ * TF-IDF similarity used to tokenize here too; it migrated to the
+ * universal splitter (`extractPlainTerms`), divergences pinned in
+ * tests/similarity-segmenter.test.js. The word-cloud fallback above is
+ * now the only splitter consumer — and it cannot be deleted: the
+ * declared browser-support floor promises "degrades, never crashes", so
+ * a runtime without Intl.Segmenter must keep getting terms from
+ * somewhere. There is no dictionary-grade splitter to upgrade it to;
+ * deleting this file would turn graceful degradation into a broken
+ * cloud.
+ *
+ * Behaviour here stays byte-compatible with the original monolith;
+ * pinned by tests/analytics.test.js and tests/tokenize-legacy.test.js.
  */
 
 import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from './stopwords.js';
@@ -35,10 +41,10 @@ import {
  * LOAD-BEARING — do not delete this alongside the legacy splitter. It is
  * the grouping key for Latin runs inside CJK documents before the
  * compromise engine arrives (`latinKeyFor` in keywords.js) and the
- * key = display contract of the English plain path
- * (`extractPlainEnglishTerms`), where the universal splitter provides the
- * word boundaries but this stemmer still provides the grouping. Pinned by
- * tests/tokenize-legacy.test.js.
+ * key = display contract of `extractPlainTerms` (the word-cloud English
+ * plain path and TF-IDF similarity), where the universal splitter
+ * provides the word boundaries but this stemmer still provides the
+ * grouping. Pinned by tests/tokenize-legacy.test.js.
  *
  * @param {string} word
  * @returns {string}

@@ -6,7 +6,13 @@
  * (title + article_preview).
  *
  * Architecture: two public APIs over one shared scoring core.
- * - `bookmarkTokenFreq()` tokenizes and counts.
+ * - `bookmarkTokenFreq()` splits via the universal `Intl.Segmenter`
+ *   splitter (`extractPlainTerms`, routed by `documentLanguage`) and
+ *   counts. It was migrated off the legacy whitespace+regex tokenizer:
+ *   the math below is unchanged, but token-level values shifted for CJK
+ *   documents (dictionary words instead of overlapping bigram fragments)
+ *   and contractions ("don't" no longer invents a shared 'don' token) —
+ *   pinned in tests/similarity-segmenter.test.js.
  * - `cosineScore()` is the single scoring core (pre-computed freq maps in, score out).
  * - `cosineSimilarity()` and `mostSimilar()` are thin facades over `cosineScore()`,
  *   so the scoring math cannot drift between the graph and the recommendations.
@@ -16,14 +22,15 @@
  * every pairwise score.
  */
 
-import { bookmarkText, tokenizeFrequency } from './tokenize.js';
+import { bookmarkText } from './tokenize.js';
+import { extractPlainTerms, documentLanguage } from './keywords.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {Map<string, number>}
  */
 export function bookmarkTokenFreq(b) {
-  return tokenizeFrequency(bookmarkText(b));
+  return new Map(extractPlainTerms(bookmarkText(b), documentLanguage(b)));
 }
 
 /**
