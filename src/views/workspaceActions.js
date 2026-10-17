@@ -17,7 +17,12 @@ import { renderBookmarkCards, updateBatchActionBar } from './bookmarks.js';
 import { activateTab } from './tabs.js';
 import { renderWordCloud } from './wordcloud.js';
 import { renderDomainChart } from './domains.js';
-import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './linkage.js';
+import {
+  renderConceptLinkageGraph,
+  zoomGraphBy,
+  resetGraphZoom,
+  setLinkageWeighting,
+} from './linkage.js';
 import { showToast } from '../utils/dom.js';
 
 /** @typedef {object} WorkspaceActionsDeps
@@ -174,4 +179,9 @@ export function registerWorkspaceListeners() {
   document.getElementById('zoomInBtn')?.addEventListener('click', () => zoomGraphBy(1.3));
   document.getElementById('zoomOutBtn')?.addEventListener('click', () => zoomGraphBy(1 / 1.3));
   document.getElementById('resetGraphBtn')?.addEventListener('click', () => resetGraphZoom());
+
+  // TF ⇄ TF-IDF toggle — re-renders the graph with the new scoring mode.
+  document.getElementById('weightingTfidfToggle')?.addEventListener('change', (e) => {
+    setLinkageWeighting(e.target.checked ? 'tfidf' : 'tf');
+  });
 }

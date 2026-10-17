@@ -63,6 +63,61 @@ export function cosineScore(freqA, freqB) {
 }
 
 /**
+ * Inverse document frequency over the union vocabulary of pre-computed
+ * frequency maps — the TF-IDF half of the linkage toggle.
+ *
+ * Smoothed (`log(1 + N/(1+df))`) so a term present in every document keeps
+ * a small positive weight instead of zeroing its pair's dot product, and
+ * rare terms rise toward `log(1+N)`. O(V) memory, built once per graph.
+ *
+ * @param {Map<string, number>[]} freqs one frequency map per document
+ * @returns {Map<string, number>} idf weight per vocabulary term
+ */
+export function buildIdf(freqs) {
+  const df = new Map();
+  for (const freq of freqs) {
+    for (const term of freq.keys()) {
+      df.set(term, (df.get(term) || 0) + 1);
+    }
+  }
+  const idf = new Map();
+  for (const [term, count] of df) {
+    idf.set(term, Math.log(1 + freqs.length / (1 + count)));
+  }
+  return idf;
+}
+
+/**
+ * Cosine similarity with per-term IDF weighting: each count is scaled by
+ * `idf.get(term) ?? 1` before the same dot/norm math as `cosineScore`, so
+ * shared generic terms (high df → low idf) contribute less than shared
+ * distinctive ones. With a flat idf map (all 1) this IS `cosineScore`.
+ *
+ * @param {Map<string, number>} freqA
+ * @param {Map<string, number>} freqB
+ * @param {Map<string, number>} idf from `buildIdf` over the same corpus
+ * @returns {number} 0..1
+ */
+export function cosineScoreWeighted(freqA, freqB, idf) {
+  const vocab = new Set([...freqA.keys(), ...freqB.keys()]);
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (const term of vocab) {
+    const weight = idf.get(term) ?? 1;
+    const ca = (freqA.get(term) || 0) * weight;
+    const cb = (freqB.get(term) || 0) * weight;
+    dot += ca * cb;
+    normA += ca * ca;
+    normB += cb * cb;
+  }
+
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} a
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {number} 0..1

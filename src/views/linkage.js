@@ -154,7 +154,9 @@ export function renderConceptLinkageGraph(focusId = null) {
   // Only reached by a focused render. Runs the link pass, then builds the rest
   // of the graph around the already-centred bookmark.
   const buildRestOfGraph = () => {
-    const { nodes: freshNodes, links } = buildLinkageGraph(filtered);
+    const { nodes: freshNodes, links } = buildLinkageGraph(filtered, {
+      weighting: graphState.weighting,
+    });
 
     // Keep OUR object in the array — the DOM already holds it as __data__ —
     // adopting the degree the link pass computed, and spread the
@@ -216,7 +218,7 @@ export function renderConceptLinkageGraph(focusId = null) {
   // ---- Unfocused render: one pass, as before ------------------------------
   // Replace the degree-less placeholders with the full build's nodes, and
   // widen the colour scale's domain to match.
-  const built = buildLinkageGraph(filtered);
+  const built = buildLinkageGraph(filtered, { weighting: graphState.weighting });
   nodesList = built.nodes;
   const links = built.links;
   domains = built.domains;
@@ -259,6 +261,12 @@ export function renderConceptLinkageGraph(focusId = null) {
  *
  * @param {number} factor
  */
+/** Switch the graph's link scoring mode ('tf' | 'tfidf') and re-render. Panel checkbox. */
+export function setLinkageWeighting(mode) {
+  graphState.weighting = mode;
+  renderConceptLinkageGraph();
+}
+
 export function zoomGraphBy(factor) {
   const { svg, zoom } = graphState;
   if (svg && zoom) svg.transition().call(zoom.scaleBy, factor);
