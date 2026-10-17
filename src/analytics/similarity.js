@@ -24,6 +24,7 @@
 
 import { bookmarkText } from './tokenize.js';
 import { extractPlainTerms, documentLanguage } from './keywords.js';
+import { MIN_AUTO_N, MIN_IDF_SPREAD, AUTO_K } from './constants.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
@@ -158,4 +159,107 @@ export function mostSimilar(list, target, top = 5, options = {}) {
     .slice(0, top);
 
   return results;
+}
+
+/**
+ * Rank all bookmarks by similarity to a target with automatic TF-IDF blending.
+ *
+ * Automatically picks between plain TF and TF-IDF scoring based on the corpus
+ * and the target:
+ * - Small corpora (below MIN_AUTO_N) or flat vocabularies (below
+ *   MIN_IDF_SPREAD) stay plain TF — IDF estimates are noise there.
+ * - Otherwise lambda = sigmoid((centerIdf - targetSpecificity) * AUTO_K), so a
+ *   generic target (low specificity) leans into IDF while a distinctive target
+ *   leans into TF. Lambda is returned alongside the ranked results and the mode
+ *   label ('tf' | 'blend' | 'tfidf') is fit for a UI status line.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} target
+ * @param {number} [top=5]
+ * @returns {{
+ *   results: { doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[],
+ *   lambda: number,
+ *   mode: 'tf' | 'blend' | 'tfidf',
+ * }}
+ */
+export function mostSimilarAuto(list, target, top = 5) {
+  const N = list.length;
+  const freqs = list.map(bookmarkTokenFreq);
+  const targetFreq = bookmarkTokenFreq(target);
+
+  if (N < MIN_AUTO_N) {
+    return {
+      results: rankByWeights(list, freqs, targetFreq, target.id, null, 0, top),
+      lambda: 0,
+      mode: 'tf',
+    };
+  }
+
+  const idf = buildIdf(freqs);
+  const idfValues = [...idf.values()];
+  const spread = Math.max(...idfValues) - Math.min(...idfValues);
+  if (spread < MIN_IDF_SPREAD) {
+    return {
+      results: rankByWeights(list, freqs, targetFreq, target.id, null, 0, top),
+      lambda: 0,
+      mode: 'tf',
+    };
+  }
+
+  const centerIdf = (Math.min(...idfValues) + Math.max(...idfValues)) / 2;
+  const specificity = targetSpecificity(targetFreq, idf);
+  const lambda = sigmoid((centerIdf - specificity) * AUTO_K);
+
+  return {
+    results: rankByWeights(list, freqs, targetFreq, target.id, idf, lambda, top),
+    lambda,
+    mode: lambda < 0.3 ? 'tf' : lambda > 0.7 ? 'tfidf' : 'blend',
+  };
+}
+
+/**
+ * Rank candidates by a convex blend of TF and TF-IDF cosine scores.
+ *
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {Map<string, number>[]} freqs one frequency map per list entry
+ * @param {Map<string, number>} targetFreq
+ * @param {Map<string, number> | null} idf null -> plain TF
+ * @param {number} lambda TF-IDF mix (0 = pure TF, 1 = pure TF-IDF)
+ * @param {number} top
+ * @returns {{ doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
+ */
+function rankByWeights(list, freqs, targetFreq, targetId, idf, lambda, top) {
+  const score = idf
+    ? (fa, fb) => (1 - lambda) * cosineScore(fa, fb) + lambda * cosineScoreWeighted(fa, fb, idf)
+    : cosineScore;
+  return list
+    .map((b, i) => ({ doc: b, freq: freqs[i] }))
+    .filter(({ doc }) => doc.id !== targetId)
+    .map(({ doc, freq }) => ({ doc, score: score(targetFreq, freq) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, top);
+}
+
+/**
+ * Mean IDF of the target's terms; terms absent from the corpus weight 1.
+ *
+ * @param {Map<string, number>} targetFreq
+ * @param {Map<string, number>} idf
+ * @returns {number}
+ */
+export function targetSpecificity(targetFreq, idf) {
+  const terms = [...targetFreq.keys()];
+  if (terms.length === 0) return 1;
+  const sum = terms.reduce((acc, t) => acc + (idf.get(t) ?? 1), 0);
+  return sum / terms.length;
+}
+
+/**
+ * Logistic sigmoid, 0..1, sigmoid(0) = 0.5.
+ *
+ * @param {number} x
+ * @returns {number}
+ */
+export function sigmoid(x) {
+  return 1 / (1 + Math.exp(-x));
 }

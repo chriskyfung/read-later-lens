@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { mostSimilar } from '../src/analytics/similarity.js';
-
+import {
+  mostSimilar,
+  mostSimilarAuto,
+  sigmoid,
+  targetSpecificity,
+  buildIdf,
+} from '../src/analytics/similarity.js';
 const bm = (id, title, preview = '') => ({
   id: String(id),
   title,
@@ -73,5 +78,104 @@ describe('mostSimilar weighting passthrough', () => {
     // TF-IDF: common words down-weighted -> distinctive pair survives at top
     const tfidfTop = tfidf[0].doc.id;
     expect(tfidfTop).toMatch(/^q/);
+  });
+});
+
+describe('mostSimilarAuto', () => {
+  // 20-document corpus: target + 6 generic + 1 distinctive + 12 filler.
+  // Generic words ('ai','briefing','news','update') appear in 7 docs;
+  // distinctive words ('quantum','entanglement') appear in 2 docs; filler
+  // words appear in 1 doc each. IDF spread exceeds MIN_IDF_SPREAD so the
+  // auto-blend gate engages.
+  const filler = [
+    ['apple', 'banana'],
+    ['cherry', 'date'],
+    ['elderberry', 'fig'],
+    ['grape', 'honeydew'],
+    ['kiwi', 'lemon'],
+    ['mango', 'nectarine'],
+    ['orange', 'papaya'],
+    ['quince', 'raspberry'],
+    ['strawberry', 'tangerine'],
+    ['ugli', 'vanilla'],
+    ['watermelon', 'xigua'],
+    ['yam', 'zucchini'],
+  ];
+  const corpus = [
+    bm('t', 'ai briefing news update quantum entanglement'), // target, mixed
+    bm('g1', 'ai briefing news update zebra'), // generic
+    bm('g2', 'ai briefing news update giraffe'),
+    bm('g3', 'ai briefing news update penguin'),
+    bm('g4', 'ai briefing news update walrus'),
+    bm('g5', 'ai briefing news update tiger'),
+    bm('g6', 'ai briefing news update lion'),
+    bm('d', 'quantum entanglement study'), // distinctive
+    ...filler.map(([w1, w2], i) => bm(`f${i + 1}`, `${w1} ${w2}`)),
+  ];
+  const target = corpus[0];
+
+  it('small corpus stays tf (lambda 0)', () => {
+    const small = [corpus[0], corpus[1], corpus[7]];
+    const out = mostSimilarAuto(small, corpus[0], 5);
+    expect(out.mode).toBe('tf');
+    expect(out.lambda).toBe(0);
+    expect(out.results.map((r) => r.doc.id)).toEqual(
+      mostSimilar(small, corpus[0], 5, { weighting: 'tf' }).map((r) => r.doc.id),
+    );
+  });
+
+  it('uniform vocabulary stays tf (zero idf spread)', () => {
+    const uniform = [bm('a', 'xx yy zz'), bm('b', 'xx xx yy zz'), bm('c', 'xx yy yy zz zz')];
+    const targetU = bm('t', 'xx yy zz');
+    const out = mostSimilarAuto([...uniform, targetU], targetU, 3);
+    expect(out.mode).toBe('tf');
+    expect(out.lambda).toBe(0);
+  });
+
+  it('generic target -> mode tfidf and reorders vs tf', () => {
+    const out = mostSimilarAuto(corpus, target, 5);
+    expect(out.mode).toBe('tfidf');
+    expect(out.lambda).toBeGreaterThan(0.7);
+    const tfTop = mostSimilar(corpus, target, 5, { weighting: 'tf' })[0].doc.id;
+    expect(tfTop).toMatch(/^g/); // tf puts a generic doc first
+    expect(out.results[0].doc.id).toBe('d'); // tfidf puts the distinctive doc first
+  });
+
+  it('distinctive target -> mode tf (lambda 0)', () => {
+    const distinctiveTarget = corpus[7];
+    const out = mostSimilarAuto(corpus, distinctiveTarget, 5);
+    expect(out.mode).toBe('tf');
+    expect(out.lambda).toBeLessThan(0.3);
+    expect(out.results.map((r) => r.doc.id)).toEqual(
+      mostSimilar(corpus, distinctiveTarget, 5, { weighting: 'tf' }).map((r) => r.doc.id),
+    );
+  });
+});
+
+describe('auto helpers', () => {
+  it('sigmoid(0) is 0.5 and monotonic', () => {
+    expect(sigmoid(0)).toBe(0.5);
+    expect(sigmoid(5)).toBeGreaterThan(sigmoid(0));
+    expect(sigmoid(-5)).toBeLessThan(sigmoid(0));
+  });
+
+  it('targetSpecificity uses weight 1 for unseen terms', () => {
+    const freqs = [
+      new Map([['rare', 1]]),
+      new Map([
+        ['common', 1],
+        ['rare', 1],
+      ]),
+    ];
+    const idf = buildIdf(freqs);
+    // 'novel' never appears in corpus -> weight 1; 'rare' -> its idf
+    const spec = targetSpecificity(
+      new Map([
+        ['novel', 1],
+        ['rare', 1],
+      ]),
+      idf,
+    );
+    expect(spec).toBe((1 + idf.get('rare')) / 2);
   });
 });

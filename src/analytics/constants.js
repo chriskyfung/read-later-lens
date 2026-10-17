@@ -34,3 +34,12 @@ export const DIGITS_ONLY = /^\d+$/;
 
 /** Minimum token length; shorter fragments are dropped. */
 export const MIN_TOKEN_LENGTH = 2;
+
+/* ---- Auto-blend thresholds (similarity modal) ---- */
+
+/** Minimum corpus size for auto-blend; below it IDF estimates are noise. */
+export const MIN_AUTO_N = 20;
+/** Minimum IDF spread across the corpus for auto-blend to engage. */
+export const MIN_IDF_SPREAD = 1.0;
+/** Steepness of the auto-blend lambda sigmoid. */
+export const AUTO_K = 4.0;
