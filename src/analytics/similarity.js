@@ -132,14 +132,28 @@ export function cosineSimilarity(a, b) {
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} target
  * @param {number} [top=5]
+ * @param {{ weighting?: 'tf'|'tfidf' }} [options]
+ *   - `'tf'` (default): plain cosine over term-frequency maps — byte-identical
+ *     to the monolith.
+ *   - `'tfidf'`: each shared term scaled by its inverse document frequency over
+ *     `list` (see `buildIdf` / `cosineScoreWeighted`), so generic terms that
+ *     appear in many documents contribute less than distinctive ones.
  * @returns {{ doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
  */
-export function mostSimilar(list, target, top = 5) {
+export function mostSimilar(list, target, top = 5, options = {}) {
+  const weighting = options.weighting ?? 'tf';
+  const freqs = list.map(bookmarkTokenFreq); // one tokenizing pass for the corpus
+  const idf = weighting === 'tfidf' ? buildIdf(freqs) : null;
   const targetFreq = bookmarkTokenFreq(target);
+  const score = idf ? cosineScoreWeighted : cosineScore;
 
   const results = list
-    .filter((b) => b.id !== target.id)
-    .map((b) => ({ doc: b, score: cosineScore(targetFreq, bookmarkTokenFreq(b)) }))
+    .map((b, i) => ({ doc: b, freq: freqs[i] }))
+    .filter(({ doc }) => doc.id !== target.id)
+    .map(({ doc, freq }) => ({
+      doc,
+      score: idf ? score(targetFreq, freq, idf) : score(targetFreq, freq),
+    }))
     .sort((a, b) => b.score - a.score)
     .slice(0, top);
 
