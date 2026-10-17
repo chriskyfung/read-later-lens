@@ -23,7 +23,6 @@ import {
 import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspaceActions.js';
 import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';
-import { needsKeywordEngine, prefetchKeywordsEngine } from './analytics/keywords.js';
 
 /**
  * Toast text when a post-action persist write fails for a reason OTHER than a
@@ -32,39 +31,6 @@ import { needsKeywordEngine, prefetchKeywordsEngine } from './analytics/keywords
  * with what the user saw. The conflict case keeps its own message.
  */
 export const PERSIST_WRITE_FAILED_MESSAGE = '無法寫入本機快取，剛才的變更可能不會保留';
-
-/**
- * Whether the speculative keyword-engine download has been scheduled this
- * session — at most ONE idle window / timeout is ever queued, and none at all
- * until the library actually contains English documents (a Chinese-only
- * library must stay at zero downloads, see `needsKeywordEngine()`).
- */
-let keywordsPrefetchScheduled = false;
-
-/**
- * Schedule `prefetchKeywordsEngine()` for the first idle window after the
- * current paint — after boot restores the library, and again after an import
- * grows it — so the lazily-split `compromise` chunk usually arrives before
- * the user opens the word cloud and stage 2 of its two-stage render is the
- * only pass that ever runs.
- *
- * `requestIdleCallback` yields until the main thread is done (`timeout` caps
- * the wait at 3 s on a busy frame); browsers without it (Safari < 17.2, within
- * the support floor) fall back to a plain timeout. Save-Data is checked at
- * fire time inside `prefetchKeywordsEngine()`, not here — scheduling is
- * cheap either way.
- */
-function scheduleKeywordsPrefetch() {
-  if (keywordsPrefetchScheduled) return;
-  if (!needsKeywordEngine(state.bookmarks)) return;
-  keywordsPrefetchScheduled = true;
-  const start = () => prefetchKeywordsEngine();
-  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(start, { timeout: 3000 });
-  } else {
-    setTimeout(start, 1500);
-  }
-}
 
 /**
  * Helper for I/O modules to trigger persistence and UI updates.
@@ -108,11 +74,6 @@ async function persistAndRender() {
   } catch (err) {
     console.warn('Render failed:', err);
   }
-
-  // An import can grow the library into one that needs the English engine
-  // (an English CSV arrives after boot's own scheduling point) — so check the
-  // gate again; the once-per-session flag keeps this to a single schedule.
-  scheduleKeywordsPrefetch();
 
   return { persisted, rendered, conflict };
 }
@@ -194,10 +155,6 @@ async function boot() {
     console.error('Storage usage update failed:', err);
   }
   renderAll();
-
-  // First paint is committed: start the speculative keyword-engine download
-  // now, so the chunk is usually resident by the time the cloud is opened.
-  scheduleKeywordsPrefetch();
 }
 
 export const ready = boot();

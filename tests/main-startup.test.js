@@ -514,30 +514,31 @@ describe('module-owned startup', () => {
     expect(showToast).toHaveBeenCalledWith(expect.stringContaining('1 筆書籤'));
   });
 
-  it('schedules the keyword-engine prefetch for the first idle window after restore', async () => {
+  it('never schedules a speculative engine download at boot', async () => {
     const state = await import('../src/core/state.js');
     const { loadState } = await import('../src/core/store.js');
     const keywords = await import('../src/analytics/keywords.js');
-    // Restore an ENGLISH library so the gate passes at boot. (A CJK-only
-    // restore must stay at zero downloads — pinned by the engine-off and
-    // intent-prefetch tests — so nothing may be scheduled for it.)
+    // Restore an ENGLISH library — the case boot used to prefetch for.
     loadState.mockImplementation(async () => {
       state.setBookmarks([bookmark('1', 'Apple orchard', 'https://apple.com')]);
       return true;
     });
-    const idleWindows = [];
-    window.requestIdleCallback = (cb) => idleWindows.push(cb);
 
-    await start();
-    // Scheduled for an idle window, never fired during boot — no network work
-    // on the critical path, and the engine is still untouched.
-    expect(idleWindows).toHaveLength(1);
-    expect(keywords.keywordsReady()).toBe(false);
+    vi.useFakeTimers();
+    try {
+      await start();
+      // No idle window was requested, and NO pending work was queued at all:
+      // boot-time scheduling used to put the speculative import on the timer
+      // queue (requestIdleCallback capture, or the setTimeout fallback).
+      expect(typeof window.requestIdleCallback).toBe('undefined');
+      expect(vi.getTimerCount()).toBe(0);
+      expect(keywords.keywordsReady()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
 
-    // The idle window opens → the shared engine load starts (asynchronously)
-    // and lands.
-    idleWindows[0]();
-    expect(keywords.keywordsReady()).toBe(false);
+    // Speculation removed, not loading: the explicit on-open path still lands.
+    await keywords.loadKeywordsEngine();
     await vi.waitFor(() => expect(keywords.keywordsReady()).toBe(true), { timeout: 10000 });
   });
 
