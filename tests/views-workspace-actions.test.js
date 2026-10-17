@@ -35,6 +35,13 @@ vi.mock('../src/views/linkage.js', () => ({
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
 }));
+// The intent-prefetch wiring is what this file owns; the engine itself is
+// covered by tests/analytics-keywords.test.js. Spies here keep the assertions
+// deterministic (no real chunk download, no timing).
+vi.mock('../src/analytics/keywords.js', () => ({
+  needsKeywordEngine: vi.fn(() => false),
+  prefetchKeywordsEngine: vi.fn(),
+}));
 vi.mock('../src/core/state.js', () => {
   const state = {
     bookmarks: [],
@@ -90,6 +97,7 @@ const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
   await import('../src/views/linkage.js');
+const { needsKeywordEngine, prefetchKeywordsEngine } = await import('../src/analytics/keywords.js');
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -431,5 +439,49 @@ describe('cross-tab stale gate', () => {
     expect(b1.deleted_at).toBeUndefined();
     expect(trashBookmarks).not.toHaveBeenCalled();
     expect(persist).not.toHaveBeenCalled();
+  });
+});
+
+describe('word-cloud tab intent prefetch', () => {
+  // Intent listeners are bound per button at registration, so the dataset must
+  // be in place first — the real markup carries it, the bare stubs do not.
+  it('downloads nothing until the engine gate says the library needs it', async () => {
+    const tab = document.querySelectorAll('.main-tab')[1];
+    tab.dataset.tab = 'wordcloud';
+    registerWorkspaceListeners();
+    needsKeywordEngine.mockReturnValue(false); // e.g. a CJK-only library
+
+    await tab.dispatch('pointerenter');
+    await tab.dispatch('focus');
+
+    expect(needsKeywordEngine).toHaveBeenCalled();
+    expect(prefetchKeywordsEngine).not.toHaveBeenCalled();
+  });
+
+  it('ignores intent from tabs other than the word cloud', async () => {
+    const tab = document.querySelectorAll('.main-tab')[0];
+    tab.dataset.tab = 'bookmarks';
+    registerWorkspaceListeners();
+    needsKeywordEngine.mockReturnValue(true);
+
+    await tab.dispatch('pointerenter');
+
+    // The dataset check short-circuits before the gate is even consulted.
+    expect(needsKeywordEngine).not.toHaveBeenCalled();
+    expect(prefetchKeywordsEngine).not.toHaveBeenCalled();
+  });
+
+  it('starts the shared download on the first intent signal for English docs', async () => {
+    const tab = document.querySelectorAll('.main-tab')[1];
+    tab.dataset.tab = 'wordcloud';
+    registerWorkspaceListeners();
+    needsKeywordEngine.mockReturnValue(true);
+
+    await tab.dispatch('pointerenter');
+
+    expect(prefetchKeywordsEngine).toHaveBeenCalledTimes(1);
+    // The click handler stays wired alongside the intent listeners.
+    await tab.dispatch('click');
+    expect(activateTab).toHaveBeenCalledWith('wordcloud');
   });
 });

@@ -19,6 +19,7 @@ import { renderWordCloud } from './wordcloud.js';
 import { renderDomainChart } from './domains.js';
 import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from './linkage.js';
 import { showToast } from '../utils/dom.js';
+import { needsKeywordEngine, prefetchKeywordsEngine } from '../analytics/keywords.js';
 
 /** @typedef {object} WorkspaceActionsDeps
  * @property {function} persist - Save state to IndexedDB and refresh usage UI.
@@ -126,7 +127,8 @@ export async function confirmDeleteSelectedBookmarks() {
 }
 
 /**
- * Attach the workspace listeners (sort, tabs, select-all, batch, zoom).
+ * Attach the workspace listeners (sort, tabs + word-cloud intent prefetch,
+ * select-all, batch, zoom).
  */
 export function registerWorkspaceListeners() {
   // Sort dropdown — monolith parity: sets sort and re-renders only.
@@ -135,9 +137,21 @@ export function registerWorkspaceListeners() {
     deps.render();
   });
 
-  // Tab switcher delegation
+  // Tab switcher delegation + word-cloud intent prefetch: hovering or
+  // focusing the ☁️ tab signals the user is about to open it, so start the
+  // lazily-split compromise chunk before the click lands. `{once}` per signal
+  // is enough — the load is idempotent anyway. The gate runs INSIDE each
+  // handler (the dataset check and `needsKeywordEngine`): a CJK-only library
+  // must never download the English engine, whatever it hovers (README
+  // zero-download contract).
   document.querySelectorAll('.main-tab').forEach((btn) => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    const prefetchOnIntent = () => {
+      if (btn.dataset.tab !== 'wordcloud') return;
+      if (needsKeywordEngine(state.bookmarks)) prefetchKeywordsEngine();
+    };
+    btn.addEventListener('pointerenter', prefetchOnIntent, { once: true });
+    btn.addEventListener('focus', prefetchOnIntent, { once: true });
   });
 
   // Select All checkbox

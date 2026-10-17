@@ -514,6 +514,33 @@ describe('module-owned startup', () => {
     expect(showToast).toHaveBeenCalledWith(expect.stringContaining('1 筆書籤'));
   });
 
+  it('schedules the keyword-engine prefetch for the first idle window after restore', async () => {
+    const state = await import('../src/core/state.js');
+    const { loadState } = await import('../src/core/store.js');
+    const keywords = await import('../src/analytics/keywords.js');
+    // Restore an ENGLISH library so the gate passes at boot. (A CJK-only
+    // restore must stay at zero downloads — pinned by the engine-off and
+    // intent-prefetch tests — so nothing may be scheduled for it.)
+    loadState.mockImplementation(async () => {
+      state.setBookmarks([bookmark('1', 'Apple orchard', 'https://apple.com')]);
+      return true;
+    });
+    const idleWindows = [];
+    window.requestIdleCallback = (cb) => idleWindows.push(cb);
+
+    await start();
+    // Scheduled for an idle window, never fired during boot — no network work
+    // on the critical path, and the engine is still untouched.
+    expect(idleWindows).toHaveLength(1);
+    expect(keywords.keywordsReady()).toBe(false);
+
+    // The idle window opens → the shared engine load starts (asynchronously)
+    // and lands.
+    idleWindows[0]();
+    expect(keywords.keywordsReady()).toBe(false);
+    await vi.waitFor(() => expect(keywords.keywordsReady()).toBe(true), { timeout: 10000 });
+  });
+
   it.each(['loadState', 'getStorageUsage'])('still renders when %s fails', async (method) => {
     const store = await import('../src/core/store.js');
     store[method].mockRejectedValue(new Error('unavailable'));
