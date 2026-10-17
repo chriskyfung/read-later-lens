@@ -5,7 +5,13 @@ import {
   tokenizeFrequency,
   bookmarkText,
 } from '../src/analytics/tokenize.js';
-import { ENGLISH_STOPWORDS, CJK_STOPWORDS } from '../src/analytics/stopwords.js';
+import {
+  BASE_EN,
+  CLOUD_EN,
+  CJK_STOPWORDS,
+  JA_STOPWORDS,
+  cjkStopsetFor,
+} from '../src/analytics/stopwords.js';
 import { cosineSimilarity, mostSimilar, bookmarkTokenFreq } from '../src/analytics/similarity.js';
 import { wordCloudFrequencies, wordCloudItems } from '../src/analytics/wordcloud.js';
 import { topDomains } from '../src/analytics/domains.js';
@@ -13,14 +19,37 @@ import { topDomains } from '../src/analytics/domains.js';
 // Regression guards: the stopword lists must not drift, or word-cloud and
 // similarity output changes silently.
 describe('stopwords', () => {
-  it('has the exact monolith sizes', () => {
-    expect(ENGLISH_STOPWORDS.size).toBe(200);
+  it('keeps the cloud list byte-identical to the monolith (CLOUD_EN)', () => {
+    expect(CLOUD_EN.size).toBe(200);
     expect(CJK_STOPWORDS.size).toBe(32);
   });
-  it('contains golden entries', () => {
-    expect(ENGLISH_STOPWORDS.has('the')).toBe(true);
-    expect(ENGLISH_STOPWORDS.has('https')).toBe(true);
+  it('splits aesthetic words out of the scorer base', () => {
+    // 'time'/'new' read as noise in a cloud but are real similarity signal:
+    // two docs sharing "time management" ARE similar.
+    for (const w of ['time', 'new', 'way', 'know', 'make']) {
+      expect(BASE_EN.has(w)).toBe(false);
+      expect(CLOUD_EN.has(w)).toBe(true);
+    }
+    expect(BASE_EN.has('the')).toBe(true);
+    expect(BASE_EN.has('https')).toBe(true);
     expect(CJK_STOPWORDS.has('的')).toBe(true);
+    expect(JA_STOPWORDS.has('ので')).toBe(true);
+  });
+  it('routes the CJK stopset by language', () => {
+    expect(cjkStopsetFor('ja').has('ので')).toBe(true);
+    expect(cjkStopsetFor('zh').has('ので')).toBe(false);
+    expect(cjkStopsetFor('zh').has('的')).toBe(true);
+  });
+});
+
+describe('stopword split — scorer vs cloud', () => {
+  it('similarity keeps aesthetic words the cloud drops', () => {
+    const doc = { id: 'x', title: 'time management', article_preview: '' };
+    const freq = bookmarkTokenFreq(doc);
+    expect(freq.get('time')).toBe(1);
+    const cloud = new Map(wordCloudFrequencies([{ ...doc }]));
+    expect(cloud.has('time')).toBe(false);
+    expect(cloud.get('management')).toBe(1); // cloud plain path keeps the content word
   });
 });
 

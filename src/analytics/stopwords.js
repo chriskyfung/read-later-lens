@@ -1,12 +1,23 @@
 /**
  * @fileoverview Stopword lists for English and CJK tokenization.
  *
- * Lists are identical to the original monolith so word-cloud and similarity
- * results stay byte-compatible across the refactor.
+ * Two English sets with different jobs:
+ * - `BASE_EN` — function words + URL/boilerplate junk. The SCORER's set
+ *   (similarity, linkage): content-ish words like 'time', 'new', 'way' stay
+ *   in the vectors, because two docs sharing "time management" ARE similar.
+ * - `CLOUD_EN` — `BASE_EN` plus the aesthetic overlay. The WORD CLOUD's set,
+ *   byte-identical to the original monolith's single list, so cloud output
+ *   is unchanged by the split (pinned in tests/analytics.test.js).
+ *
+ * CJK: `CJK_STOPWORDS` (zh) is shared by both paths — no aesthetic overlay
+ * yet, which needs corpus evidence rather than guesses. Japanese gets its
+ * own `JA_STOPWORDS` (multi-char function words; single kana particles are
+ * already dropped by `MIN_TOKEN_LENGTH`), routed via `cjkStopsetFor` so the
+ * Chinese list never half-filters Japanese documents.
  */
 
 /** @type {ReadonlySet<string>} */
-export const ENGLISH_STOPWORDS = new Set([
+export const BASE_EN = new Set([
   'a',
   'about',
   'above',
@@ -190,12 +201,19 @@ export const ENGLISH_STOPWORDS = new Set([
   'www',
   'html',
   'amp',
+]);
+
+/**
+ * Aesthetic overlay — high-frequency content-ish words that dominate a
+ * word cloud but carry little topic signal ('time', 'new', 'way'…).
+ * Dropped ONLY by the cloud; the scorer keeps them (see fileoverview).
+ */
+const CLOUD_EN_AESTHETIC = new Set([
   'ever',
   'get',
   'also',
   'like',
   'just',
-  'would',
   'make',
   'time',
   'new',
@@ -209,6 +227,9 @@ export const ENGLISH_STOPWORDS = new Set([
   'even',
   'us',
 ]);
+
+/** Word-cloud English stop set: `BASE_EN` + aesthetic overlay. */
+export const CLOUD_EN = new Set([...BASE_EN, ...CLOUD_EN_AESTHETIC]);
 
 /** @type {ReadonlySet<string>} */
 export const CJK_STOPWORDS = new Set([
@@ -246,3 +267,47 @@ export const CJK_STOPWORDS = new Set([
   '或',
   '對',
 ]);
+
+/**
+ * Japanese multi-char function words (particles/assistants/politeness
+ * endings). Single kana particles ('の','は','が'…) are already dropped by
+ * `MIN_TOKEN_LENGTH` in the caller. Seeded conservatively — Japanese text
+ * is rare in this corpus; extend from real imports rather than guesses.
+ */
+export const JA_STOPWORDS = new Set([
+  'ので',
+  'のに',
+  'こと',
+  'もの',
+  'ため',
+  'よう',
+  'ところ',
+  'という',
+  'として',
+  'について',
+  'のように',
+  'です',
+  'ます',
+  'でした',
+  'ました',
+  'でしょう',
+]);
+
+/**
+ * Japanese set = shared kanji function words + JA-specific entries. Built
+ * once at module load — `cjkStopsetFor` is called per-word inside
+ * `segmentCjkWords`, so it must never allocate.
+ */
+const JA_COMBINED = new Set([...CJK_STOPWORDS, ...JA_STOPWORDS]);
+
+/**
+ * Language-routed CJK stop set: Japanese gets its own list (plus the shared
+ * `CJK_STOPWORDS` for kanji function words like '的'), Chinese keeps the
+ * monolith list — so the Chinese list never half-filters Japanese docs.
+ *
+ * @param {string} lang 'zh' (default) | 'ja'
+ * @returns {ReadonlySet<string>}
+ */
+export function cjkStopsetFor(lang = 'zh') {
+  return lang === 'ja' ? JA_COMBINED : CJK_STOPWORDS;
+}

@@ -23,7 +23,7 @@
  * as English documents.
  */
 
-import { CJK_STOPWORDS } from './stopwords.js';
+import { cjkStopsetFor } from './stopwords.js';
 import { MIN_TOKEN_LENGTH } from './constants.js';
 
 /** Memoized `Intl.Segmenter` instances, keyed by locale ('en' | 'zh' | 'ja'). */
@@ -112,19 +112,21 @@ export function segmentWords(text, lang) {
  * - Latin runs pass through untouched — the caller applies the English
  *   stopword/length/digit policy and lemma grouping.
  * - CJK words shorter than `MIN_TOKEN_LENGTH` (single function words like
- *   '的', '了') and entries from the shared `CJK_STOPWORDS` list are dropped,
- *   mirroring the legacy path's noise filters.
+ *   '的', '了', and single kana particles) and entries from the
+ *   language-routed stop set (`cjkStopsetFor(locale)` — Japanese gets its
+ *   own list) are dropped, mirroring the legacy path's noise filters.
  *
  * @param {string} text
  * @param {string} locale segmenter locale, 'zh' (default) or 'ja'
  * @returns {string[]} word segments in source order
  */
 export function segmentCjkWords(text, locale = 'zh') {
+  const stopset = cjkStopsetFor(locale);
   const words = [];
   for (const word of segmentWords(text, locale)) {
     if (LATIN_WORD.test(word)) {
       words.push(word);
-    } else if (word.length >= MIN_TOKEN_LENGTH && !CJK_STOPWORDS.has(word)) {
+    } else if (word.length >= MIN_TOKEN_LENGTH && !stopset.has(word)) {
       words.push(word);
     }
   }

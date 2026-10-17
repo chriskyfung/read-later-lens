@@ -48,12 +48,12 @@
     "pnpm": ">=12.0.0"
   },
   "browserslist": [
-    "chrome >= 87",
-    "edge >= 87",
+    "chrome >= 120",
+    "edge >= 120",
     "firefox >= 125",
-    "safari >= 14.1",
-    "ios_saf >= 14.5",
-    "samsung >= 14"
+    "safari >= 17",
+    "ios_saf >= 17",
+    "samsung >= 24"
   ],
   "dependencies": {
     "compromise": "^14.18.0",

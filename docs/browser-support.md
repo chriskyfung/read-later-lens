@@ -2,20 +2,21 @@
 
 ## The floor
 
-| Engine                | Minimum         | Notes                  |
-| --------------------- | --------------- | ---------------------- |
-| Chrome                | 87 (Nov 2020)   |                        |
-| Edge                  | 87              | tracks Chrome          |
-| Firefox               | 125 (Apr 2024)  | **binding constraint** |
-| Safari (macOS/iPadOS) | 14.1 (Apr 2021) |                        |
-| Safari (iOS)          | 14.5            |                        |
-| Samsung Internet      | 14.0            | Chrome 87-based        |
+| Engine                | Minimum        | Notes            |
+| --------------------- | -------------- | ---------------- |
+| Chrome                | 120 (Dec 2023) |                  |
+| Edge                  | 120            | tracks Chrome    |
+| Firefox               | 125 (Apr 2024) |                  |
+| Safari (macOS/iPadOS) | 17 (Sep 2023)  |                  |
+| Safari (iOS)          | 17             |                  |
+| Samsung Internet      | 24.0           | Chrome 120-based |
 
-The floor equals `Intl.Segmenter` availability — the one built-in the
-primary word-cloud path depends on. It became **Baseline Newly
-available on 2024-04-16** ([web.dev](https://web.dev/blog/intl-segmenter);
+The floor is the 2024 evergreen set — every entry ships the
+`Intl.Segmenter` built-in the primary word-cloud path depends on, which
+became **Baseline Newly available on 2024-04-16** ([web.dev](https://web.dev/blog/intl-segmenter);
 [caniuse](https://caniuse.com/mdn-javascript_builtins_intl_segmenter)
-puts global support at ~96.6% as of 2026-09).
+puts global support at ~96.6% as of 2026-09). Firefox 125 (Apr 2024) is
+the binding constraint, matching that Baseline date.
 
 It is declared as `browserslist` in `package.json`. **No tool in this
 repo currently reads it** — the build syntax level is pinned explicitly
@@ -30,9 +31,9 @@ policy statement, ready for tooling that adopts it later.
 - **Build syntax floor** (`build.target: 'es2022'`): what the bundle
   may emit. Audited 2026-10 against the runtime floor: `src/` uses no
   top-level await, `Array.prototype.at`, class static blocks, or private
-  methods, so current ES2022-era output stays within Chrome 87 /
-  Safari 14.1. Re-run that audit when `build.target` or the syntax
-  usage changes.
+  methods, so current ES2022-era output stays within the floor (the
+  floor browsers all predate full ES2022 support). Re-run that audit
+  when `build.target` or the syntax usage changes.
 
 ## Below the floor: degraded, not broken
 
