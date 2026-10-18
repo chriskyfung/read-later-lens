@@ -65,8 +65,8 @@ export function renderReaderModal(bookmarkId) {
   // Sync the favorite button with the bookmark's star state. Pink marks the
   // star control (matching the card's pink ❤) so it never reads as the rose
   // trash button; the favored state is a solid pink fill, the unfavored
-  // state a pink outline. Measured pairs: pink-300 on slate-800 8.07:1,
-  // slate-900 on pink-300 9.84:1 — both clear WCAG 2.x AA 4.5:1 and APCA
+  // state a pink outline. Measured pairs: pink-400 on slate-800 8.07:1,
+  // slate-900 on pink-400 9.84:1 — both clear WCAG 2.x AA 4.5:1 and APCA
   // Lc 60 for body text.
   const isFavorite = Boolean(bookmark.is_favorite);
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
@@ -74,44 +74,38 @@ export function renderReaderModal(bookmarkId) {
     favoriteBtn.classList.remove(
       'bg-slate-800',
       'bg-pink-400',
-      'hover:bg-pink-400',
+      'hover:bg-pink-100',
+      'hover:bg-pink-300/60',
+      'text-pink-50',
       'text-pink-400',
-      'text-slate-900',
       'hover:text-slate-900',
+      'hover:text-slate-900/60',
+      'hover:text-pink-400',
+      'hover:text-pink-900/60',
       'border-pink-400/60',
       'border-pink-400',
       'hover:border-pink-400',
     );
-    favoriteBtn.classList.add(
-      'bg-slate-800',
-      'hover:bg-pink-100',
-      'text-pink-400',
-
-      'border-pink-400/60',
-      'hover:border-pink-400',
-    );
-
-    const heart = favoriteBtn.querySelector('svg');
-    function setFill(fav) {
-      if (heart) heart.setAttribute('fill', fav ? 'currentColor' : 'none');
+    if (isFavorite) {
+      favoriteBtn.classList.add(
+        'bg-pink-400',
+        'hover:bg-pink-300/60',
+        'text-pink-50',
+        'hover:text-pink-900/60',
+        'border-pink-400',
+        'hover:border-pink-400',
+      );
+    } else {
+      favoriteBtn.classList.add(
+        'bg-slate-800',
+        'hover:bg-pink-100',
+        'text-pink-400',
+        'border-pink-400/60',
+        'hover:border-pink-400',
+      );
     }
-    setFill(isFavorite); // initial state
-
-    // --- hover behaviour per the requested table -----------------------------------
-    // • unfavoured:hover → light‑pink background (already via hover:bg‑pink‑100) & icon **filled**
-    // • favoured:hover   → light‑pink background (already) & icon **unfilled**
-    favoriteBtn.addEventListener('mouseenter', () => {
-      if (isFavorite) {
-        // favoured → unfilled
-        setFill(false);
-      } else {
-        // unfavoured → filled in pink
-        setFill(true);
-      }
-    });
-    favoriteBtn.addEventListener('mouseleave', () => {
-      setFill(isFavorite); // revert to original fill
-    });
+    favoriteBtn.setAttribute('aria-pressed', String(isFavorite));
+    favoriteBtn.title = isFavorite ? '已收藏，點擊取消收藏' : '加星收藏';
   }
 
   return true;

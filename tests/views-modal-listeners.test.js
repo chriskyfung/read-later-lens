@@ -196,20 +196,22 @@ describe('registerModalListeners', () => {
     expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
   });
 
-  it('toggles the star from the reader and re‑renders the refined pink state', async () => {
+  it('toggles the star from the reader and re‑renders the solid pink favored state', async () => {
     registerModalListeners();
     openReaderModal('1');
     const btn = el('readerFavoriteBtn');
     expect(btn.classList.contains('bg-slate-800')).toBe(true);
     expect(btn.classList.contains('text-pink-400')).toBe(true);
     expect(btn.classList.contains('bg-pink-400')).toBe(false);
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
 
     await btn.dispatch('click');
 
     expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(true);
-    expect(btn.classList.contains('bg-slate-800')).toBe(true);
-    expect(btn.classList.contains('text-pink-400')).toBe(true);
-    expect(btn.classList.contains('bg-pink-400')).toBe(false);
+    expect(btn.classList.contains('bg-pink-400')).toBe(true);
+    expect(btn.classList.contains('text-pink-50')).toBe(true);
+    expect(btn.classList.contains('bg-slate-800')).toBe(false);
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('stacks the similarity drawer on top of the reader for the same bookmark', () => {
