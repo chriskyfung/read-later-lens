@@ -160,3 +160,23 @@ export function normalizeTags(raw) {
   if (Array.isArray(raw)) return raw;
   return String(raw).split(',');
 }
+
+/**
+ * Normalize a favorite flag from a source record's raw field value.
+ *
+ * `true`, non-zero numbers, and `'1'` / `'true'` / `'yes'` / `'y'`
+ * (case-insensitive, surrounding whitespace ignored) map to `true`;
+ * anything else — including `undefined` / `null` for sources with no such
+ * column — maps to `false`. Callers pass whichever alias the source uses
+ * (`is_favorite ?? favorite ?? starred`).
+ *
+ * @param {unknown} raw
+ * @returns {boolean}
+ */
+export function normalizeFavorite(raw) {
+  if (raw === undefined || raw === null) return false;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'number') return raw !== 0;
+  const text = String(raw).trim().toLowerCase();
+  return text === '1' || text === 'true' || text === 'yes' || text === 'y';
+}

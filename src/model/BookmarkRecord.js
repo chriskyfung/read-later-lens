@@ -19,6 +19,9 @@
  * @property {string[]} tags          List of tag strings.
  * @property {string} instapaper_url Reader deep-link URL (written by the adapter).
  * @property {string} [provider]      Provider slug, e.g. 'instapaper'.
+ * @property {boolean} [is_favorite] True when the user starred the bookmark;
+ *   absent/falsy while unstarred. Old IndexedDB rows predate the field and
+ *   read as unstarred with zero migration (same fail-open shape as tags).
  * @property {string|null} [deleted_at] ISO timestamp once soft-deleted; null /
  *   absent while active. The trash view is simply a projection over this field,
  *   so no separate store or IndexedDB migration is needed.
