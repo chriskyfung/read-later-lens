@@ -7,7 +7,12 @@
  * read the first table, map columns by name, and normalize each row.
  */
 
-import { dropUrlLess, normalizeFields, normalizeTags } from '../../model/normalize.js';
+import {
+  dropUrlLess,
+  normalizeFields,
+  normalizeTags,
+  normalizeFavorite,
+} from '../../model/normalize.js';
 import { makeReaderUrl } from '../../model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics/detectLanguage.js';
 
@@ -96,6 +101,7 @@ export async function processSqliteAsBookmarks(
             tags: normalizeTags(rec.tags),
             instapaper_url: readerUrl,
             provider: rowProvider,
+            is_favorite: normalizeFavorite(rec.is_favorite ?? rec.favorite ?? rec.starred),
           };
         }),
       ),

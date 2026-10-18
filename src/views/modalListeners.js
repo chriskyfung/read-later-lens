@@ -20,10 +20,10 @@
  * the two never overlap.
  */
 
-import { closeReaderModal, getReaderBookmarkId } from './readerModal.js';
+import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from './readerModal.js';
 import { closeTrashModal } from '../views/trash.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
-import { confirmDeleteBookmark } from './workspaceActions.js';
+import { confirmDeleteBookmark, toggleFavoriteBookmark } from './workspaceActions.js';
 import { closeSaveModal } from '../io/exporter.js';
 import { closeImportModal } from '../io/importer.js';
 import {
@@ -77,6 +77,10 @@ export function registerModalListeners() {
   document.getElementById('readerDeleteBtn')?.addEventListener('click', async () => {
     const id = getReaderBookmarkId();
     if (id && (await confirmDeleteBookmark(id))) closeReaderModal();
+  });
+  document.getElementById('readerFavoriteBtn')?.addEventListener('click', () => {
+    const id = getReaderBookmarkId();
+    if (id && toggleFavoriteBookmark(id)) syncReaderFavoriteButton(id);
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();

@@ -50,12 +50,13 @@ function makeEl() {
     },
     classList: {
       // Real overlays mount with the Tailwind `hidden` class already applied.
+      // add/remove mirror the DOMTokenList variadic signature.
       _s: new Set(['hidden']),
-      add(c) {
-        this._s.add(c);
+      add(...cs) {
+        cs.forEach((c) => this._s.add(c));
       },
-      remove(c) {
-        this._s.delete(c);
+      remove(...cs) {
+        cs.forEach((c) => this._s.delete(c));
       },
       contains(c) {
         return this._s.has(c);
@@ -77,6 +78,10 @@ function makeEl() {
       this.focused += 1;
     },
     querySelectorAll: () => [],
+    // The reader modal's favorite heart is an inline <svg> child; the stub
+    // returns null like a real querySelector with no match, so source can
+    // call it unconditionally.
+    querySelector: () => null,
   };
 }
 function el(id) {
@@ -189,6 +194,24 @@ describe('registerModalListeners', () => {
 
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
     expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
+  });
+
+  it('toggles the star from the reader and re‑renders the solid pink favored state', async () => {
+    registerModalListeners();
+    openReaderModal('1');
+    const btn = el('readerFavoriteBtn');
+    expect(btn.classList.contains('bg-slate-800')).toBe(true);
+    expect(btn.classList.contains('text-pink-400')).toBe(true);
+    expect(btn.classList.contains('bg-pink-400')).toBe(false);
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+
+    await btn.dispatch('click');
+
+    expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(true);
+    expect(btn.classList.contains('bg-pink-400')).toBe(true);
+    expect(btn.classList.contains('text-pink-50')).toBe(true);
+    expect(btn.classList.contains('bg-slate-800')).toBe(false);
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('stacks the similarity drawer on top of the reader for the same bookmark', () => {

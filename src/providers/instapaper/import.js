@@ -6,7 +6,12 @@
  * (alias-based) so it round-trips the original monolith's `processRawRecords`.
  */
 
-import { dropUrlLess, normalizeFields, normalizeTags } from '../../model/normalize.js';
+import {
+  dropUrlLess,
+  normalizeFields,
+  normalizeTags,
+  normalizeFavorite,
+} from '../../model/normalize.js';
 import { processSqliteAsBookmarks } from './sqlite.js';
 import { makeReaderUrl } from '../../model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics/detectLanguage.js';
@@ -53,6 +58,7 @@ export function importFromJsonOrCsv(rawRows, sourceFileId, sourceFileName, optio
         tags: normalizeTags(rec.tags),
         instapaper_url: readerUrl,
         provider,
+        is_favorite: normalizeFavorite(rec.is_favorite ?? rec.favorite ?? rec.starred),
       };
     }),
   );

@@ -95,4 +95,31 @@ describe('bookmarkCardHtml', () => {
     expect(html).toContain('📁 My Export.csv');
     expect(html).toContain('title="My Export.csv"');
   });
+
+  it('renders no favorite control on the card (starring lives in the reader)', () => {
+    const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
+    expect(html).not.toContain('data-bookmark-favorite');
+    expect(html).not.toContain('加星收藏');
+  });
+
+  it('prefixes a spaced pink heart before the source file when starred', () => {
+    const html = bookmarkCardHtml({
+      bookmark: { ...bookmark, is_favorite: true },
+      domain: 'apple.com',
+      isSelected: false,
+    });
+    expect(html).toContain('aria-hidden="true" class="mr-1 text-pink-500">❤');
+    expect(html).toContain('aria-label="已收藏，來自檔案 My Export.csv"');
+  });
+
+  it('renders no heart and a plain file label when unstarred', () => {
+    const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
+    expect(html).not.toContain('text-pink-500">❤');
+    expect(html).toContain('aria-label="來自檔案 My Export.csv"');
+  });
+
+  it('separates the trash button from the link group with a spacer', () => {
+    const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
+    expect(html).toContain('aria-hidden="true" class="w-2"');
+  });
 });

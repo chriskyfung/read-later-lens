@@ -62,8 +62,29 @@ describe('mountModals — overlay markup parity', () => {
     // Linkage shortcut (🕸️ 關聯), grouped beside the similarity button.
     expect(html).toContain('id="readerLinkageBtn"');
     expect(html).toContain('title="在概念關聯圖中檢視"');
+    // Favorite (收藏) sits in the left exploratory group with a pink
+    // scheme, never beside the rose trash button.
+    expect(html).toContain('id="readerFavoriteBtn"');
+    expect(html).toContain('title="加星收藏"');
+    expect(html).toContain('text-pink-400');
     expect(html).toContain('hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
     expect(html).toContain('d="M6 18L18 6M6 6l12 12"'); // close icon path
+  });
+
+  it('groups 收藏 with 相似/關聯 on the left, ahead of the trash group', () => {
+    const html = allHtml();
+    const leftGroup = ['readerSimilarityBtn', 'readerLinkageBtn', 'readerFavoriteBtn'];
+    const rightGroup = ['readerInstapaperBtn', 'readerDeleteBtn'];
+    const pos = (id) => html.indexOf(`id="${id}"`);
+    const leftPos = leftGroup.map(pos);
+    const rightPos = rightGroup.map(pos);
+    expect(leftPos.every((p) => p >= 0)).toBe(true);
+    expect(rightPos.every((p) => p >= 0)).toBe(true);
+    // Left-group buttons keep their relative order, and the whole left
+    // group precedes the right group (trash stays visually separate).
+    expect([...leftPos].sort((a, b) => a - b)).toEqual(leftPos);
+    expect(Math.max(...leftPos)).toBeLessThan(Math.min(...rightPos));
+    expect(html).not.toContain('text-rose-500');
   });
 
   it('keeps the similarity modal ids and zh-TW labels', () => {
