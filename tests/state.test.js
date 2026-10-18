@@ -16,6 +16,9 @@ import {
   trashBookmarks,
   restoreBookmarks,
   purgeBookmarks,
+  isFavorite,
+  setFavorite,
+  toggleFavorite,
 } from '../src/core/state.js';
 
 const mk = (id, sourceId = 'f1') => ({ id: String(id), source_file_id: sourceId });
@@ -125,5 +128,53 @@ describe('mergeBookmarks over the trash', () => {
     expect(bookmarks).toHaveLength(1);
     expect(bookmarks[0].title).toBe('imported');
     expect(isTrashed(bookmarks[0])).toBe(false);
+  });
+});
+
+describe('favorite transitions', () => {
+  it('sets and clears the flag on the requested ids only', () => {
+    setBookmarks([mk(1), mk(2)]);
+
+    setFavorite(['1'], true);
+
+    expect(isFavorite(bookmarks[0])).toBe(true);
+    expect(isFavorite(bookmarks[1])).toBe(false);
+    expect(bookmarks[0].title).toBeUndefined();
+
+    setFavorite(['1'], false);
+    expect(isFavorite(bookmarks[0])).toBe(false);
+  });
+
+  it('toggles one bookmark and reports the new flag', () => {
+    setBookmarks([mk(1)]);
+
+    expect(toggleFavorite('1')).toBe(true);
+    expect(isFavorite(bookmarks[0])).toBe(true);
+    expect(toggleFavorite('1')).toBe(false);
+    expect(isFavorite(bookmarks[0])).toBe(false);
+  });
+
+  it('toggles nothing for an unknown id', () => {
+    setBookmarks([mk(1)]);
+
+    expect(toggleFavorite('nope')).toBe(false);
+    expect(bookmarks).toHaveLength(1);
+  });
+
+  it('keeps an on-disk star when the re-import carries no explicit flag', () => {
+    setBookmarks([{ ...mk(1), is_favorite: true }]);
+
+    mergeBookmarks([{ id: '1', title: 'imported' }]);
+
+    expect(isFavorite(bookmarks[0])).toBe(true);
+    expect(bookmarks[0].title).toBe('imported');
+  });
+
+  it('lets an explicit incoming false clear an on-disk star', () => {
+    setBookmarks([{ ...mk(1), is_favorite: true }]);
+
+    mergeBookmarks([{ id: '1', title: 'imported', is_favorite: false }]);
+
+    expect(isFavorite(bookmarks[0])).toBe(false);
   });
 });

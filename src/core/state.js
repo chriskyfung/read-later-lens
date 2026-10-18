@@ -108,11 +108,21 @@ export function setSQL(v) {
 /**
  * Add a batch of bookmarks, merging on `id` (incoming wins → newest wins).
  *
+ * A star already on disk wins when the incoming record carries no explicit
+ * favorite flag, so re-importing a source never silently un-stars a bookmark.
+ * An explicit `false` from a future two-way-sync source still clears.
+ *
  * @param {BookmarkRecord[]} incoming
  */
 export function mergeBookmarks(incoming) {
   const existing = new Map(bookmarks.map((b) => [b.id, b]));
-  for (const b of incoming) existing.set(b.id, b);
+  for (const b of incoming)
+    existing.set(
+      b.id,
+      b.is_favorite === undefined && existing.get(b.id)?.is_favorite
+        ? { ...b, is_favorite: true }
+        : b,
+    );
   bookmarks = Array.from(existing.values());
 }
 
@@ -179,4 +189,40 @@ export function restoreBookmarks(ids) {
 export function purgeBookmarks(ids) {
   const targets = new Set(ids);
   bookmarks = bookmarks.filter((b) => !targets.has(b.id));
+}
+
+/**
+ * @param {import('../model/BookmarkRecord.js').BookmarkRecord} bookmark
+ * @returns {boolean} Whether the record is favorited.
+ */
+export function isFavorite(bookmark) {
+  return Boolean(bookmark && bookmark.is_favorite);
+}
+
+/**
+ * Set the favorite flag on the given ids (idempotent; every other field is
+ * untouched). Mirrors trashBookmarks's immutable-map idiom so persist + render
+ * always observe a new array.
+ *
+ * @param {string[]} ids
+ * @param {boolean} value
+ */
+export function setFavorite(ids, value) {
+  const targets = new Set(ids);
+  const flag = Boolean(value);
+  bookmarks = bookmarks.map((b) => (targets.has(b.id) ? { ...b, is_favorite: flag } : b));
+}
+
+/**
+ * Toggle one bookmark's favorite flag; mutates nothing if the id is unknown.
+ *
+ * @param {string} id
+ * @returns {boolean} The new flag, or false when the id was not found.
+ */
+export function toggleFavorite(id) {
+  const found = bookmarks.find((b) => b.id === id);
+  if (!found) return false;
+  const next = !found.is_favorite;
+  setFavorite([id], next);
+  return next;
 }
