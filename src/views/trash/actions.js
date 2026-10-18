@@ -4,19 +4,41 @@ import { stateStillFresh } from '../../core/guard.js';
 import { showToast } from '../../utils/dom.js';
 import { getDeps } from './deps.js';
 import { findTrashedBookmark, collectTrashIds } from './service.js';
-import { renderTrashView } from './view.js';
+import { renderTrashView, patchTrashRow, captureDomRowCount } from './view.js';
 import { restoreToast, PURGE_TOAST, emptyToast, purgeConfirm, emptyConfirm } from './constants.js';
 
 /**
  * Shared post-mutation sync: selection cleanup is done by callers (single id
  * vs. batch), then persist → render → trash re-render → toast, in the exact
  * order the monolith used.
+ *
+ * `patchId` opts into the single-row repaint path: the row for that id is
+ * removed (and `restoredRow` prepended when restoring) instead of rebuilding
+ * the whole list. Any drift detected by patchTrashRow() falls back to the full
+ * render, so the screen can never disagree with state.
  */
 function syncAfterMutation(toast) {
   const deps = getDeps();
   deps.persist();
   deps.render();
   renderTrashView();
+  showToast(toast);
+}
+
+/**
+ * Post-mutation sync for a single-row trash mutation: same order as
+ * syncAfterMutation, but the trash list is patched (one row removed) instead
+ * of rebuilt. `domRowsBefore` must be captured via captureDomRowCount() BEFORE
+ * the state mutation; any drift the patch detects falls back to the full
+ * render, so the screen can never disagree with state.
+ */
+function syncAfterSingleRowMutation(toast, id, domRowsBefore) {
+  const deps = getDeps();
+  deps.persist();
+  deps.render();
+  if (!patchTrashRow(id, domRowsBefore, getTrashedBookmarks().length)) {
+    renderTrashView();
+  }
   showToast(toast);
 }
 
@@ -33,9 +55,15 @@ export async function restoreBookmark(id) {
   // Gate before the mutation: see deleteBookmark() in workspaceActions.js.
   if (!(await stateStillFresh())) return false;
 
+  // Snapshot the visible row count BEFORE mutating so the single-row patch
+  // path can detect any drift against the new projection (see patchTrashRow).
+  const domRowsBefore = captureDomRowCount();
+
   state.restoreBookmarks([id]);
   state.selectedIds.delete(id);
-  syncAfterMutation(restoreToast(bookmark.title));
+  // Restoring leaves the trash projection: the row is simply removed (the
+  // restored bookmark reappears in the grid behind via renderAll above).
+  syncAfterSingleRowMutation(restoreToast(bookmark.title), id, domRowsBefore);
   return true;
 }
 
@@ -52,9 +80,10 @@ export async function purgeBookmark(id) {
   // working set another tab has already changed.
   if (!(await stateStillFresh())) return false;
 
+  const domRowsBefore = captureDomRowCount();
   state.purgeBookmarks([id]);
   state.selectedIds.delete(id);
-  syncAfterMutation(PURGE_TOAST);
+  syncAfterSingleRowMutation(PURGE_TOAST, id, domRowsBefore);
   return true;
 }
 

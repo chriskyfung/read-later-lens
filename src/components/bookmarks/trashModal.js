@@ -42,7 +42,7 @@ export function trashItemClass() {
  */
 export function trashItemHtml(bookmark) {
   return `
-    <div class="${trashItemClass()}">
+    <div data-trash-row="${escapeHtml(bookmark.id)}" class="${trashItemClass()}">
       <div class="flex-1 min-w-0">
         <h3 class="font-bold text-sm text-slate-100 truncate">${escapeHtml(bookmark.title)}</h3>
         <p class="text-xs text-slate-400 line-clamp-2 mb-1">${escapeHtml(bookmark.article_preview || '無預覽內容')}</p>
