@@ -5,8 +5,8 @@
  * `content`-first preview fallback, and the Instapaper button driven by
  * `instapaper_url` (the stored record contract). In addition to close
  * behaviour, the id of the open bookmark is tracked (getReaderBookmarkId) so
- * src/views/modalListeners.js can drive the 🗑️ 刪除 / ⚡ 相似 buttons without an
- * import cycle into workspaceActions.js. Opening/closing goes through
+ * src/views/modalListeners.js can drive the 刪除 / 相似 / 收藏 buttons without
+ * an import cycle into workspaceActions.js. Opening/closing goes through
  * pushLayer/popLayer (src/utils/dom.js), so a reader opened from a
  * similarity drawer stacks on top of it and unwinds back to it.
  */
@@ -15,8 +15,8 @@ import { bookmarks } from '../core/state.js';
 import { pushLayer, popLayer, safeUrl } from '../utils/dom.js';
 
 /**
- * Currently-open bookmark id, consumed by the reader action buttons (🗑️ 刪除
- * and ⚡ 相似) registered in src/views/modalListeners.js. Kept here rather than
+ * Currently-open bookmark id, consumed by the reader action buttons (刪除,
+ * 相似, 收藏) registered in src/views/modalListeners.js. Kept here rather than
  * on a DOM node so the leaf module can read it without readerModal.js importing
  * workspaceActions.js (which would close the
  * workspaceActions → bookmarks → readerModal cycle). Null when no reader is open.
@@ -62,15 +62,42 @@ export function renderReaderModal(bookmarkId) {
     bookmark.content || bookmark.article_preview || '無內文預覽';
   document.getElementById('readerInstapaperBtn').href = safeUrl(bookmark.instapaper_url) || '#';
 
-  // Sync the favorite heart's fill + text color with the bookmark's star state.
+  // Sync the favorite button with the bookmark's star state. Pink marks the
+  // star control (matching the card's pink ❤) so it never reads as the rose
+  // trash button; the favored state is a solid pink fill, the unfavored
+  // state a pink outline. Measured pairs: pink-300 on slate-800 8.07:1,
+  // slate-900 on pink-300 9.84:1 — both clear WCAG 2.x AA 4.5:1 and APCA
+  // Lc 60 for body text.
   const isFavorite = Boolean(bookmark.is_favorite);
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
   if (favoriteBtn) {
-    favoriteBtn.classList.remove('text-rose-500', 'text-rose-200', 'hover:text-white');
+    favoriteBtn.classList.remove(
+      'bg-slate-800',
+      'bg-pink-300',
+      'hover:bg-pink-300',
+      'text-pink-300',
+      'text-slate-900',
+      'hover:text-slate-900',
+      'border-pink-500/60',
+      'border-pink-300',
+      'hover:border-pink-300',
+    );
     if (isFavorite) {
-      favoriteBtn.classList.add('text-rose-500');
+      favoriteBtn.classList.add(
+        'bg-pink-300',
+        'hover:bg-pink-300',
+        'text-slate-900',
+        'border-pink-300',
+      );
     } else {
-      favoriteBtn.classList.add('text-rose-200', 'hover:text-white');
+      favoriteBtn.classList.add(
+        'bg-slate-800',
+        'hover:bg-pink-300',
+        'text-pink-300',
+        'hover:text-slate-900',
+        'border-pink-500/60',
+        'hover:border-pink-300',
+      );
     }
     const heart = favoriteBtn.querySelector('svg');
     if (heart) heart.setAttribute('fill', isFavorite ? 'currentColor' : 'none');

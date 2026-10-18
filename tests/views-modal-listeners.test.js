@@ -50,12 +50,13 @@ function makeEl() {
     },
     classList: {
       // Real overlays mount with the Tailwind `hidden` class already applied.
+      // add/remove mirror the DOMTokenList variadic signature.
       _s: new Set(['hidden']),
-      add(c) {
-        this._s.add(c);
+      add(...cs) {
+        cs.forEach((c) => this._s.add(c));
       },
-      remove(c) {
-        this._s.delete(c);
+      remove(...cs) {
+        cs.forEach((c) => this._s.delete(c));
       },
       contains(c) {
         return this._s.has(c);
@@ -193,6 +194,22 @@ describe('registerModalListeners', () => {
 
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
     expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
+  });
+
+  it('toggles the star from the reader and re-renders the pink state', async () => {
+    registerModalListeners();
+    openReaderModal('1');
+    // Unstarred: pink outline on dark.
+    expect(el('readerFavoriteBtn').classList.contains('text-pink-300')).toBe(true);
+    expect(el('readerFavoriteBtn').classList.contains('bg-slate-800')).toBe(true);
+
+    await el('readerFavoriteBtn').dispatch('click');
+
+    expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(true);
+    // Favored: solid pink fill; trash stays the only rose control.
+    expect(el('readerFavoriteBtn').classList.contains('bg-pink-300')).toBe(true);
+    expect(el('readerFavoriteBtn').classList.contains('text-slate-900')).toBe(true);
+    expect(el('readerFavoriteBtn').classList.contains('text-pink-300')).toBe(false);
   });
 
   it('stacks the similarity drawer on top of the reader for the same bookmark', () => {

@@ -80,7 +80,7 @@ export async function deleteBookmark(id) {
 }
 
 /**
- * Toggle one live bookmark's favorite flag (card-grid heart + reader 收藏).
+ * Toggle one live bookmark's favorite flag (reader 收藏 button).
  *
  * Mirrors deleteBookmark()'s side-effect order (persist, render, batch bar,
  * toast). Trashed and unknown ids are refused without side effects.

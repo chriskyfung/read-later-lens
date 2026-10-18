@@ -53,6 +53,14 @@ export function readerModalHtml() {
             class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
             <span>🕸️ 關聯</span>
           </button>
+          <button id="readerFavoriteBtn" title="加星收藏"
+            class="bg-slate-800 hover:bg-pink-300 text-pink-300 hover:text-slate-900 text-xs px-4 py-2 rounded-lg border border-pink-500/60 hover:border-pink-300 flex items-center gap-1">
+            <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+            <span>收藏</span>
+          </button>
         </div>
         <div class="flex items-center gap-2">
           <a id="readerInstapaperBtn" href="#" target="_blank"
@@ -70,14 +78,6 @@ export function readerModalHtml() {
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
             </svg>
             <span>刪除</span>
-          </button>
-          <button id="readerFavoriteBtn" title="加星收藏"
-            class="bg-rose-600/20 hover:bg-rose-500 text-rose-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-rose-700/50 flex items-center gap-1">
-            <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-            </svg>
-            <span>收藏</span>
           </button>
         </div>
       </div>
