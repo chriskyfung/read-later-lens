@@ -81,6 +81,8 @@ const SOURCE_COLUMN_VALUES = {
   tags: (b) => (Array.isArray(b.tags) ? b.tags.join(',') : (b.tags ?? null)),
   instapaper_url: (b) => b.instapaper_url,
   provider: (b) => b.provider,
+  is_favorite: (b) => (b.is_favorite ? 1 : 0),
+  favorite: (b) => (b.is_favorite ? 1 : 0),
 };
 
 /**
