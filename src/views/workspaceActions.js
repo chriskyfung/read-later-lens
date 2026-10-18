@@ -190,14 +190,8 @@ export function registerWorkspaceListeners() {
     updateBatchActionBar();
   });
 
-  // Bookmark delete + favorite — delegated from bookmark grid (confirm first
-  // for delete; favorite toggles in place).
+  // Bookmark delete — delegated from bookmark grid (confirm first).
   document.getElementById('bookmarkCardsGrid')?.addEventListener('click', async (e) => {
-    const favoriteBtn = e.target.closest('[data-bookmark-favorite]');
-    if (favoriteBtn) {
-      toggleFavoriteBookmark(favoriteBtn.dataset.bookmarkFavorite);
-      return;
-    }
     const btn = e.target.closest('[data-delete-bookmark]');
     if (btn) await confirmDeleteBookmark(btn.dataset.deleteBookmark);
   });
