@@ -154,6 +154,19 @@ describe('favorite transitions', () => {
     expect(isFavorite(bookmarks[0])).toBe(false);
   });
 
+  it('toggles in place without reallocating the library array', () => {
+    setBookmarks([mk(1), mk(2)]);
+    const arr = bookmarks;
+    const other = bookmarks[1];
+
+    expect(toggleFavorite('1')).toBe(true);
+
+    // O(1) single-row copy: no full-library map alloc, untouched rows keep identity.
+    expect(bookmarks).toBe(arr);
+    expect(bookmarks[1]).toBe(other);
+    expect(isFavorite(bookmarks[0])).toBe(true);
+  });
+
   it('toggles nothing for an unknown id', () => {
     setBookmarks([mk(1)]);
 

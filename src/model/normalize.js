@@ -174,9 +174,15 @@ export function normalizeTags(raw) {
  * @returns {boolean}
  */
 export function normalizeFavorite(raw) {
-  if (raw === undefined || raw === null) return false;
-  if (typeof raw === 'boolean') return raw;
+  if (raw === undefined || raw === null || raw === false || raw === 0 || raw === '') return false;
+  if (raw === true || raw === 1) return true;
   if (typeof raw === 'number') return raw !== 0;
+  if (typeof raw === 'string') {
+    // Fast path: the exact tokens importers/exporters round-trip, before the
+    // trim+lowercase fallback for sloppy input (' True ', 'YES', …).
+    if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'y') return true;
+    if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'n') return false;
+  }
   const text = String(raw).trim().toLowerCase();
   return text === '1' || text === 'true' || text === 'yes' || text === 'y';
 }

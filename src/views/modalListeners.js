@@ -20,7 +20,7 @@
  * the two never overlap.
  */
 
-import { closeReaderModal, getReaderBookmarkId, renderReaderModal } from './readerModal.js';
+import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from './readerModal.js';
 import { closeTrashModal } from '../views/trash.js';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from './workspaceActions.js';
@@ -80,7 +80,7 @@ export function registerModalListeners() {
   });
   document.getElementById('readerFavoriteBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();
-    if (id && toggleFavoriteBookmark(id)) renderReaderModal(id);
+    if (id && toggleFavoriteBookmark(id)) syncReaderFavoriteButton(id);
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();

@@ -89,8 +89,8 @@ export async function deleteBookmark(id) {
  * @returns {boolean} True when a live bookmark was toggled.
  */
 export function toggleFavoriteBookmark(id) {
-  const bookmark = state.bookmarks.find((b) => b.id === id && !b.deleted_at);
-  if (!bookmark) return false;
+  const bookmark = state.getBookmarkById(id);
+  if (!bookmark || bookmark.deleted_at) return false;
 
   const next = state.toggleFavorite(id);
   deps.persist();

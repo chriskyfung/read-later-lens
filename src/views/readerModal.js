@@ -11,7 +11,7 @@
  * similarity drawer stacks on top of it and unwinds back to it.
  */
 
-import { bookmarks } from '../core/state.js';
+import { getBookmarkById } from '../core/state.js';
 import { pushLayer, popLayer, safeUrl } from '../utils/dom.js';
 
 /**
@@ -46,7 +46,7 @@ export function renderReaderModal(bookmarkId) {
   const modal = document.getElementById('readerModal');
   if (!modal) return false;
 
-  const bookmark = bookmarks.find((b) => b.id === bookmarkId);
+  const bookmark = getBookmarkById(bookmarkId);
   if (!bookmark) return false;
 
   currentReaderBookmarkId = bookmarkId;
@@ -62,53 +62,77 @@ export function renderReaderModal(bookmarkId) {
     bookmark.content || bookmark.article_preview || '無內文預覽';
   document.getElementById('readerInstapaperBtn').href = safeUrl(bookmark.instapaper_url) || '#';
 
-  // Sync the favorite button with the bookmark's star state. Pink marks the
-  // star control (matching the card's pink ❤) so it never reads as the rose
-  // trash button; the favored state is a solid pink fill, the unfavored
-  // state a pink outline. Measured pairs: pink-400 on slate-800 8.07:1,
-  // slate-900 on pink-400 9.84:1 — both clear WCAG 2.x AA 4.5:1 and APCA
-  // Lc 60 for body text.
-  const isFavorite = Boolean(bookmark.is_favorite);
+  // Pink marks the star control (matching the card's pink ❤) so it never
+  // reads as the rose trash button. Measured pairs: pink-400 on slate-800
+  // 8.07:1, slate-900 on pink-400 9.84:1 — both clear WCAG 2.x AA 4.5:1.
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
-  if (favoriteBtn) {
-    favoriteBtn.classList.remove(
-      'bg-slate-800',
-      'bg-pink-400',
-      'hover:bg-pink-100',
-      'hover:bg-pink-300/60',
-      'text-pink-50',
-      'text-pink-400',
-      'hover:text-slate-900',
-      'hover:text-slate-900/60',
-      'hover:text-pink-400',
-      'hover:text-pink-900/60',
-      'border-pink-400/60',
-      'border-pink-400',
-      'hover:border-pink-400',
-    );
-    if (isFavorite) {
-      favoriteBtn.classList.add(
-        'bg-pink-400',
-        'hover:bg-pink-300/60',
-        'text-pink-50',
-        'hover:text-pink-900/60',
-        'border-pink-400',
-        'hover:border-pink-400',
-      );
-    } else {
-      favoriteBtn.classList.add(
-        'bg-slate-800',
-        'hover:bg-pink-100',
-        'text-pink-400',
-        'border-pink-400/60',
-        'hover:border-pink-400',
-      );
-    }
-    favoriteBtn.setAttribute('aria-pressed', String(isFavorite));
-    favoriteBtn.title = isFavorite ? '已收藏，點擊取消收藏' : '加星收藏';
-  }
+  if (favoriteBtn) applyFavoriteVariant(favoriteBtn, Boolean(bookmark.is_favorite));
 
   return true;
+}
+
+/**
+ * Favorite-button variant classes. Hoisted so every open/toggle reuses the
+ * same arrays instead of allocating fresh token lists per call.
+ */
+const FAV_OFF = [
+  'bg-slate-800',
+  'hover:bg-pink-100',
+  'text-pink-400',
+  'border-pink-400/60',
+  'hover:border-pink-400',
+];
+const FAV_ON = [
+  'bg-pink-400',
+  'hover:bg-pink-300/60',
+  'text-pink-50',
+  'hover:text-pink-900/60',
+  'border-pink-400',
+  'hover:border-pink-400',
+];
+const FAV_ALL = [
+  'bg-slate-800',
+  'bg-pink-400',
+  'hover:bg-pink-100',
+  'hover:bg-pink-300/60',
+  'text-pink-50',
+  'text-pink-400',
+  'hover:text-slate-900',
+  'hover:text-slate-900/60',
+  'hover:text-pink-400',
+  'hover:text-pink-900/60',
+  'border-pink-400/60',
+  'border-pink-400',
+  'hover:border-pink-400',
+];
+
+/**
+ * Sync only the favorite button for an already-open reader (star toggle).
+ * Cheaper than renderReaderModal(): one O(1) lookup + one button write,
+ * no title/url/preview rewrites.
+ *
+ * @param {string} bookmarkId
+ * @returns {boolean} Whether the button was synced.
+ */
+export function syncReaderFavoriteButton(bookmarkId) {
+  const bookmark = getBookmarkById(bookmarkId);
+  const favoriteBtn = document.getElementById('readerFavoriteBtn');
+  if (!bookmark || !favoriteBtn) return false;
+  applyFavoriteVariant(favoriteBtn, Boolean(bookmark.is_favorite));
+  return true;
+}
+
+/**
+ * Apply the on/off variant to the favorite button (single remove + add).
+ *
+ * @param {HTMLElement} favoriteBtn
+ * @param {boolean} isFavorite
+ */
+function applyFavoriteVariant(favoriteBtn, isFavorite) {
+  favoriteBtn.classList.remove(...FAV_ALL);
+  favoriteBtn.classList.add(...(isFavorite ? FAV_ON : FAV_OFF));
+  favoriteBtn.setAttribute('aria-pressed', String(isFavorite));
+  favoriteBtn.title = isFavorite ? '已收藏，點擊取消收藏' : '加星收藏';
 }
 
 /**

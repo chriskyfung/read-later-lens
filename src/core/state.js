@@ -49,6 +49,27 @@
 /** @type {BookmarkRecord[]} */
 export let bookmarks = [];
 
+/** Id → position in `bookmarks`. Rebuilt on bulk writes; patched on O(1) toggle. */
+const bookmarkIndex = new Map();
+
+/** Rebuild the id → position index after any bulk array replacement. */
+function rebuildBookmarkIndex() {
+  bookmarkIndex.clear();
+  for (let i = 0; i < bookmarks.length; i++) bookmarkIndex.set(bookmarks[i].id, i);
+}
+
+/**
+ * O(1) lookup by id (linear `find` fallback is never needed — the index is
+ * kept in sync by every mutator below).
+ *
+ * @param {string} id
+ * @returns {BookmarkRecord|undefined}
+ */
+export function getBookmarkById(id) {
+  const i = bookmarkIndex.get(id);
+  return i === undefined ? undefined : bookmarks[i];
+}
+
 /** @type {Map<string, SourceFileRecord>} */
 export let sourceFiles = new Map();
 
@@ -72,6 +93,7 @@ export let SQL = null;
 
 export function setBookmarks(v) {
   bookmarks = v;
+  rebuildBookmarkIndex();
 }
 export function setSourceFiles(v) {
   sourceFiles = v;
@@ -116,20 +138,22 @@ export function setSQL(v) {
  */
 export function mergeBookmarks(incoming) {
   const existing = new Map(bookmarks.map((b) => [b.id, b]));
-  for (const b of incoming)
+  for (const b of incoming) {
+    const prev = existing.get(b.id);
     existing.set(
       b.id,
-      b.is_favorite === undefined && existing.get(b.id)?.is_favorite
-        ? { ...b, is_favorite: true }
-        : b,
+      b.is_favorite === undefined && prev?.is_favorite ? { ...b, is_favorite: true } : b,
     );
+  }
   bookmarks = Array.from(existing.values());
+  rebuildBookmarkIndex();
 }
 
 /** @param {string} sourceFileId */
 export function removeSourceFile(sourceFileId) {
   sourceFiles.delete(sourceFileId);
   bookmarks = bookmarks.filter((b) => b.source_file_id !== sourceFileId);
+  rebuildBookmarkIndex();
   if (activeFolder === sourceFileId) activeFolder = 'ALL';
 }
 
@@ -166,6 +190,7 @@ export function trashBookmarks(ids) {
   bookmarks = bookmarks.map((b) =>
     targets.has(b.id) && !b.deleted_at ? { ...b, deleted_at: deletedAt } : b,
   );
+  rebuildBookmarkIndex();
 }
 
 /**
@@ -178,6 +203,7 @@ export function restoreBookmarks(ids) {
   bookmarks = bookmarks.map((b) =>
     targets.has(b.id) && b.deleted_at ? { ...b, deleted_at: null } : b,
   );
+  rebuildBookmarkIndex();
 }
 
 /**
@@ -189,6 +215,7 @@ export function restoreBookmarks(ids) {
 export function purgeBookmarks(ids) {
   const targets = new Set(ids);
   bookmarks = bookmarks.filter((b) => !targets.has(b.id));
+  rebuildBookmarkIndex();
 }
 
 /**
@@ -211,18 +238,22 @@ export function setFavorite(ids, value) {
   const targets = new Set(ids);
   const flag = Boolean(value);
   bookmarks = bookmarks.map((b) => (targets.has(b.id) ? { ...b, is_favorite: flag } : b));
+  // Positions are unchanged by the 1:1 map, so the index stays valid.
 }
 
 /**
  * Toggle one bookmark's favorite flag; mutates nothing if the id is unknown.
  *
+ * O(1) via the id index: a single record is copied in place, so a star
+ * click never allocates a full-library array the way setFavorite's map does.
+ *
  * @param {string} id
  * @returns {boolean} The new flag, or false when the id was not found.
  */
 export function toggleFavorite(id) {
-  const found = bookmarks.find((b) => b.id === id);
-  if (!found) return false;
-  const next = !found.is_favorite;
-  setFavorite([id], next);
+  const i = bookmarkIndex.get(id);
+  if (i === undefined) return false;
+  const next = !bookmarks[i].is_favorite;
+  bookmarks[i] = { ...bookmarks[i], is_favorite: next };
   return next;
 }
