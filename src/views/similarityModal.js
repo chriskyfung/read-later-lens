@@ -10,7 +10,7 @@
 
 import { bookmarks } from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
-import { mostSimilar } from '../analytics/similarity.js';
+import { mostSimilarAuto } from '../analytics/similarity.js';
 import { escapeHtml, pushLayer, popLayer } from '../utils/dom.js';
 import { openReaderModal } from './readerModal.js';
 
@@ -36,8 +36,18 @@ export function renderSimilarityModal(bookmarkId) {
 
   // Rank against live bookmarks only: recommending a trashed article (or
   // recommending *for* one) would contradict the trash's "removed from view"
-  // contract.
-  const results = mostSimilar(getActiveBookmarks(), target, 5);
+  // contract. Auto-blend picks TF or TF-IDF per target; mode label is shown
+  // under the target title so the ranking basis is visible, not magic.
+  const { results, mode } = mostSimilarAuto(getActiveBookmarks(), target, 5);
+  const modeLabel = {
+    tf: '按字面相似排序',
+    tfidf: '已降低常見詞權重',
+    blend: '混合排序',
+  }[mode];
+  const modeLabelEl = document.getElementById('simRankingMode');
+  if (modeLabelEl) {
+    modeLabelEl.innerText = modeLabel ? `排序模式：${modeLabel}` : '';
+  }
 
   if (results.length === 0) {
     resultsList.innerHTML = `<p class="text-sm text-slate-500 italic">No similar articles found.</p>`;

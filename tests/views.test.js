@@ -239,3 +239,62 @@ describe('openSimilarityModal', () => {
     expect(opener.focused).toBe(1);
   });
 });
+
+describe('similarity modal auto-blend mode label', () => {
+  const mk = (id, title, preview = '') => ({
+    id,
+    title,
+    article_preview: preview,
+    url: `https://a.com/${id}`,
+    detected_language: 'en',
+    tags: [],
+    source_file_id: 'f1',
+    source_file_name: 'a.csv',
+    instapaper_url: `https://a.com/${id}`,
+    content: '',
+  });
+
+  const filler = [
+    ['apple', 'banana'],
+    ['cherry', 'date'],
+    ['elderberry', 'fig'],
+    ['grape', 'honeydew'],
+    ['kiwi', 'lemon'],
+    ['mango', 'nectarine'],
+    ['orange', 'papaya'],
+    ['quince', 'raspberry'],
+    ['strawberry', 'tangerine'],
+    ['ugli', 'vanilla'],
+    ['watermelon', 'xigua'],
+    ['yam', 'zucchini'],
+  ];
+  const corpus = [
+    mk('t', 'ai briefing news update quantum entanglement'), // target, mixed
+    mk('g1', 'ai briefing news update zebra'), // generic
+    mk('g2', 'ai briefing news update giraffe'),
+    mk('g3', 'ai briefing news update penguin'),
+    mk('g4', 'ai briefing news update walrus'),
+    mk('g5', 'ai briefing news update tiger'),
+    mk('g6', 'ai briefing news update lion'),
+    mk('d', 'quantum entanglement study'), // distinctive
+    ...filler.map(([w1, w2], i) => mk(`f${i + 1}`, `${w1} ${w2}`)),
+  ];
+
+  beforeEach(() => {
+    setBookmarks(corpus);
+    for (const id of simIds) el(id);
+    el('simRankingMode'); // pre-create so getElementById finds it
+  });
+
+  it('generic target shows tfidf mode label', () => {
+    openSimilarityModal('t');
+    const label = el('simRankingMode').innerText;
+    expect(label).toContain('已降低常見詞權重');
+  });
+
+  it('distinctive target shows tf mode label', () => {
+    openSimilarityModal('d');
+    const label = el('simRankingMode').innerText;
+    expect(label).toContain('按字面相似排序');
+  });
+});
