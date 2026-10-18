@@ -66,7 +66,7 @@ describe('mountModals — overlay markup parity', () => {
     // scheme, never beside the rose trash button.
     expect(html).toContain('id="readerFavoriteBtn"');
     expect(html).toContain('title="加星收藏"');
-    expect(html).toContain('text-pink-300');
+    expect(html).toContain('text-pink-400');
     expect(html).toContain('hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
     expect(html).toContain('d="M6 18L18 6M6 6l12 12"'); // close icon path
   });

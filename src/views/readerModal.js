@@ -73,34 +73,45 @@ export function renderReaderModal(bookmarkId) {
   if (favoriteBtn) {
     favoriteBtn.classList.remove(
       'bg-slate-800',
-      'bg-pink-300',
-      'hover:bg-pink-300',
-      'text-pink-300',
+      'bg-pink-400',
+      'hover:bg-pink-400',
+      'text-pink-400',
       'text-slate-900',
       'hover:text-slate-900',
-      'border-pink-500/60',
-      'border-pink-300',
-      'hover:border-pink-300',
+      'border-pink-400/60',
+      'border-pink-400',
+      'hover:border-pink-400',
     );
-    if (isFavorite) {
-      favoriteBtn.classList.add(
-        'bg-pink-300',
-        'hover:bg-pink-300',
-        'text-slate-900',
-        'border-pink-300',
-      );
-    } else {
-      favoriteBtn.classList.add(
-        'bg-slate-800',
-        'hover:bg-pink-300',
-        'text-pink-300',
-        'hover:text-slate-900',
-        'border-pink-500/60',
-        'hover:border-pink-300',
-      );
-    }
+    favoriteBtn.classList.add(
+      'bg-slate-800',
+      'hover:bg-pink-100',
+      'text-pink-400',
+
+      'border-pink-400/60',
+      'hover:border-pink-400',
+    );
+
     const heart = favoriteBtn.querySelector('svg');
-    if (heart) heart.setAttribute('fill', isFavorite ? 'currentColor' : 'none');
+    function setFill(fav) {
+      if (heart) heart.setAttribute('fill', fav ? 'currentColor' : 'none');
+    }
+    setFill(isFavorite); // initial state
+
+    // --- hover behaviour per the requested table -----------------------------------
+    // • unfavoured:hover → light‑pink background (already via hover:bg‑pink‑100) & icon **filled**
+    // • favoured:hover   → light‑pink background (already) & icon **unfilled**
+    favoriteBtn.addEventListener('mouseenter', () => {
+      if (isFavorite) {
+        // favoured → unfilled
+        setFill(false);
+      } else {
+        // unfavoured → filled in pink
+        setFill(true);
+      }
+    });
+    favoriteBtn.addEventListener('mouseleave', () => {
+      setFill(isFavorite); // revert to original fill
+    });
   }
 
   return true;

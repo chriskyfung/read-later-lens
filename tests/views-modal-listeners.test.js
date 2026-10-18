@@ -196,20 +196,20 @@ describe('registerModalListeners', () => {
     expect(bookmarks.filter((b) => !b.deleted_at).map((b) => b.id)).toEqual(['2']);
   });
 
-  it('toggles the star from the reader and re-renders the pink state', async () => {
+  it('toggles the star from the reader and re‑renders the refined pink state', async () => {
     registerModalListeners();
     openReaderModal('1');
-    // Unstarred: pink outline on dark.
-    expect(el('readerFavoriteBtn').classList.contains('text-pink-300')).toBe(true);
-    expect(el('readerFavoriteBtn').classList.contains('bg-slate-800')).toBe(true);
+    const btn = el('readerFavoriteBtn');
+    expect(btn.classList.contains('bg-slate-800')).toBe(true);
+    expect(btn.classList.contains('text-pink-400')).toBe(true);
+    expect(btn.classList.contains('bg-pink-400')).toBe(false);
 
-    await el('readerFavoriteBtn').dispatch('click');
+    await btn.dispatch('click');
 
     expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(true);
-    // Favored: solid pink fill; trash stays the only rose control.
-    expect(el('readerFavoriteBtn').classList.contains('bg-pink-300')).toBe(true);
-    expect(el('readerFavoriteBtn').classList.contains('text-slate-900')).toBe(true);
-    expect(el('readerFavoriteBtn').classList.contains('text-pink-300')).toBe(false);
+    expect(btn.classList.contains('bg-slate-800')).toBe(true);
+    expect(btn.classList.contains('text-pink-400')).toBe(true);
+    expect(btn.classList.contains('bg-pink-400')).toBe(false);
   });
 
   it('stacks the similarity drawer on top of the reader for the same bookmark', () => {
