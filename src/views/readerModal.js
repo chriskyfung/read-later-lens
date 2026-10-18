@@ -62,6 +62,20 @@ export function renderReaderModal(bookmarkId) {
     bookmark.content || bookmark.article_preview || '無內文預覽';
   document.getElementById('readerInstapaperBtn').href = safeUrl(bookmark.instapaper_url) || '#';
 
+  // Sync the favorite heart's fill + text color with the bookmark's star state.
+  const isFavorite = Boolean(bookmark.is_favorite);
+  const favoriteBtn = document.getElementById('readerFavoriteBtn');
+  if (favoriteBtn) {
+    favoriteBtn.classList.remove('text-rose-500', 'text-rose-200', 'hover:text-white');
+    if (isFavorite) {
+      favoriteBtn.classList.add('text-rose-500');
+    } else {
+      favoriteBtn.classList.add('text-rose-200', 'hover:text-white');
+    }
+    const heart = favoriteBtn.querySelector('svg');
+    if (heart) heart.setAttribute('fill', isFavorite ? 'currentColor' : 'none');
+  }
+
   return true;
 }
 

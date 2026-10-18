@@ -64,9 +64,11 @@ export function updateBookmarksHeader(filtered) {
 }
 
 // Descendants that own their own click behaviour; clicking them must NOT
-// trigger the card's "open reader" handler. Delete is delegated at the grid
-// level (see src/views/workspaceActions.js), so it bails here as well.
-const CARD_INTERACTIVE = 'a, button, input, label, [data-delete-bookmark]';
+// trigger the card's "open reader" handler. Delete and favorite are delegated
+// at the grid level (see src/views/workspaceActions.js), so they bail here
+// as well.
+const CARD_INTERACTIVE =
+  'a, button, input, label, [data-delete-bookmark], [data-bookmark-favorite]';
 
 /**
  * Build a single bookmark card element and wire its per-card listeners.
@@ -98,6 +100,7 @@ export function createBookmarkCard(bookmark) {
     .querySelector('.open-linkage-btn')
     .addEventListener('click', () => openLinkageForBookmark(bookmark.id));
   card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = bookmark.id;
+  card.querySelector('[data-bookmark-favorite]').dataset.bookmarkFavorite = bookmark.id;
 
   card.tabIndex = 0;
   card.addEventListener('click', (e) => {

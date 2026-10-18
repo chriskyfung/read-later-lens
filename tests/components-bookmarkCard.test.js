@@ -95,4 +95,23 @@ describe('bookmarkCardHtml', () => {
     expect(html).toContain('📁 My Export.csv');
     expect(html).toContain('title="My Export.csv"');
   });
+
+  it('renders an unfilled heart for an unstarred bookmark', () => {
+    const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
+    expect(html).toContain('data-bookmark-favorite');
+    expect(html).toContain('title="加星收藏"');
+    expect(html).toContain('fill="none"');
+    expect(html).not.toContain('text-rose-500');
+  });
+
+  it('renders a filled rose heart for a starred bookmark', () => {
+    const html = bookmarkCardHtml({
+      bookmark: { ...bookmark, is_favorite: true },
+      domain: 'apple.com',
+      isSelected: false,
+    });
+    expect(html).toContain('data-bookmark-favorite');
+    expect(html).toContain('fill="currentColor"');
+    expect(html).toContain('text-rose-500');
+  });
 });

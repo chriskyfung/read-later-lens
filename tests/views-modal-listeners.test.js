@@ -77,6 +77,10 @@ function makeEl() {
       this.focused += 1;
     },
     querySelectorAll: () => [],
+    // The reader modal's favorite heart is an inline <svg> child; the stub
+    // returns null like a real querySelector with no match, so source can
+    // call it unconditionally.
+    querySelector: () => null,
   };
 }
 function el(id) {

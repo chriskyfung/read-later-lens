@@ -80,6 +80,27 @@ export async function deleteBookmark(id) {
 }
 
 /**
+ * Toggle one live bookmark's favorite flag (card-grid heart + reader 收藏).
+ *
+ * Mirrors deleteBookmark()'s side-effect order (persist, render, batch bar,
+ * toast). Trashed and unknown ids are refused without side effects.
+ *
+ * @param {string} id
+ * @returns {boolean} True when a live bookmark was toggled.
+ */
+export function toggleFavoriteBookmark(id) {
+  const bookmark = state.bookmarks.find((b) => b.id === id && !b.deleted_at);
+  if (!bookmark) return false;
+
+  const next = state.toggleFavorite(id);
+  deps.persist();
+  deps.render();
+  updateBatchActionBar();
+  showToast(next ? `已將「${bookmark.title}」設為收藏` : `已取消收藏「${bookmark.title}」`);
+  return true;
+}
+
+/**
  * Trash one bookmark if it is still live (card-grid delete + reader delete).
  *
  * No `confirm()` prompt: the action is reversible from the trash, so the
@@ -169,8 +190,14 @@ export function registerWorkspaceListeners() {
     updateBatchActionBar();
   });
 
-  // Bookmark delete — delegated from bookmark grid (confirm first).
+  // Bookmark delete + favorite — delegated from bookmark grid (confirm first
+  // for delete; favorite toggles in place).
   document.getElementById('bookmarkCardsGrid')?.addEventListener('click', async (e) => {
+    const favoriteBtn = e.target.closest('[data-bookmark-favorite]');
+    if (favoriteBtn) {
+      toggleFavoriteBookmark(favoriteBtn.dataset.bookmarkFavorite);
+      return;
+    }
     const btn = e.target.closest('[data-delete-bookmark]');
     if (btn) await confirmDeleteBookmark(btn.dataset.deleteBookmark);
   });
