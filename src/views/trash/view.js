@@ -1,4 +1,4 @@
-import { trashItemHtml } from '../../components/bookmarks/trashModal.js';
+import { trashItemHtml } from '../../components/bookmarks/trash/item.js';
 import { getTrashedBookmarks } from '../../core/filters.js';
 import { TRASH_IDS, summaryText } from './constants.js';
 

@@ -12,7 +12,7 @@
  * - saveModal        -> src/io/exporter.js
  * - importModal      -> src/io/importer.js
  * - duplicateModal   -> src/io/importer.js
- * - trashModal       -> src/components/bookmarks/trashModal.js
+ * - trashModal       -> src/components/bookmarks/trash/modal.js
  * - toast            -> src/utils/dom.js
  *
  * Listener registration (close buttons) lives in src/views/modalListeners.js
@@ -23,7 +23,7 @@ import { similarityModalHtml } from './similarityModal.js';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';
-import { trashModalHtml } from './bookmarks/trashModal.js';
+import { trashModalHtml } from './bookmarks/trash/index.js';
 import { toastHtml } from './toast.js';
 
 /**
