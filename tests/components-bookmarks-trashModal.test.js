@@ -4,7 +4,7 @@ import {
   trashItemClass,
   trashItemHtml,
   trashModalHtml,
-} from '../src/components/bookmarks/trashModal.js';
+} from '../src/components/bookmarks/trash/index.js';
 
 /**
  * Tests for the pure trash-modal markup helpers. They are the parity guards for
