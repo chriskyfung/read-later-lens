@@ -4,7 +4,7 @@
  * Design notes (soft-delete plan):
  *  - The trash is a *projection* over `deleted_at`, not a second store, so it
  *    survives reloads through the existing IndexedDB bookmark blob.
- *  - The list lives in a dedicated modal (src/components/bookmarks/trashModal.js,
+ *  - The list lives in a dedicated modal (src/components/bookmarks/trash/,
  *    opened from the sidebar's 回收桶 row in src/views/sidebarActions.js). The
  *    grid behind it stays mounted, so the modal keeps the current folder,
  *    language, tag and search context; it is intentionally flat and unfiltered
