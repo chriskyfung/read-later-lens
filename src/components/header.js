@@ -1,94 +1,18 @@
 ﻿/**
  * @fileoverview Top navigation header — presentational markup only.
  *
- * Extracted byte-for-byte from the original monolith (index.html
- * "Top Navigation Header"). Behavior mapping:
- *  - searchInput     → src/views/header.js (registerHeaderListeners)
- *  - clearSearchBtn  → src/views/header.js (registerHeaderListeners)
- *  - clearCacheBtn   → src/views/header.js (registerHeaderListeners)
- *  - importBtn       → src/io/importer.js (opens the source picker modal)
- *  - fileInput       → src/io/importer.js (opened from the source picker)
- *  - saveBackBtn     → src/io/exporter.js
+ * The markup now lives in src/components/header/ (shell, branding, searchBar,
+ * actions, constants) and this module re-exports the stable public surface
+ * so importers (src/main.js, tests) keep working unchanged.
+ *
+ * Behavior mapping (unchanged):
+ *  - searchInput / clearSearchBtn / clearCacheBtn → src/views/header.js
+ *  - importBtn / fileInput → src/io/importer.js
+ *  - saveBackBtn → src/io/exporter.js
  *
  * mountHeader() inserts the header as the FIRST child of <body>
  * (insertAdjacentHTML 'afterbegin'), preserving the monolith's DOM order.
  */
 
-/** @returns {string} The header markup. */
-export function headerHtml() {
-  return `
-  <!-- Top Navigation Header -->
-  <header id="appHeader"
-    class="bg-slate-800/90 backdrop-blur-sm border-b border-slate-700 px-6 py-3 flex items-center justify-between z-20 shrink-0">
-    <div class="flex items-center gap-3">
-      <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-500/30">
-        <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-        </svg>
-      </div>
-      <div>
-        <h1 class="font-bold text-lg text-white tracking-wide">稍後閱讀透鏡 Read Later Lens</h1>
-        <p class="text-xs text-slate-400">跨格式書籤聚合、智慧搜尋與動態文字分析系統</p>
-      </div>
-    </div>
-
-    <!-- Search & Quick Actions -->
-    <div class="flex items-center gap-2 flex-1 max-w-xl mx-8">
-      <div class="relative w-full">
-        <input type="text" id="searchInput" title="輸入後自動搜尋；按 Enter 立即搜尋；支援 link: 網址篩選" placeholder="搜尋標題、網址、預覽內容或標籤...（多關鍵字以空格分隔；&quot;...&quot; 精確比對；link:網址 篩選 URL）"
-          class="w-full bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-sm text-slate-100 rounded-xl pl-10 pr-10 py-2 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition">
-        <svg class="size-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor"
-          viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-        <!-- Quick reset: clears the search input (shown only when non-empty) -->
-        <button id="clearSearchBtn" type="button" title="清除搜尋條件"
-          class="hidden absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-200 transition-colors">
-          <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="flex items-center gap-2">
-      <button type="button" id="importBtn" title="選擇匯入來源並載入 CSV, JSON, 或 SQLite (.db) 檔案"
-        class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-md transition">
-        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>匯入</span>
-      </button>
-      <input type="file" id="fileInput" multiple accept=".csv,.json,.db,.sqlite" class="hidden">
-
-      <button id="saveBackBtn" title="儲存變更或匯出檔案"
-        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-md transition">
-        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-        </svg>
-        <span>匯出</span>
-      </button>
-
-      <button id="clearCacheBtn" title="清除本地快取"
-        class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-2 rounded-lg transition active:scale-95">
-        <svg id="clearCacheIcon" class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-          </path>
-        </svg>
-      </button>
-    </div>
-  </header>
-`;
-}
-
-/**
- * Insert the header as the first child of <body> (monolith DOM order).
- */
-export function mountHeader() {
-  document.body.insertAdjacentHTML('afterbegin', headerHtml());
-}
+export { headerHtml, mountHeader } from './header/index.js';
+export { HEADER_IDS } from './header/constants.js';
