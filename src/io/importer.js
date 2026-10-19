@@ -6,14 +6,8 @@
 import * as state from '../core/state.js';
 import { STALE_STATE_REASON } from '../core/guard.js';
 import { resolveImportAdapter } from '../providers/index.js';
-import {
-  checkImport,
-  defaultProfileId,
-  normalizeProfileId,
-  selectableProfiles,
-} from '../providers/profiles.js';
-import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../components/io/importModal.js';
-import { showToast, pushLayer, popLayer, topLayerId } from '../utils/dom.js';
+import { checkImport, normalizeProfileId, selectableProfiles } from '../providers/profiles.js';
+import { showToast } from '../utils/dom.js';
 import { captureCsvDialect } from '../utils/csv.js';
 import { newFileId } from '../utils/id.js';
 import {
@@ -22,121 +16,21 @@ import {
   createUniqueSourceName,
   promptUnavailableMessage,
 } from './import/messages.js';
-
-export { createUniqueSourceName } from './import/messages.js';
+import { deps } from './import/deps.js';
+import {
+  applyProfileSelection,
+  cardEl,
+  closeImportModal,
+  handleProfileKeydown,
+  openImportModal,
+  selectedProfileId,
+} from './import/picker.js';
 import { initSql } from './sqlLoader.js';
 import Papa from 'papaparse';
 
-/**
- * Dependencies injected from the main application orchestrator.
- * @typedef {object} ImporterDeps
- * @property {function} persistAndRender - Callback to save state to IndexedDB and
- *   re-render views. Resolves to `{persisted, rendered}` (see src/main.js), or to
- *   nothing for a fire-and-forget stub. `persisted: false` marks a failed cache
- *   write, which the importer rolls back.
- * @property {function} [render] - Re-render the views after state is rolled back.
- *   Persistence is intentionally not retried here: the transaction already failed
- *   to reach storage, and the rollback must only make the in-memory session match
- *   what the next reload will show.
- */
-let deps = {
-  persistAndRender: () => {},
-  render: () => {},
-};
-
-/**
- * Initialize importer with necessary side-effect callbacks.
- * @param {ImporterDeps} injectedDeps
- */
-export function initImporter(injectedDeps) {
-  deps = { ...deps, ...injectedDeps };
-}
-
-// ------------------------------------------------------------------
-// Import source picker modal
-//
-// The header 匯入 button opens this modal instead of the raw file dialog.
-// Selection is explicit (no auto-detect): the chosen profile is remembered
-// for the session and stamped onto every source file imported afterwards.
-// ------------------------------------------------------------------
-
-/** Currently selected source profile id (session-only; defaults to InstapaperScraper). */
-let selectedProfileId = defaultProfileId();
-
-/**
- * @param {string} profileId
- * @returns {HTMLElement|null} The profile's radio card element.
- */
-function cardEl(profileId) {
-  return document.getElementById(`importProfile-${profileId}`);
-}
-
-/**
- * Select a source profile: remember it and sync the radio cards' aria state
- * and selected/unselected border classes. Exported so tests (and the modal
- * opener) can reset the session default deterministically. Unknown ids
- * coerce to the default, so the radiogroup keeps exactly one checked card.
- *
- * @param {string} profileId
- */
-export function applyProfileSelection(profileId) {
-  selectedProfileId = normalizeProfileId(profileId);
-  for (const { id } of selectableProfiles()) {
-    const card = cardEl(id);
-    if (!card || !card.classList) continue;
-    // Compare against the coerced selection, not the raw input: an unknown
-    // id must still leave exactly one card checked instead of zero.
-    card.setAttribute?.('aria-checked', String(id === selectedProfileId));
-    const checked = id === selectedProfileId;
-    for (const name of checked ? UNSELECTED_CARD_CLASSES : SELECTED_CARD_CLASSES) {
-      card.classList.remove(name);
-    }
-    for (const name of checked ? SELECTED_CARD_CLASSES : UNSELECTED_CARD_CLASSES) {
-      card.classList.add(name);
-    }
-  }
-}
-
-/**
- * Open the source picker modal as a stack layer (Esc, focus trap and inert
- * background come from the shared layer stack). Re-entrant clicks are no-ops.
- */
-export function openImportModal() {
-  if (topLayerId() === 'importModal') return;
-  applyProfileSelection(selectedProfileId);
-  pushLayer('importModal');
-}
-
-/** Close the source picker, revealing whatever modal (if any) is beneath it. */
-export function closeImportModal() {
-  popLayer('importModal');
-}
-
-/**
- * Arrow/Home/End navigation within the radiogroup (Enter/Space already fire
- * click natively on the card buttons). Wraps around both ends.
- *
- * @param {KeyboardEvent} event
- */
-function handleProfileKeydown(event) {
-  const list = selectableProfiles();
-  const idx = list.findIndex((profile) => profile.id === selectedProfileId);
-  let next = null;
-  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
-    next = list[(idx + 1) % list.length];
-  } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-    next = list[(idx - 1 + list.length) % list.length];
-  } else if (event.key === 'Home') {
-    next = list[0];
-  } else if (event.key === 'End') {
-    next = list[list.length - 1];
-  }
-  if (!next) return;
-  event.preventDefault?.();
-  applyProfileSelection(next.id);
-  const card = cardEl(next.id);
-  if (card && typeof card.focus === 'function') card.focus();
-}
+export { initImporter } from './import/deps.js';
+export { applyProfileSelection, closeImportModal, openImportModal } from './import/picker.js';
+export { createUniqueSourceName } from './import/messages.js';
 
 /**
  * Node ids the duplicate prompt needs before a user can answer it. The modal
