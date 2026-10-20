@@ -5,11 +5,12 @@
 
 import * as state from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
-import { saveSourceFileRowHtml } from '../components/io/saveModal.js';
 import { downloadBlob, saveFileWithFallback } from '../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../utils/csv.js';
 import { initSql } from './sqlLoader.js';
-import { pushLayer, popLayer, on, showToast } from '../utils/dom.js';
+import { on, showToast } from '../utils/dom.js';
+import { renderSaveModal, openSaveModal, closeSaveModal } from './export/modal.js';
+import { quoteSqliteIdentifier, createTableSql } from './export/sqlite.js';
 import {
   exportColumnsFor,
   projectRecord,
@@ -18,78 +19,7 @@ import {
 } from './export/columns.js';
 import Papa from 'papaparse';
 
-/**
- * Populate the source-file list of the save/export modal without touching
- * the layer stack.
- *
- * Doubles as the layer's `restore`, so a save modal revealed by closing a
- * modal stacked above it re-populates itself.
- *
- * @returns {boolean} Whether the modal content was rendered.
- */
-export function renderSaveModal() {
-  const container = document.getElementById('saveSourceFilesList');
-  if (!container) return false;
-
-  container.innerHTML = '';
-
-  if (state.sourceFiles.size === 0) {
-    container.innerHTML = '<span class="text-xs text-slate-500">尚無載入的來源檔案</span>';
-  } else {
-    state.sourceFiles.forEach((file) => {
-      const item = document.createElement('div');
-      item.className =
-        'p-3 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-between text-xs';
-      item.innerHTML = saveSourceFileRowHtml({ file });
-      item.querySelector('[data-save-file]').dataset.saveFile = file.id;
-      container.appendChild(item);
-    });
-  }
-
-  return true;
-}
-
-/**
- * Opens the save/export modal and populates the list of source files,
- * stacking it on top of any modal that is already open.
- */
-export function openSaveModal() {
-  if (!renderSaveModal()) return;
-  pushLayer('saveModal', { restore: renderSaveModal });
-}
-
-/**
- * Hide the save/export modal, revealing the layer beneath it if there is one.
- */
-export function closeSaveModal() {
-  popLayer('saveModal');
-}
-
-/**
- * Escape an identifier for use inside a double-quoted SQLite name by doubling
- * any embedded quote — the same rule the read path uses, so a table or column
- * named maliciously cannot inject DDL into the file we emit.
- *
- * @param {string} name
- * @returns {string}
- */
-function quoteSqliteIdentifier(name) {
-  return `"${String(name).replace(/"/g, '""')}"`;
-}
-
-/**
- * Build the `CREATE TABLE` statement reproducing a source's own layout.
- *
- * Columns are declared TEXT: the app stores every field as a string, and the
- * original declared types are not part of the recorded schema.
- *
- * @param {{table: string, columns: string[]}} schema
- * @returns {string}
- */
-function createTableSql(schema) {
-  const cols = schema.columns.map((c) => `${quoteSqliteIdentifier(c)} TEXT`).join(', ');
-  return `CREATE TABLE ${quoteSqliteIdentifier(schema.table)} (${cols});`;
-}
+export { renderSaveModal, openSaveModal, closeSaveModal };
 
 /**
  * Saves a single source file's bookmarks back to disk.
