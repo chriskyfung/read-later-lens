@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   escapeHtml,
+  safeUrl,
   showToast,
   on,
   closeLayer,
   closeTopLayer,
   focusableWithin,
+  MODAL_Z_BASE,
   popLayer,
   pushLayer,
   registerModalLayer,
@@ -16,6 +18,26 @@ import {
   trapFocus,
 } from '../src/utils/dom.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
+
+// Submodule references, used only by the facade-surface contract: the facade
+// must hand back the *same* function objects (a single shared stack), not
+// independent copies.
+import {
+  MODAL_Z_BASE as MODAL_Z_BASE_FROM_STACK,
+  registerModalLayer as registerModalLayerFromStack,
+  stackDepth as stackDepthFromStack,
+  topLayerId as topLayerIdFromStack,
+  topLayer as topLayerFromStack,
+  pushLayer as pushLayerFromStack,
+  popLayer as popLayerFromStack,
+  closeLayer as closeLayerFromStack,
+  closeTopLayer as closeTopLayerFromStack,
+  resetLayers as resetLayersFromStack,
+} from '../src/utils/dom/layerStack.js';
+import {
+  focusableWithin as focusableWithinFromFocus,
+  trapFocus as trapFocusFromFocus,
+} from '../src/utils/dom/focus.js';
 
 function setupDom({ onClick } = {}) {
   const classes = new Set(['translate-y-20', 'opacity-0']);
@@ -553,5 +575,85 @@ describe('trapFocus', () => {
     vi.stubGlobal('document', { activeElement: null });
     expect(() => trapFocus(null, { shiftKey: false, preventDefault: vi.fn() })).not.toThrow();
     expect(focusableWithin(null)).toEqual([]);
+  });
+});
+
+describe('facade surface', () => {
+  // The split into src/utils/dom/* must be transparent to callers: the facade
+  // keeps the same public names, and for stateful modules the facade must
+  // return the *same* objects so there is one shared stack rather than copies.
+  const EXPECTED_FACADE_NAMES = [
+    'MODAL_Z_BASE',
+    'registerModalLayer',
+    'stackDepth',
+    'topLayerId',
+    'topLayer',
+    'pushLayer',
+    'popLayer',
+    'closeLayer',
+    'closeTopLayer',
+    'resetLayers',
+    'focusableWithin',
+    'trapFocus',
+    'on',
+    'escapeHtml',
+    'safeUrl',
+    'showToast',
+  ];
+
+  it('re-exports every public name (none lost in the split)', () => {
+    const facade = {
+      MODAL_Z_BASE,
+      registerModalLayer,
+      stackDepth,
+      topLayerId,
+      topLayer,
+      pushLayer,
+      popLayer,
+      closeLayer,
+      closeTopLayer,
+      resetLayers,
+      focusableWithin,
+      trapFocus,
+      on,
+      escapeHtml,
+      safeUrl,
+      showToast,
+    };
+    expect(Object.keys(facade).sort()).toEqual([...EXPECTED_FACADE_NAMES].sort());
+
+    EXPECTED_FACADE_NAMES.forEach((name) => {
+      expect(typeof facade[name]).not.toBe('undefined');
+    });
+  });
+
+  it('exposes the layer-stack functions from one shared module', () => {
+    expect(typeof MODAL_Z_BASE).toBe('number');
+    expect(MODAL_Z_BASE).toBe(MODAL_Z_BASE_FROM_STACK);
+    expect(registerModalLayer).toBe(registerModalLayerFromStack);
+    expect(stackDepth).toBe(stackDepthFromStack);
+    expect(topLayerId).toBe(topLayerIdFromStack);
+    expect(topLayer).toBe(topLayerFromStack);
+    expect(pushLayer).toBe(pushLayerFromStack);
+    expect(popLayer).toBe(popLayerFromStack);
+    expect(closeLayer).toBe(closeLayerFromStack);
+    expect(closeTopLayer).toBe(closeTopLayerFromStack);
+    expect(resetLayers).toBe(resetLayersFromStack);
+  });
+
+  it('exposes the focus-trap functions from one shared module', () => {
+    expect(typeof focusableWithin).toBe('function');
+    expect(typeof trapFocus).toBe('function');
+    expect(focusableWithin).toBe(focusableWithinFromFocus);
+    expect(trapFocus).toBe(trapFocusFromFocus);
+  });
+
+  it('keeps escapeHtml / safeUrl / on / showToast present on the facade', () => {
+    // Still inline in the facade until the next commit extracts them; this
+    // pins the names so that move must keep them re-exported here.
+    expect(typeof on).toBe('function');
+    expect(typeof escapeHtml).toBe('function');
+    expect(typeof safeUrl).toBe('function');
+    expect(typeof showToast).toBe('function');
   });
 });
