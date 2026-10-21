@@ -78,9 +78,9 @@ export function registerModalListeners() {
     const id = getReaderBookmarkId();
     if (id && (await confirmDeleteBookmark(id))) closeReaderModal();
   });
-  document.getElementById('readerFavoriteBtn')?.addEventListener('click', () => {
+  document.getElementById('readerFavoriteBtn')?.addEventListener('click', async () => {
     const id = getReaderBookmarkId();
-    if (id && toggleFavoriteBookmark(id)) syncReaderFavoriteButton(id);
+    if (id && (await toggleFavoriteBookmark(id))) syncReaderFavoriteButton(id);
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();

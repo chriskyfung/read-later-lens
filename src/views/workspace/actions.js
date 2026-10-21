@@ -3,7 +3,10 @@
  * batch trash.
  *
  * The side-effect order (gate → mutate → persist → render → batch bar →
- * toast) is preserved verbatim from the monolith.
+ * toast) is preserved verbatim from the monolith, except that the persist
+ * is now awaited: `deps.persist()` writes to IndexedDB, and rendering
+ * before that write settles let the view show a state the cache did not
+ * have yet.
  */
 import * as state from '../../core/state.js';
 import { stateStillFresh } from '../../core/guard.js';
@@ -29,8 +32,8 @@ import {
  *   it was not, or when the action was refused because another tab wrote.
  */
 export async function deleteBookmark(id) {
-  const bookmark = state.bookmarks.find((b) => b.id === id && !b.deleted_at);
-  if (!bookmark) return false;
+  const bookmark = state.getBookmarkById(id);
+  if (!bookmark || bookmark.deleted_at) return false;
 
   // Gate before the mutation: trashing over a working set this tab has not
   // seen would keep rows the other tab just wrote from ever landing.
@@ -39,7 +42,7 @@ export async function deleteBookmark(id) {
   const deps = getDeps();
   state.trashBookmarks([id]);
   state.selectedIds.delete(id);
-  deps.persist();
+  await deps.persist();
   deps.render();
   updateBatchActionBar();
   showToast(TRASHED_TOAST(bookmark.title));
@@ -53,15 +56,15 @@ export async function deleteBookmark(id) {
  * toast). Trashed and unknown ids are refused without side effects.
  *
  * @param {string} id
- * @returns {boolean} True when a live bookmark was toggled.
+ * @returns {Promise<boolean>} True when a live bookmark was toggled.
  */
-export function toggleFavoriteBookmark(id) {
+export async function toggleFavoriteBookmark(id) {
   const bookmark = state.getBookmarkById(id);
   if (!bookmark || bookmark.deleted_at) return false;
 
   const deps = getDeps();
   const next = state.toggleFavorite(id);
-  deps.persist();
+  await deps.persist();
   deps.render();
   updateBatchActionBar();
   showToast(next ? FAVORITE_ON_TOAST(bookmark.title) : FAVORITE_OFF_TOAST(bookmark.title));
@@ -101,7 +104,7 @@ export async function deleteSelectedBookmarks() {
   const deps = getDeps();
   state.trashBookmarks(ids);
   state.selectedIds.clear();
-  deps.persist();
+  await deps.persist();
   deps.render();
   updateBatchActionBar();
   showToast(BATCH_TRASHED_TOAST(ids.length));

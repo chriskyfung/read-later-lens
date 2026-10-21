@@ -7,6 +7,7 @@ import {
   confirmDeleteBookmark,
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
+  toggleFavoriteBookmark,
 } from '../src/views/workspaceActions.js';
 import {
   setBookmarks,
@@ -66,6 +67,14 @@ vi.mock('../src/core/state.js', () => {
     purgeBookmarks: vi.fn((ids) => {
       const targets = new Set(ids);
       state.bookmarks = state.bookmarks.filter((b) => !targets.has(b.id));
+    }),
+    // O(1) id lookup, mirroring the real state module's index.
+    getBookmarkById: vi.fn((id) => state.bookmarks.find((b) => b.id === id)),
+    toggleFavorite: vi.fn((id) => {
+      const b = state.bookmarks.find((x) => x.id === id);
+      if (!b) return false;
+      b.is_favorite = !b.is_favorite;
+      return b.is_favorite;
     }),
     get selectedIds() {
       return state.selectedIds;
@@ -278,6 +287,82 @@ describe('confirmDeleteSelectedBookmarks', () => {
     expect(await confirmDeleteSelectedBookmarks()).toBe(false);
 
     expect(trashBookmarks).not.toHaveBeenCalled();
+  });
+});
+
+describe('persistence ordering', () => {
+  it('awaits the persist before rendering on a delete', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    // The render must not run while the write is still in flight, or the view
+    // would show a state the cache does not have yet.
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+
+  it('awaits the persist before rendering on a batch delete', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1' }, { id: '2' }]);
+    selectedIds.add('1');
+
+    expect(await deleteSelectedBookmarks()).toBe(true);
+
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+
+  it('awaits the persist before rendering on a favorite toggle', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+});
+
+describe('toggleFavoriteBookmark', () => {
+  it('looks the bookmark up through the id index, not an array scan', async () => {
+    initWorkspaceActions({ persist: vi.fn(async () => {}), render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+    const state = await import('../src/core/state.js');
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+    expect(state.getBookmarkById).toHaveBeenCalledWith('1');
+  });
+
+  it('refuses an unknown or already-trashed id without side effects', async () => {
+    const persist = vi.fn();
+    const render = vi.fn();
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(false);
+    expect(await toggleFavoriteBookmark('missing')).toBe(false);
+    expect(persist).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
   });
 });
 
