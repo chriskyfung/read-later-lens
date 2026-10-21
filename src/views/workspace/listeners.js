@@ -8,6 +8,7 @@
 import * as state from '../../core/state.js';
 import { getFilteredBookmarks } from '../../core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '../bookmarks.js';
+import { WORKSPACE_IDS } from '../../components/workspace/constants.js';
 import { getDeps } from './deps.js';
 import { switchTab } from './tabActions.js';
 import { zoomIn, zoomOut, resetZoom, applyWeighting } from './graphActions.js';
@@ -20,7 +21,7 @@ export function registerWorkspaceListeners() {
   const deps = getDeps();
 
   // Sort dropdown — monolith parity: sets sort and re-renders only.
-  document.getElementById('sortSelect')?.addEventListener('change', (e) => {
+  document.getElementById(WORKSPACE_IDS.SORT_SELECT)?.addEventListener('change', (e) => {
     state.setSortBy(e.target.value);
     deps.render();
   });
@@ -44,11 +45,11 @@ export function registerWorkspaceListeners() {
 
   // Batch Delete — confirm first, then the extracted monolith-order body.
   document
-    .getElementById('batchDeleteBtn')
+    .getElementById(WORKSPACE_IDS.BATCH_DELETE_BTN)
     ?.addEventListener('click', confirmDeleteSelectedBookmarks);
 
   // Batch Cancel
-  document.getElementById('batchCancelBtn')?.addEventListener('click', () => {
+  document.getElementById(WORKSPACE_IDS.BATCH_CANCEL_BTN)?.addEventListener('click', () => {
     state.selectedIds.clear();
     renderBookmarkCards();
     updateBatchActionBar();

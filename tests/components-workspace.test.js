@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { mountWorkspace, workspaceHtml } from '../src/components/workspace.js';
+import { WORKSPACE_IDS } from '../src/components/workspace/constants.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 // mountWorkspace appends the composed <main> to #appBody via
@@ -52,6 +53,15 @@ describe('mountWorkspace — composition', () => {
       /^[\s\S]*<main class="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">/,
     );
     expect(html()).toMatch(/<\/main>\s*$/);
+  });
+});
+
+describe('WORKSPACE_IDS — markup parity', () => {
+  it('renders every id the table names', () => {
+    for (const [key, id] of Object.entries(WORKSPACE_IDS)) {
+      if (key === 'APP_BODY') continue; // the mount target, not markup
+      expect(html(), key).toContain(`id="${id}"`);
+    }
   });
 });
 
