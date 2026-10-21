@@ -438,6 +438,19 @@ describe('registerWorkspaceListeners', () => {
     expect(setSortBy).toHaveBeenCalledWith('newer');
   });
 
+  it('looks the deps up at event time, not at registration time', () => {
+    // The listeners may be registered before the orchestrator injects the real
+    // callbacks; a captured snapshot would keep calling the old ones.
+    registerWorkspaceListeners();
+    const render = vi.fn();
+    initWorkspaceActions({ persist: vi.fn(async () => {}), render });
+
+    el('sortSelect').dispatch('change', { target: { value: 'newer' } });
+
+    expect(setSortBy).toHaveBeenCalledWith('newer');
+    expect(render).toHaveBeenCalled();
+  });
+
   it('wires the tab buttons', () => {
     registerWorkspaceListeners();
     const tabs = document.querySelectorAll('.main-tab');

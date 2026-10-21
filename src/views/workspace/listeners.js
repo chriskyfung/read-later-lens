@@ -18,12 +18,14 @@ import { confirmDeleteBookmark, confirmDeleteSelectedBookmarks } from './actions
  * Attach the workspace listeners (sort, tabs, select-all, batch, zoom).
  */
 export function registerWorkspaceListeners() {
-  const deps = getDeps();
+  // The deps are read at EVENT time, not at registration time: the listeners
+  // may be registered before the orchestrator injects the real callbacks, and
+  // a captured snapshot would then keep calling the no-op defaults forever.
 
   // Sort dropdown — monolith parity: sets sort and re-renders only.
   document.getElementById(WORKSPACE_IDS.SORT_SELECT)?.addEventListener('change', (e) => {
     state.setSortBy(e.target.value);
-    deps.render();
+    getDeps().render();
   });
 
   // Tab switcher delegation
