@@ -21,6 +21,22 @@ import {
 } from './constants.js';
 
 /**
+ * Read the outcome of a persist call.
+ *
+ * `deps.persist` is the injected `persistAfterAction` (src/main.js), which
+ * reports `{persisted, conflict}` and shows its own toast when the write did
+ * not land. A stub that returns nothing counts as committed, so the action
+ * keeps its success toast.
+ *
+ * @param {unknown} saved - Whatever `deps.persist()` resolved to.
+ * @returns {boolean} True when the write landed and no other tab interfered.
+ */
+function writeLanded(saved) {
+  if (!saved || typeof saved !== 'object') return true;
+  return saved.persisted !== false && saved.conflict !== true;
+}
+
+/**
  * Move a single bookmark to the trash (generated card data-delete-bookmark).
  *
  * Soft delete: the record keeps living in `state.bookmarks` with a `deleted_at`
@@ -42,10 +58,12 @@ export async function deleteBookmark(id) {
   const deps = getDeps();
   state.trashBookmarks([id]);
   state.selectedIds.delete(id);
-  await deps.persist();
+  const saved = await deps.persist();
   deps.render();
   updateBatchActionBar();
-  showToast(TRASHED_TOAST(bookmark.title));
+  // The persist reports a failed or refused write with its own toast; a
+  // success message on top of it would hide the very failure it announces.
+  if (writeLanded(saved)) showToast(TRASHED_TOAST(bookmark.title));
   return true;
 }
 
@@ -64,10 +82,13 @@ export async function toggleFavoriteBookmark(id) {
 
   const deps = getDeps();
   const next = state.toggleFavorite(id);
-  await deps.persist();
+  const saved = await deps.persist();
   deps.render();
   updateBatchActionBar();
-  showToast(next ? FAVORITE_ON_TOAST(bookmark.title) : FAVORITE_OFF_TOAST(bookmark.title));
+  // A failed or refused write already announced itself — see deleteBookmark().
+  if (writeLanded(saved)) {
+    showToast(next ? FAVORITE_ON_TOAST(bookmark.title) : FAVORITE_OFF_TOAST(bookmark.title));
+  }
   return true;
 }
 
@@ -104,10 +125,11 @@ export async function deleteSelectedBookmarks() {
   const deps = getDeps();
   state.trashBookmarks(ids);
   state.selectedIds.clear();
-  await deps.persist();
+  const saved = await deps.persist();
   deps.render();
   updateBatchActionBar();
-  showToast(BATCH_TRASHED_TOAST(ids.length));
+  // A failed or refused write already announced itself — see deleteBookmark().
+  if (writeLanded(saved)) showToast(BATCH_TRASHED_TOAST(ids.length));
   return true;
 }
 

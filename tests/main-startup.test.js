@@ -54,6 +54,33 @@ describe('entry-point feature wiring', () => {
     expect(saveState).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the write-failure toast when a delete cannot be cached (e2e)', async () => {
+    const store = await import('../src/core/store.js');
+    const { showToast } = await import('../src/utils/dom.js');
+    // The cache write fails, so the session is no longer cached. The action
+    // must not replace that warning with its own "moved to trash" success
+    // message — the toast area shows one message at a time, and the last
+    // call wins.
+    store.saveState.mockResolvedValueOnce({ persisted: false, conflict: false });
+
+    await start();
+    const state = await import('../src/core/state.js');
+    state.setBookmarks([bookmark('d1', 'Apple', 'https://apple.com')]);
+    const { renderAll } = await import('../src/views/main-view.js');
+    renderAll();
+
+    const card = els.bookmarkCardsGrid.children[0];
+    const button = card.querySelector('[data-delete-bookmark]');
+    await els.bookmarkCardsGrid.dispatch('click', {
+      target: { closest: (selector) => (selector === '[data-delete-bookmark]' ? button : null) },
+    });
+
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalled());
+    const messages = showToast.mock.calls.map((c) => c[0]);
+    expect(messages).toContainEqual(expect.stringContaining('無法寫入本機快取'));
+    expect(messages).not.toContainEqual(expect.stringContaining('移至回收桶'));
+  });
+
   it('imports through the source picker modal opened from the header (e2e)', async () => {
     await start();
     const { stackDepth } = await import('../src/utils/dom.js');

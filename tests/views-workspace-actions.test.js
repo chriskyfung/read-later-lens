@@ -29,6 +29,10 @@ vi.mock('../src/core/store.js', async (importOriginal) => ({
   isStateFresh: async () => gate.fresh,
 }));
 vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
+vi.mock('../src/utils/dom.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  showToast: vi.fn(),
+}));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
 vi.mock('../src/views/linkage.js', () => ({
@@ -95,6 +99,7 @@ vi.mock('../src/views/bookmarks.js', () => ({
 }));
 
 const { activateTab } = await import('../src/views/tabs.js');
+const { showToast } = await import('../src/utils/dom.js');
 const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
@@ -340,6 +345,65 @@ describe('persistence ordering', () => {
     expect(await toggleFavoriteBookmark('1')).toBe(true);
 
     expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+});
+
+describe('persist outcome decides the toast', () => {
+  it('keeps the failure message when the cache write fails (no success toast on top)', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    // The persist announced the failed write; the action must not add a
+    // "moved to trash" message on top of it, which would hide the failure.
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the conflict message when another tab won the race', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: true }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('still reports success when the write landed', async () => {
+    const persist = vi.fn(async () => ({ persisted: true, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('移至回收桶'));
+  });
+
+  it('suppresses the batch-trash toast when the write failed', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([
+      { id: '1', title: 'T1' },
+      { id: '2', title: 'T2' },
+    ]);
+    selectedIds.add('1');
+    selectedIds.add('2');
+
+    expect(await deleteSelectedBookmarks()).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the favorite toast when the write failed', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
   });
 });
 
