@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { mountWorkspace, workspaceHtml } from '../src/components/workspace.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -52,6 +52,24 @@ describe('mountWorkspace — composition', () => {
       /^[\s\S]*<main class="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">/,
     );
     expect(html()).toMatch(/<\/main>\s*$/);
+  });
+});
+
+describe('mountWorkspace — missing #appBody', () => {
+  it('warns and skips mounting instead of throwing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const original = globalThis.document.getElementById;
+    globalThis.document.getElementById = (id) => (id === 'appBody' ? null : original(id));
+
+    try {
+      captured.length = 0;
+      expect(() => mountWorkspace()).not.toThrow();
+      expect(captured).toHaveLength(0);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      globalThis.document.getElementById = original;
+      warn.mockRestore();
+    }
   });
 });
 

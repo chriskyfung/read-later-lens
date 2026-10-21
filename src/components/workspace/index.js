@@ -13,5 +13,10 @@ export { workspaceHtml };
  * mountSidebar() ran (it uses 'afterbegin').
  */
 export function mountWorkspace() {
-  document.getElementById('appBody').insertAdjacentHTML('beforeend', workspaceHtml());
+  const appBody = document.getElementById('appBody');
+  if (!appBody) {
+    console.warn('[workspace] #appBody not found; skipping workspace mount');
+    return;
+  }
+  appBody.insertAdjacentHTML('beforeend', workspaceHtml());
 }
