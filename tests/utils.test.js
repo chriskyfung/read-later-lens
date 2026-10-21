@@ -38,6 +38,12 @@ import {
   focusableWithin as focusableWithinFromFocus,
   trapFocus as trapFocusFromFocus,
 } from '../src/utils/dom/focus.js';
+import {
+  escapeHtml as escapeHtmlFromEscape,
+  safeUrl as safeUrlFromEscape,
+} from '../src/utils/dom/escape.js';
+import { on as onFromBind } from '../src/utils/dom/bind.js';
+import { showToast as showToastFromToast } from '../src/utils/dom/toast.js';
 
 function setupDom({ onClick } = {}) {
   const classes = new Set(['translate-y-20', 'opacity-0']);
@@ -648,12 +654,16 @@ describe('facade surface', () => {
     expect(trapFocus).toBe(trapFocusFromFocus);
   });
 
-  it('keeps escapeHtml / safeUrl / on / showToast present on the facade', () => {
-    // Still inline in the facade until the next commit extracts them; this
-    // pins the names so that move must keep them re-exported here.
-    expect(typeof on).toBe('function');
+  it('exposes the escape / bind / toast helpers from one shared module', () => {
+    // Each helper now lives in its own submodule; the facade must re-export the
+    // same function objects, not its own copies.
     expect(typeof escapeHtml).toBe('function');
     expect(typeof safeUrl).toBe('function');
+    expect(typeof on).toBe('function');
     expect(typeof showToast).toBe('function');
+    expect(escapeHtml).toBe(escapeHtmlFromEscape);
+    expect(safeUrl).toBe(safeUrlFromEscape);
+    expect(on).toBe(onFromBind);
+    expect(showToast).toBe(showToastFromToast);
   });
 });
