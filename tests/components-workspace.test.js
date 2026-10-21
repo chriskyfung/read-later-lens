@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { mountWorkspace, workspaceHtml } from '../src/components/workspace.js';
+import * as workspaceFacade from '../src/components/workspace.js';
+import * as workspaceBarrel from '../src/components/workspace/index.js';
 import { WORKSPACE_IDS } from '../src/components/workspace/constants.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -53,6 +55,20 @@ describe('mountWorkspace — composition', () => {
       /^[\s\S]*<main class="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-hidden">/,
     );
     expect(html()).toMatch(/<\/main>\s*$/);
+  });
+});
+
+describe('workspace facade — export parity', () => {
+  it('resolves every name the facade promises', () => {
+    // The bundle build catches a missing barrel export, but the test suite
+    // does not, so pin the two surfaces here. A re-export of a name the
+    // barrel does not have resolves to undefined rather than failing at
+    // import time, so the value is what is asserted.
+    const promised = ['workspaceHtml', 'mountWorkspace', 'WORKSPACE_IDS'];
+    for (const name of promised) {
+      expect(workspaceFacade[name], name).toBeDefined();
+      expect(workspaceBarrel[name], name).toBeDefined();
+    }
   });
 });
 

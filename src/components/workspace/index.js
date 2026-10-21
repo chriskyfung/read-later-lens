@@ -4,6 +4,7 @@
 import { WORKSPACE_IDS } from './constants.js';
 import { workspaceHtml } from './shell.js';
 
+export { WORKSPACE_IDS } from './constants.js';
 export { workspaceHtml };
 
 /**
