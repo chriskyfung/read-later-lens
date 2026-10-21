@@ -1,4 +1,7 @@
-# Skill: facade-split-refactor
+---
+name: facade-split-refactor
+description: Implement a "extract folder-behind-facade" refactor
+---
 
 ## Purpose
 

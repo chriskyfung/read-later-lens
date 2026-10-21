@@ -1,4 +1,7 @@
-# Skill: commit-hygiene
+---
+name: commit-hygiene
+description: Prevent recurring failure modes
+---
 
 ## Purpose
 

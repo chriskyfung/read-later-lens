@@ -1,8 +1,9 @@
+---
+name: refactor-review-gate
+description: Revise already-landed refactor commits and produce a professional PR message without mutating the tree
+---
+
 # Skill: refactor-review-gate
-
-## Purpose
-
-Help a future agent revise already-landed refactor commits and produce a professional PR message without mutating the tree.
 
 ## Trigger phrases
 
