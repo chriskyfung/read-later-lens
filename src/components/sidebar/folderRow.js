@@ -1,7 +1,7 @@
 /**
  * @fileoverview Sidebar folder-row presentational helpers.
  *
- * Extracted from src/views/sidebar.js `renderSidebarFolders()` — the class
+ * Extracted from src/views/sidebar/folders.js `renderSidebarFolders()` — the class
  * builder for `#allFolderBtn`, plus the class/badge/markup builders for a
  * dynamic source-file row. Classes and markup are preserved byte-for-byte from
  * the monolith; the host view still owns DOM creation and dataset wiring.

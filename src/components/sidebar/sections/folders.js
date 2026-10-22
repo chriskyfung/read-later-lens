@@ -3,7 +3,7 @@
  *
  * Static monolith parity: extracted byte-for-byte from the original
  * src/components/sidebar.js sidebarHtml() template (index.html "Left Sidebar").
- * The dynamic file rows inside #folderList are rendered by src/views/sidebar.js.
+ * The dynamic file rows inside #folderList are rendered by src/views/sidebar/folders.js.
  */
 
 /** @returns {string} The folders / source-files section markup. */

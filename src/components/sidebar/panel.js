@@ -3,12 +3,12 @@
  *
  * Extracted byte-for-byte from the original monolith (index.html
  * "Left Sidebar"). Behavior mapping:
- *  - folder rows (dynamic)  → src/views/sidebar.js (renderer)
- *  - folder select/delete   → src/views/sidebarActions.js (delegated listeners)
- *  - allFolderBtn / trashFolderBtn / languageFilters → src/views/sidebarActions.js
+ *  - folder rows (dynamic)  → src/views/sidebar/folders.js (renderer)
+ *  - folder select/delete   → src/views/sidebar/listeners.js (delegated listeners)
+ *  - allFolderBtn / trashFolderBtn / languageFilters → src/views/sidebar/listeners.js
  *  - trash rows (dynamic)   → src/views/trash.js
- *  - storage usage          → src/views/sidebarActions.js (updateStorageUsageUI)
- *  - tag cloud (dynamic)    → src/views/sidebar.js
+ *  - storage usage          → src/views/sidebar/storage.js (updateStorageUsageUI)
+ *  - tag cloud (dynamic)    → src/views/sidebar/tags.js
  *
  * The markup is split into single-concern section modules under ./sections/;
  * sidebarHtml() composes them in the monolith DOM order. mountSidebar()

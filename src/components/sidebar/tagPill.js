@@ -1,7 +1,7 @@
 /**
  * @fileoverview Sidebar tag-pill presentational helpers.
  *
- * Extracted from src/views/sidebar.js `renderTagCloud()` — the exact empty
+ * Extracted from src/views/sidebar/tags.js `renderTagCloud()` — the exact empty
  * placeholder, the pill class list and the `#${tag} (${count})` label. Markup
  * and classes are preserved byte-for-byte from the monolith; the host view
  * still owns DOM creation and the `data-filter-tag` dataset wiring.

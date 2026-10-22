@@ -5,7 +5,7 @@
  *  - The trash is a *projection* over `deleted_at`, not a second store, so it
  *    survives reloads through the existing IndexedDB bookmark blob.
  *  - The list lives in a dedicated modal (src/components/bookmarks/trash/,
- *    opened from the sidebar's 回收桶 row in src/views/sidebarActions.js). The
+ *    opened from the sidebar's 回收桶 row in src/views/sidebar/listeners.js). The
  *    grid behind it stays mounted, so the modal keeps the current folder,
  *    language, tag and search context; it is intentionally flat and unfiltered
  *    (ignores activeFolder / activeLang / activeTag / searchQuery) — simple and
@@ -21,7 +21,7 @@
  * Implementation lives in src/views/trash/ (constants, deps, service, view,
  * controller, actions, listeners); this module only re-exports so existing
  * importers (src/main.js, src/views/sidebarActions.js, tests) keep working.
- * `persist`/`render` are injected by src/main.js, mirroring sidebarActions and
+ * `persist`/`render` are injected by src/main.js, mirroring the sidebar and
  * workspaceActions.
  */
 export { initTrashDeps as initTrash, getDeps } from './trash/deps.js';

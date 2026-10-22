@@ -8,7 +8,7 @@ import {
 } from '../src/components/sidebar/folderRow.js';
 
 /**
- * Tests for the pure folder-row helpers extracted from src/views/sidebar.js.
+ * Tests for the pure folder-row helpers extracted from src/views/sidebar/folders.js.
  * They mirror the parity guards the monolith asserted in
  * tests/views-sidebar.test.js (exact button classes, badge colours and row
  * markup).
