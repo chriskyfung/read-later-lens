@@ -6,7 +6,7 @@ import {
 } from '../src/components/sidebar/tagPill.js';
 
 /**
- * Tests for the pure tag helpers extracted from src/views/sidebar.js.
+ * Tests for the pure tag helpers extracted from src/views/sidebar/tags.js.
  * They mirror the parity guards the monolith asserted in
  * tests/views-sidebar.test.js (exact placeholder, pill classes and labels).
  */

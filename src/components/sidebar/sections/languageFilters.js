@@ -3,7 +3,7 @@
  *
  * Static monolith parity: extracted byte-for-byte from the original
  * src/components/sidebar.js sidebarHtml() template (index.html "Left Sidebar").
- * The click handling lives in src/views/sidebarActions.js.
+ * The click handling lives in src/views/sidebar/listeners.js.
  */
 
 /** @returns {string} The language filters section markup. */
