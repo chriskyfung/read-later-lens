@@ -9,6 +9,7 @@
 
 import { openDB, deleteDB } from 'idb';
 import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from './state.js';
+import { toPersistedSources } from './store/serialize.js';
 
 const DB_NAME = 'ReadLaterLensDB';
 
@@ -176,29 +177,7 @@ export async function closeDb() {
 export async function saveState() {
   try {
     const db = await getDb();
-    // Only serializable source metadata is persisted. Source records carry no
-    // file handles — save-back writes a copy (Save-As, then a download), so a
-    // handle would have no reader even if one were kept. SQLite payloads stay
-    // in memory only.
-    const sourcesArray = Array.from(sourceFiles.entries()).map(([, v]) => ({
-      id: v.id,
-      name: v.name,
-      type: v.type,
-      profile: v.profile,
-      originalData: v.type === 'sqlite' || v.type === 'db' ? null : v.originalData,
-      // The observed table layout is tiny (a name plus a column list), unlike the
-      // payload above, so it IS persisted: without it a reload would make the
-      // original `.db` shape unknowable and save-back would have to guess.
-      sqliteSchema: v.sqliteSchema ?? null,
-      // Same reasoning as `sqliteSchema` above: a header row is a few short
-      // strings, so persisting it keeps the source's own CSV layout knowable
-      // after a reload instead of re-guessed from the app's internal schema.
-      csvColumns: v.csvColumns ?? null,
-      // And the same for the dialect: two short strings, and without them a
-      // ;-delimited or LF source would silently return as comma + CRLF after a
-      // reload, re-parsed from the raw text only to guess the wrong shape.
-      csvDialect: v.csvDialect ?? null,
-    }));
+    const sourcesArray = toPersistedSources(sourceFiles);
     // One transaction for every row: IndexedDB commits a transaction only if
     // ALL of its requests succeed, so a failure on the second row can no longer
     // leave `bookmarks` updated while `sources` still describes the old folder
