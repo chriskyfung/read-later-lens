@@ -1,146 +1,15 @@
 /**
- * @fileoverview Sidebar actions — folder select/delete, language filters,
- * and the IndexedDB storage usage indicator.
+ * @fileoverview Sidebar actions — facade preserving the public API.
+ *
+ * The behavior now lives in src/views/sidebar/ (deps, actions, storage,
+ * listeners) and this facade re-exports the stable public surface so importers
+ * (src/main.js, tests) keep working unchanged.
  *
  * Extracted from the monolith's inline script in index.html.
  * Register listeners AFTER mountSidebar() (src/components/sidebar/panel.js).
  */
 
-import * as state from '../core/state.js';
-import { openTrashModal } from './trash.js';
-import { getStorageUsage } from '../core/store.js';
-import { stateStillFresh } from '../core/guard.js';
-import { showToast } from '../utils/dom.js';
-
-/** @typedef {object} SidebarActionsDeps
- * @property {function} persist - Save state to IndexedDB and refresh usage UI.
- * @property {function} render - Re-render all views (no persistence).
- */
-let deps = { persist: () => {}, render: () => {} };
-
-/**
- * Inject side-effect callbacks (same pattern as initImporter).
- * @param {SidebarActionsDeps} injectedDeps
- */
-export function initSidebarActions(injectedDeps) {
-  deps = { ...deps, ...injectedDeps };
-}
-
-/**
- * Refresh the storage usage indicator in the sidebar.
- */
-export async function updateStorageUsageUI() {
-  const { usageKB, limitMB } = await getStorageUsage();
-  document.getElementById('storageUsageText').innerText = `${usageKB} KB / ${limitMB} MB`;
-  const pct = Math.min(100, (usageKB / (limitMB * 1024)) * 100);
-  document.getElementById('storageProgressBar').style.width = `${pct}%`;
-}
-
-/**
- * Select a source folder (generated row data-select-folder).
- * @param {string} folderId
- */
-export function selectFolder(folderId) {
-  state.setActiveFolder(folderId);
-  deps.render();
-}
-
-/**
- * Confirm and delete a source file with its bookmarks (generated row data-delete-folder).
- * @param {Event} e
- * @param {string} fileId
- */
-export async function confirmDeleteFolder(e, fileId) {
-  e.stopPropagation();
-  const file = state.sourceFiles.get(fileId);
-  if (confirm(`確定要刪除檔案「${file ? file.name : ''}」與其包含的所有書籤嗎？`)) {
-    return deleteFolder(fileId);
-  }
-  return false;
-}
-
-/**
- * Remove a source file and its bookmarks — permanently (monolith side-effect
- * order, extended with the trash purge).
- *
- * Folder deletion is deliberately NOT a soft delete: the file, its active
- * bookmarks AND its trashed bookmarks all go away in one step. That invariant is
- * what makes "restore into a deleted folder" impossible, so no trashed record
- * can ever point at a missing source file.
- *
- * @param {string} fileId
- * @param {boolean} [triggerRender=true]
- * @returns {Promise<boolean>} `true` when the file and its bookmarks were deleted;
- *   `false` when nothing was deleted, or when refused because another tab wrote.
- */
-export async function deleteFolder(fileId, triggerRender = true) {
-  // Gate before the first mutation: deleting on top of a working set this tab
-  // has not seen would discard rows the other tab just wrote.
-  if (!(await stateStillFresh())) return false;
-
-  // Purge every record owned by the file, trashed or not.
-  const doomed = state.bookmarks.filter((b) => b.source_file_id === fileId).map((b) => b.id);
-  state.sourceFiles.delete(fileId);
-  state.purgeBookmarks(doomed);
-  doomed.forEach((id) => state.selectedIds.delete(id));
-  if (state.activeFolder === fileId) {
-    state.setActiveFolder('ALL');
-  }
-  deps.persist();
-  if (triggerRender) {
-    deps.render();
-    showToast('已刪除檔案及其所有書籤（含回收桶）');
-  }
-  return true;
-}
-
-/**
- * Attach the all-bookmarks and language-filter listeners.
- */
-export function registerSidebarListeners() {
-  document.getElementById('tagFilterCloud')?.addEventListener('click', (e) => {
-    const pill = e.target.closest('[data-filter-tag]');
-    if (!pill) return;
-    const tag = pill.dataset.filterTag;
-    state.setActiveTag(state.activeTag === tag ? null : tag);
-    deps.render();
-  });
-  // Folder list — delegated select/delete
-  document.getElementById('folderList')?.addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('[data-delete-folder]');
-    if (deleteBtn) {
-      await confirmDeleteFolder(e, deleteBtn.dataset.deleteFolder);
-      return;
-    }
-    const selectBtn = e.target.closest('[data-select-folder]');
-    if (selectBtn) {
-      selectFolder(selectBtn.dataset.selectFolder);
-    }
-  });
-
-  // "All bookmarks" folder button
-  document.getElementById('allFolderBtn')?.addEventListener('click', () => {
-    state.setActiveFolder('ALL');
-    deps.render();
-  });
-
-  // Trash (回收桶) row — opens the dedicated trash modal instead of switching
-  // the pseudo-folder (the grid behind it stays mounted). See src/views/trash.js.
-  document.getElementById('trashFolderBtn')?.addEventListener('click', () => {
-    // The modal opens on top of whatever is on screen.
-    openTrashModal();
-  });
-
-  // Language filter pill click delegation
-  document.getElementById('languageFilters')?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('lang-btn')) {
-      document.querySelectorAll('.lang-btn').forEach((b) => {
-        b.classList.remove('active', 'bg-indigo-600', 'text-white');
-        b.classList.add('bg-slate-700', 'text-slate-300');
-      });
-      e.target.classList.add('active', 'bg-indigo-600', 'text-white');
-      state.setActiveLang(e.target.dataset.lang);
-      deps.render();
-    }
-  });
-}
+export { initSidebarActions, getDeps } from './sidebar/index.js';
+export { updateStorageUsageUI } from './sidebar/index.js';
+export { selectFolder, confirmDeleteFolder, deleteFolder } from './sidebar/index.js';
+export { registerSidebarListeners } from './sidebar/index.js';
