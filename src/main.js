@@ -88,19 +88,31 @@ async function persistAndRender() {
  * success. A genuine storage failure is *also* reported: the base `saveState`
  * result (`persisted: false` without `conflict`) means this session is no
  * longer cached, and a reload would resurrect what the user just deleted.
+ *
+ * The outcome is RETURNED as well as announced, so an action that awaits this
+ * call can decide not to stack a success message on top of a failure one
+ * (the toast area shows one message at a time — the last call wins).
+ *
+ * @returns {Promise<{persisted: boolean, conflict: boolean}>} The write outcome.
  */
 async function persistAfterAction() {
+  let persisted = true;
+  let conflict = false;
   try {
     const saved = await saveState();
-    if (saved && saved.persisted === false && saved.conflict !== true) {
-      showToast(PERSIST_WRITE_FAILED_MESSAGE);
-      return;
-    }
-    if (saved && saved.conflict === true) {
-      showToast(STALE_STATE_MESSAGE);
-    }
+    // A stub that says nothing counts as committed: `saved !== false` and
+    // `saved?.persisted !== false` both mean "the save reported no failure".
+    persisted = saved !== false && saved?.persisted !== false;
+    conflict = saved?.conflict === true;
   } catch (err) {
     console.warn('IndexedDB save failed:', err);
+    persisted = false;
+  }
+
+  if (!persisted && !conflict) {
+    showToast(PERSIST_WRITE_FAILED_MESSAGE);
+  } else if (conflict) {
+    showToast(STALE_STATE_MESSAGE);
   }
 
   try {
@@ -108,6 +120,8 @@ async function persistAfterAction() {
   } catch (err) {
     console.warn('Storage usage update failed:', err);
   }
+
+  return { persisted, conflict };
 }
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.

@@ -7,6 +7,7 @@ import {
   confirmDeleteBookmark,
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
+  toggleFavoriteBookmark,
 } from '../src/views/workspaceActions.js';
 import {
   setBookmarks,
@@ -28,6 +29,10 @@ vi.mock('../src/core/store.js', async (importOriginal) => ({
   isStateFresh: async () => gate.fresh,
 }));
 vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
+vi.mock('../src/utils/dom.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  showToast: vi.fn(),
+}));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
 vi.mock('../src/views/linkage.js', () => ({
@@ -67,6 +72,14 @@ vi.mock('../src/core/state.js', () => {
       const targets = new Set(ids);
       state.bookmarks = state.bookmarks.filter((b) => !targets.has(b.id));
     }),
+    // O(1) id lookup, mirroring the real state module's index.
+    getBookmarkById: vi.fn((id) => state.bookmarks.find((b) => b.id === id)),
+    toggleFavorite: vi.fn((id) => {
+      const b = state.bookmarks.find((x) => x.id === id);
+      if (!b) return false;
+      b.is_favorite = !b.is_favorite;
+      return b.is_favorite;
+    }),
     get selectedIds() {
       return state.selectedIds;
     },
@@ -86,6 +99,7 @@ vi.mock('../src/views/bookmarks.js', () => ({
 }));
 
 const { activateTab } = await import('../src/views/tabs.js');
+const { showToast } = await import('../src/utils/dom.js');
 const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
@@ -281,12 +295,160 @@ describe('confirmDeleteSelectedBookmarks', () => {
   });
 });
 
+describe('persistence ordering', () => {
+  it('awaits the persist before rendering on a delete', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    // The render must not run while the write is still in flight, or the view
+    // would show a state the cache does not have yet.
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+
+  it('awaits the persist before rendering on a batch delete', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1' }, { id: '2' }]);
+    selectedIds.add('1');
+
+    expect(await deleteSelectedBookmarks()).toBe(true);
+
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+
+  it('awaits the persist before rendering on a favorite toggle', async () => {
+    const order = [];
+    const persist = vi.fn(async () => {
+      order.push('persist:start');
+      await Promise.resolve();
+      order.push('persist:end');
+    });
+    const render = vi.fn(() => order.push('render'));
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+
+    expect(order).toEqual(['persist:start', 'persist:end', 'render']);
+  });
+});
+
+describe('persist outcome decides the toast', () => {
+  it('keeps the failure message when the cache write fails (no success toast on top)', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    // The persist announced the failed write; the action must not add a
+    // "moved to trash" message on top of it, which would hide the failure.
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the conflict message when another tab won the race', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: true }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('still reports success when the write landed', async () => {
+    const persist = vi.fn(async () => ({ persisted: true, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await deleteBookmark('1')).toBe(true);
+
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('移至回收桶'));
+  });
+
+  it('suppresses the batch-trash toast when the write failed', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([
+      { id: '1', title: 'T1' },
+      { id: '2', title: 'T2' },
+    ]);
+    selectedIds.add('1');
+    selectedIds.add('2');
+
+    expect(await deleteSelectedBookmarks()).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the favorite toast when the write failed', async () => {
+    const persist = vi.fn(async () => ({ persisted: false, conflict: false }));
+    initWorkspaceActions({ persist, render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+});
+
+describe('toggleFavoriteBookmark', () => {
+  it('looks the bookmark up through the id index, not an array scan', async () => {
+    initWorkspaceActions({ persist: vi.fn(async () => {}), render: vi.fn() });
+    setBookmarks([{ id: '1', title: 'T1' }]);
+    const state = await import('../src/core/state.js');
+
+    expect(await toggleFavoriteBookmark('1')).toBe(true);
+    expect(state.getBookmarkById).toHaveBeenCalledWith('1');
+  });
+
+  it('refuses an unknown or already-trashed id without side effects', async () => {
+    const persist = vi.fn();
+    const render = vi.fn();
+    initWorkspaceActions({ persist, render });
+    setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
+
+    expect(await toggleFavoriteBookmark('1')).toBe(false);
+    expect(await toggleFavoriteBookmark('missing')).toBe(false);
+    expect(persist).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+  });
+});
+
 describe('registerWorkspaceListeners', () => {
   it('wires the sortSelect dropdown', () => {
     registerWorkspaceListeners();
     const sortSel = el('sortSelect');
     sortSel.dispatch('change', { target: { value: 'newer' } });
     expect(setSortBy).toHaveBeenCalledWith('newer');
+  });
+
+  it('looks the deps up at event time, not at registration time', () => {
+    // The listeners may be registered before the orchestrator injects the real
+    // callbacks; a captured snapshot would keep calling the old ones.
+    registerWorkspaceListeners();
+    const render = vi.fn();
+    initWorkspaceActions({ persist: vi.fn(async () => {}), render });
+
+    el('sortSelect').dispatch('change', { target: { value: 'newer' } });
+
+    expect(setSortBy).toHaveBeenCalledWith('newer');
+    expect(render).toHaveBeenCalled();
   });
 
   it('wires the tab buttons', () => {
