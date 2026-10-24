@@ -8,7 +8,7 @@ import {
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
   toggleFavoriteBookmark,
-} from '../src/views/workspaceActions.js';
+} from '../src/views/workspace';
 import {
   setBookmarks,
   setSortBy,

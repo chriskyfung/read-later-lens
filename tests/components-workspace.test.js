@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { mountWorkspace, workspaceHtml } from '../src/components/workspace.js';
-import * as workspaceFacade from '../src/components/workspace.js';
-import * as workspaceBarrel from '../src/components/workspace/index.js';
+import { mountWorkspace, workspaceHtml } from '../src/components/workspace';
+import * as workspace from '../src/components/workspace';
 import { WORKSPACE_IDS } from '../src/components/workspace/constants.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -66,8 +65,7 @@ describe('workspace facade — export parity', () => {
     // import time, so the value is what is asserted.
     const promised = ['workspaceHtml', 'mountWorkspace', 'WORKSPACE_IDS'];
     for (const name of promised) {
-      expect(workspaceFacade[name], name).toBeDefined();
-      expect(workspaceBarrel[name], name).toBeDefined();
+      expect(workspace[name], name).toBeDefined();
     }
   });
 });
