@@ -12,7 +12,7 @@ import { initImporter, registerImporterListeners } from './io/importer.js';
 import { registerExporterListeners } from './io/exporter.js';
 import { mountHeader } from './components/header';
 import { mountSidebar } from './components/sidebar/panel.js';
-import { mountWorkspace } from './components/workspace.js';
+import { mountWorkspace } from './components/workspace';
 import { mountModals } from './components/modals.js';
 import { initHeader, registerHeaderListeners } from './views/header';
 import {
@@ -20,7 +20,7 @@ import {
   registerSidebarListeners,
   updateStorageUsageUI,
 } from './views/sidebarActions.js';
-import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspaceActions.js';
+import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspace';
 import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';
 
