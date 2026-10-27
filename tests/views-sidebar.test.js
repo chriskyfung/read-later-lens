@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderSidebarFolders, renderTagCloud, renderSidebar } from '../src/views/sidebar.js';
-import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebarActions.js';
+import { renderSidebarFolders, renderTagCloud, renderSidebar } from '../src/views/sidebar';
+import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebar';
 import { sidebarTrashBtnClass } from '../src/components/sidebar/folderRow.js';
 import * as state from '../src/core/state.js';
 
