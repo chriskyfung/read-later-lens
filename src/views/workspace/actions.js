@@ -41,7 +41,7 @@ function writeLanded(saved) {
  *
  * Soft delete: the record keeps living in `state.bookmarks` with a `deleted_at`
  * stamp, so the trash view can restore it. Only the trash's own permanent
- * actions (src/views/trash.js) and folder deletion remove records for real.
+ * actions (src/views/trash/) and folder deletion remove records for real.
  *
  * @param {string} id
  * @returns {Promise<boolean>} True when a live bookmark was trashed; false when

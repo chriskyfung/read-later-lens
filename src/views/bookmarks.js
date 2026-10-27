@@ -118,7 +118,7 @@ export function createBookmarkCard(bookmark) {
  * Render the bookmark cards grid (and its header side-effects).
  *
  * Always leaves the trash panel hidden: the grid is the non-trash view, and
- * src/views/trash.js is a dedicated modal; the grid stays mounted behind it.
+ * src/views/trash/ is a dedicated modal; the grid stays mounted behind it.
  */
 export function renderBookmarkCards() {
   const grid = document.getElementById('bookmarkCardsGrid');

@@ -6,7 +6,7 @@
  *  - folder rows (dynamic)  → src/views/sidebar/folders.js (renderer)
  *  - folder select/delete   → src/views/sidebar/listeners.js (delegated listeners)
  *  - allFolderBtn / trashFolderBtn / languageFilters → src/views/sidebar/listeners.js
- *  - trash rows (dynamic)   → src/views/trash.js
+ *  - trash rows (dynamic)   → src/views/trash/ (renderer)
  *  - storage usage          → src/views/sidebar/storage.js (updateStorageUsageUI)
  *  - tag cloud (dynamic)    → src/views/sidebar/tags.js
  *

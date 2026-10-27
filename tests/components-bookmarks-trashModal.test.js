@@ -4,11 +4,11 @@ import {
   trashItemClass,
   trashItemHtml,
   trashModalHtml,
-} from '../src/components/bookmarks/trash/index.js';
+} from '../src/components/bookmarks/trash';
 
 /**
  * Tests for the pure trash-modal markup helpers. They are the parity guards for
- * the trash view (src/views/trash.js), which only does DOM orchestration.
+ * the trash view (src/views/trash/), which only does DOM orchestration.
  */
 describe('trash modal helpers', () => {
   it('exposes the modal shell anchors and the empty state', () => {

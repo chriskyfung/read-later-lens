@@ -1,7 +1,7 @@
 /**
  * @fileoverview Trash markup barrel — stable public surface for the split.
  *
- * Mirrors src/views/trash.js: importers reach through this facade, not into
+ * Mirrors src/views/trash/index.js: importers reach through this facade, not into
  * the individual modules, so the internal file layout can evolve without
  * touching callers. tests/dom-xss-sinks.test.js imports trashItemHtml
  * directly from ./item.js to pin the sink to its source file.
