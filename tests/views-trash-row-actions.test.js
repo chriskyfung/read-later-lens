@@ -12,7 +12,7 @@
  * clicks the REAL buttons.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { registerTrashListeners, renderTrashView, initTrash } from '../src/views/trash.js';
+import { registerTrashListeners, renderTrashView, initTrash } from '../src/views/trash';
 import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state.js';
 
 // Only the row wiring is under test; the cross-tab gate must stay transparent.

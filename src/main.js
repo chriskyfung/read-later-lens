@@ -22,7 +22,7 @@ import {
 } from './views/sidebar';
 import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspace';
 import { registerModalListeners } from './views/modalListeners.js';
-import { initTrash, registerTrashListeners } from './views/trash.js';
+import { initTrash, registerTrashListeners } from './views/trash';
 
 /**
  * Toast text when a post-action persist write fails for a reason OTHER than a

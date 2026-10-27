@@ -4,7 +4,7 @@
  * Importers reach through this facade (src/main.js, src/views/domains.js,
  * src/views/wordcloud.js, tests), not into the individual modules, so the
  * internal file layout can evolve without touching callers. Mirrors
- * src/views/trash.js.
+ * src/views/trash/index.js.
  *
  * Layout note: unlike the trash split, the header has no open/close
  * lifecycle (no controller — it is always mounted) and no bookmark

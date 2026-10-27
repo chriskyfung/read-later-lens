@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * Render-output observations for the trash view (src/views/trash.js).
+ * Render-output observations for the trash view (src/views/trash/).
  *
  * The stub suite in views-trash.test.js fakes innerHTML + dataset, so it can
  * never observe what renderTrashView actually writes into list.children (the
@@ -10,7 +10,7 @@
  * instead, keeping the stub file focused on handler-level tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderTrashView, initTrash, emptyTrash } from '../src/views/trash.js';
+import { renderTrashView, initTrash, emptyTrash } from '../src/views/trash';
 import { setBookmarks, setSelectedIds } from '../src/core/state.js';
 
 // The cross-tab gate is transparent for these observations.

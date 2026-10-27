@@ -8,7 +8,7 @@ import {
   confirmPurgeBookmark,
   emptyTrash,
   confirmEmptyTrash,
-} from '../src/views/trash.js';
+} from '../src/views/trash';
 import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state.js';
 import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
 

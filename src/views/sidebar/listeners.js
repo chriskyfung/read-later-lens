@@ -11,7 +11,7 @@
  */
 
 import * as state from '../../core/state.js';
-import { openTrashModal } from '../trash.js';
+import { openTrashModal } from '../trash';
 import { getDeps } from './deps.js';
 import { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL } from './constants.js';
 import { selectFolder, confirmDeleteFolder } from './actions.js';
@@ -47,7 +47,7 @@ export function registerSidebarListeners() {
   });
 
   // Trash (回收桶) row — opens the dedicated trash modal instead of switching
-  // the pseudo-folder (the grid behind it stays mounted). See src/views/trash.js.
+  // the pseudo-folder (the grid behind it stays mounted). See src/views/trash.
   document.getElementById(SIDEBAR_IDS.trashFolderBtn)?.addEventListener('click', () => {
     // The modal opens on top of whatever is on screen.
     openTrashModal();
