@@ -9,7 +9,7 @@ import {
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
-import { resetLayers, stackDepth } from '../src/utils/dom.js';
+import { resetLayers, stackDepth } from '../src/utils/dom';
 import { STALE_STATE_REASON } from '../src/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());

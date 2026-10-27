@@ -4,7 +4,7 @@ import { saveSingleFile } from '../src/io/exporter.js';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { saveFileWithFallback } from '../src/utils/download.js';
 import { setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
-import { resetLayers } from '../src/utils/dom.js';
+import { resetLayers } from '../src/utils/dom';
 
 vi.mock('../src/utils/download.js', () => ({
   downloadBlob: vi.fn(),

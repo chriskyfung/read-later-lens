@@ -7,7 +7,7 @@
  * owns DOM element creation, event wiring and the click flow.
  */
 
-import { escapeHtml } from '../../utils/dom.js';
+import { escapeHtml } from '../../utils/dom';
 
 /**
  * Returns the exact empty‑state markup that the monolith uses.

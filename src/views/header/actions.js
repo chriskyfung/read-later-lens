@@ -11,7 +11,7 @@
 
 import * as state from '../../core/state.js';
 import { stateStillFresh, STALE_STATE_MESSAGE } from '../../core/guard.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import { getDeps } from './deps.js';
 import { cancelPendingSearch } from './search.js';
 import { syncClearButton, setClearCacheSpinning } from './view.js';

@@ -1,4 +1,4 @@
-import { pushLayer, popLayer } from '../../utils/dom.js';
+import { pushLayer, popLayer } from '../../utils/dom';
 import { TRASH_IDS } from './constants.js';
 import { renderTrashView } from './view.js';
 

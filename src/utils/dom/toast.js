@@ -6,7 +6,7 @@
  * stacking timers; this is the only module-global side effect in
  * src/utils/dom.
  *
- * Re-exported by the public facade src/utils/dom.js.
+ * Re-exported by the public barrel src/utils/dom/index.js.
  */
 
 const TOAST_HIDE_MS = 2500;

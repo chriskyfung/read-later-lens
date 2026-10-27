@@ -10,7 +10,7 @@ import * as state from '../../core/state.js';
 import { getActiveBookmarks } from '../../core/filters.js';
 import { saveFileWithFallback } from '../../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../../utils/csv.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import { initSql } from '../sqlLoader.js';
 import {
   exportColumnsFor,

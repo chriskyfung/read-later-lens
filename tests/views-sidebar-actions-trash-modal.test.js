@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebar';
 import { setBookmarks, setSelectedIds } from '../src/core/state.js';
-import { MODAL_Z_BASE } from '../src/utils/dom.js';
+import { MODAL_Z_BASE } from '../src/utils/dom';
 
 vi.mock('../src/core/store.js', async (importOriginal) => ({
   ...(await importOriginal()),

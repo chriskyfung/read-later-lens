@@ -4,7 +4,7 @@
  * Extracted from src/io/exporter.js when the exporter split into src/io/export/*.
  */
 
-import { on, showToast } from '../../utils/dom.js';
+import { on, showToast } from '../../utils/dom';
 import { openSaveModal, closeSaveModal } from './modal.js';
 import { saveSingleFile } from './singleFile.js';
 import { exportAllUnifiedJson, exportAllUnifiedCsv } from './unified.js';

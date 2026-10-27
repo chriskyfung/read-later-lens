@@ -1,4 +1,4 @@
-import { on } from '../../utils/dom.js';
+import { on } from '../../utils/dom';
 import { TRASH_IDS } from './constants.js';
 import { confirmEmptyTrash, restoreBookmark, confirmPurgeBookmark } from './actions.js';
 

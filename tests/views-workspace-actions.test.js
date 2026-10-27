@@ -29,7 +29,7 @@ vi.mock('../src/core/store.js', async (importOriginal) => ({
   isStateFresh: async () => gate.fresh,
 }));
 vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
-vi.mock('../src/utils/dom.js', async (importOriginal) => ({
+vi.mock('../src/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
 }));
@@ -99,7 +99,7 @@ vi.mock('../src/views/bookmarks.js', () => ({
 }));
 
 const { activateTab } = await import('../src/views/tabs.js');
-const { showToast } = await import('../src/utils/dom.js');
+const { showToast } = await import('../src/utils/dom');
 const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =

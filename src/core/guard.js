@@ -12,7 +12,7 @@
  */
 
 import { isStateFresh } from './store.js';
-import { showToast } from '../utils/dom.js';
+import { showToast } from '../utils/dom';
 
 /**
  * The short reason shared by every surface that has to say *why* an action was

@@ -7,7 +7,7 @@
  * src/io/exporter.js (openSaveModal + button listeners).
  */
 
-import { escapeHtml } from '../../utils/dom.js';
+import { escapeHtml } from '../../utils/dom';
 
 /** @returns {string} The save/export modal markup. */
 export function saveModalHtml() {

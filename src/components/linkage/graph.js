@@ -10,7 +10,7 @@
  * and interactions.
  */
 
-import { escapeHtml } from '../../utils/dom.js';
+import { escapeHtml } from '../../utils/dom';
 
 /**
  * Returns the empty-state markup shown when the graph has no bookmarks to render.

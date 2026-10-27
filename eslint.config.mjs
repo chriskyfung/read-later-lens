@@ -59,7 +59,7 @@ export default [
       'prefer-const': 'error',
       // DOM-sink tripwire: an interpolated template assigned to innerHTML (or
       // passed to insertAdjacentHTML) is how imported data becomes markup.
-      // Escape it with escapeHtml() (src/utils/dom.js) or build nodes with
+      // Escape it with escapeHtml() (src/utils/dom/) or build nodes with
       // textContent. An already-escaped template suppresses this rule with a
       // one-line lint directive that states the reason — see
       // src/views/similarityModal.js for the working pattern.
@@ -69,7 +69,7 @@ export default [
           selector:
             "AssignmentExpression[left.property.name='innerHTML'] > TemplateLiteral[expressions.0]",
           message:
-            'Escape imported data with escapeHtml() (src/utils/dom.js) before assigning to innerHTML, or build nodes with textContent. Extracted markup builders in src/components/** are the preferred shape.',
+            'Escape imported data with escapeHtml() (src/utils/dom/) before assigning to innerHTML, or build nodes with textContent. Extracted markup builders in src/components/** are the preferred shape.',
         },
         {
           selector:

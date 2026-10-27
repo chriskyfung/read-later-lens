@@ -7,7 +7,7 @@
  * the monolith; the host view still owns DOM creation and dataset wiring.
  */
 
-import { escapeHtml } from '../../utils/dom.js';
+import { escapeHtml } from '../../utils/dom';
 
 /**
  * Class list for the "all files" folder button, driven by selection state.

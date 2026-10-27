@@ -3,7 +3,7 @@ import './styles/main.css';
 import * as state from './core/state.js';
 import { saveState, loadState } from './core/store.js';
 import { STALE_STATE_MESSAGE } from './core/guard.js';
-import { showToast } from './utils/dom.js';
+import { showToast } from './utils/dom';
 import { initDomains } from './views/domains.js';
 import { initWordCloud } from './views/wordcloud.js';
 import { renderAll } from './views/main-view.js';

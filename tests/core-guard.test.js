@@ -16,7 +16,7 @@ vi.mock('../src/core/store.js', async (importOriginal) => ({
   isStateFresh: () => h.probe(),
 }));
 
-vi.mock('../src/utils/dom.js', async (importOriginal) => ({
+vi.mock('../src/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: h.showToast,
 }));

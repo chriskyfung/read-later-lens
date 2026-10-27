@@ -6,7 +6,7 @@ import {
 } from '../src/views/readerModal.js';
 import { openSimilarityModal, closeSimilarityModal } from '../src/views/similarityModal.js';
 import { setBookmarks } from '../src/core/state.js';
-import { resetLayers } from '../src/utils/dom.js';
+import { resetLayers } from '../src/utils/dom';
 
 // ---- DOM stubs ----------------------------------------------------------
 function makeEl() {

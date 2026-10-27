@@ -11,7 +11,7 @@ import { captureCsvDialect } from '../src/utils/csv.js';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state.js';
-import { resetLayers } from '../src/utils/dom.js';
+import { resetLayers } from '../src/utils/dom';
 
 // Stands in for the `papaparse` dependency that `src/io/exporter.js` imports,
 // so these tests can assert on the arguments. The real library is still needed

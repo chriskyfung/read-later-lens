@@ -10,7 +10,7 @@
 
 import * as state from '../../core/state.js';
 import { normalizeProfileId } from '../../providers/profiles.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import { buildBatchSummary, createUniqueSourceName, promptUnavailableMessage } from './messages.js';
 import {
   DUPLICATE_PROMPT_FLAG,

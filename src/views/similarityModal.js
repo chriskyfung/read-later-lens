@@ -5,13 +5,13 @@
  * that clicking a result now *stacks* the reader on top of this drawer: the
  * drawer stays open beneath it, so closing the reader returns to the
  * recommendation list. Opening/closing goes through pushLayer/popLayer
- * (src/utils/dom.js) so nested dialogs stack and unwind in reverse order.
+ * (src/utils/dom/) so nested dialogs stack and unwind in reverse order.
  */
 
 import { bookmarks } from '../core/state.js';
 import { getActiveBookmarks } from '../core/filters.js';
 import { mostSimilarAuto } from '../analytics/similarity.js';
-import { escapeHtml, pushLayer, popLayer } from '../utils/dom.js';
+import { escapeHtml, pushLayer, popLayer } from '../utils/dom';
 import { openReaderModal } from './readerModal.js';
 
 /**

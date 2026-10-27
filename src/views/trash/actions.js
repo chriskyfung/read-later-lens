@@ -1,7 +1,7 @@
 import * as state from '../../core/state.js';
 import { getTrashedBookmarks } from '../../core/filters.js';
 import { stateStillFresh } from '../../core/guard.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import { getDeps } from './deps.js';
 import { findTrashedBookmark, collectTrashIds } from './service.js';
 import { renderTrashView, patchTrashRow, captureDomRowCount } from './view.js';
