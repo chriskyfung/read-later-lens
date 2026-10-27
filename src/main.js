@@ -9,7 +9,7 @@ import { initWordCloud } from './views/wordcloud.js';
 import { renderAll } from './views/main-view.js';
 
 import { initImporter, registerImporterListeners } from './io/import';
-import { registerExporterListeners } from './io/exporter.js';
+import { registerExporterListeners } from './io/export';
 import { mountHeader } from './components/header';
 import { mountSidebar } from './components/sidebar/panel.js';
 import { mountWorkspace } from './components/workspace';

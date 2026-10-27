@@ -9,7 +9,7 @@
  *
  * - readerModal      -> src/views/readerModal.js
  * - similarityModal  -> src/views/similarityModal.js
- * - saveModal        -> src/io/exporter.js
+ * - saveModal        -> src/io/export/
  * - importModal      -> src/io/import/
  * - duplicateModal   -> src/io/import/
  * - trashModal       -> src/components/bookmarks/trash/modal.js

@@ -3,7 +3,7 @@ import { saveModalHtml, saveSourceFileRowHtml } from '../src/components/io/saveM
 
 /**
  * The save/export modal's source rows are assigned to innerHTML by
- * renderSaveModal() (src/io/exporter.js), so file.name — whatever the OS handed
+ * renderSaveModal() (src/io/export/), so file.name — whatever the OS handed
  * the picker, replayed from the IndexedDB cache on later visits — has to arrive
  * as text, not as markup.
  */

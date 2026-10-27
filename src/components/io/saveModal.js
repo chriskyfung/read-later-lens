@@ -4,7 +4,7 @@
  * Extracted from the original monolith (index.html "MODAL 3"), with the
  * save-back line reworded once save-back stopped promising an in-place
  * File System Access write (see src/utils/download.js). Behavior lives in
- * src/io/exporter.js (openSaveModal + button listeners).
+ * src/io/export/ (openSaveModal + button listeners).
  */
 
 import { escapeHtml } from '../../utils/dom';
