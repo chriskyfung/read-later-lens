@@ -25,7 +25,7 @@ import { closeTrashModal } from '../views/trash';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from './workspace';
 import { closeSaveModal } from '../io/exporter.js';
-import { closeImportModal } from '../io/importer.js';
+import { closeImportModal } from '../io/import';
 import {
   closeLayer,
   registerModalLayer,

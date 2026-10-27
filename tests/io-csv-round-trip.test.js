@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { handleFileUploads, initImporter, applyProfileSelection } from '../src/io/importer.js';
+import { handleFileUploads, initImporter, applyProfileSelection } from '../src/io/import';
 import { saveSingleFile } from '../src/io/exporter.js';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { saveFileWithFallback } from '../src/utils/download.js';

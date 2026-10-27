@@ -1,6 +1,9 @@
 /**
- * @fileoverview Import module barrel — the only surface src/io/importer.js
- * (and its tests) should reach through. Mirrors the trash/header facades.
+ * @fileoverview Import module barrel — stable public surface for the split.
+ *
+ * Importers reach through this barrel (src/io/import/index.js), not into the
+ * individual modules, so the internal file layout can evolve without touching
+ * callers. Mirrors the trash/header facades.
  */
 
 export { initImporter } from './deps.js';

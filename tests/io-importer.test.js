@@ -5,7 +5,7 @@ import {
   createUniqueSourceName,
   registerImporterListeners,
   applyProfileSelection,
-} from '../src/io/importer.js';
+} from '../src/io/import';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
@@ -14,7 +14,7 @@ import { STALE_STATE_REASON } from '../src/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
-// Stands in for the `papaparse` dependency that `src/io/importer.js` imports.
+// Stands in for the `papaparse` dependency that `src/io/import/` imports.
 // These tests assert on the call, so the call is mocked rather than executed.
 const Papa = vi.hoisted(() => ({
   parse: vi.fn(),

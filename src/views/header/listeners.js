@@ -7,7 +7,7 @@
  *
  * Register AFTER mountHeader() (src/components/header.js) so the header
  * elements exist. Listeners for #fileInput and #saveBackBtn remain owned by
- * src/io/importer.js and src/io/exporter.js respectively.
+ * src/io/import/ and src/io/exporter.js respectively.
  */
 
 import { HEADER_IDS } from '../../components/header/constants.js';
