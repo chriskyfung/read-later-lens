@@ -19,7 +19,7 @@ import {
   initSidebarActions,
   registerSidebarListeners,
   updateStorageUsageUI,
-} from './views/sidebarActions.js';
+} from './views/sidebar';
 import { initWorkspaceActions, registerWorkspaceListeners } from './views/workspace';
 import { registerModalListeners } from './views/modalListeners.js';
 import { initTrash, registerTrashListeners } from './views/trash.js';

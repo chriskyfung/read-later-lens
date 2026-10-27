@@ -20,7 +20,7 @@
  *
  * Implementation lives in src/views/trash/ (constants, deps, service, view,
  * controller, actions, listeners); this module only re-exports so existing
- * importers (src/main.js, src/views/sidebarActions.js, tests) keep working.
+ * importers (src/main.js, tests) keep working.
  * `persist`/`render` are injected by src/main.js, mirroring the sidebar and
  * workspaceActions.
  */
