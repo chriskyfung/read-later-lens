@@ -14,7 +14,7 @@ import { renderTrashView, initTrash, emptyTrash } from '../src/views/trash';
 import { setBookmarks, setSelectedIds } from '../src/core/state.js';
 
 // The cross-tab gate is transparent for these observations.
-vi.mock('../src/core/store.js', async (importOriginal) => ({
+vi.mock('../src/core/store', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

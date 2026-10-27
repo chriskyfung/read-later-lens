@@ -3,7 +3,7 @@
  *
  * `tests/store.test.js` covers the persistence behaviour end to end; this file
  * covers the seams the split created — the pure projection, the revision
- * holder, and the facade contract that the rest of the app (and the other
+ * holder, and the barrel contract that the rest of the app (and the other
  * test files) rely on.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -160,35 +160,24 @@ describe('store/revision', () => {
   });
 });
 
-describe('store facade', () => {
+describe('store barrel', () => {
   it('exposes the public API unchanged', async () => {
-    const facade = await import('../src/core/store.js');
+    const barrel = await import('../src/core/store');
 
     for (const name of ['saveState', 'loadState', 'isStateFresh', 'getStorageUsage', 'closeDb']) {
-      expect(typeof facade[name]).toBe('function');
+      expect(typeof barrel[name]).toBe('function');
     }
   });
 
-  it('re-exports the very same functions the barrel provides', async () => {
-    const facade = await import('../src/core/store.js');
-    const barrel = await import('../src/core/store/index.js');
-
-    expect(facade.saveState).toBe(barrel.saveState);
-    expect(facade.loadState).toBe(barrel.loadState);
-    expect(facade.isStateFresh).toBe(barrel.isStateFresh);
-    expect(facade.getStorageUsage).toBe(barrel.getStorageUsage);
-    expect(facade.closeDb).toBe(barrel.closeDb);
-  });
-
-  it('keeps isStateFresh spyable through the facade', async () => {
+  it('keeps isStateFresh spyable through the barrel', async () => {
     // `views-header.test.js` and `core/guard.js` both reach the probe through
-    // this module, so a spy installed on the facade must be the value the
-    // implementation resolves to — i.e. the facade re-exports, never wraps.
-    const facade = await import('../src/core/store.js');
-    const probe = vi.spyOn(facade, 'isStateFresh').mockResolvedValue(false);
+    // this module, so a spy installed on the barrel must be the value the
+    // implementation resolves to — i.e. the barrel re-exports, never wraps.
+    const barrel = await import('../src/core/store');
+    const probe = vi.spyOn(barrel, 'isStateFresh').mockResolvedValue(false);
 
     try {
-      expect(await facade.isStateFresh()).toBe(false);
+      expect(await barrel.isStateFresh()).toBe(false);
       expect(probe).toHaveBeenCalled();
     } finally {
       probe.mockRestore();

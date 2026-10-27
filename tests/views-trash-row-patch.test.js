@@ -9,7 +9,7 @@ import { initTrash, restoreBookmark, purgeBookmark } from '../src/views/trash';
 import { setBookmarks, bookmarks, setSelectedIds } from '../src/core/state.js';
 
 // The patch path is under test; the cross-tab gate must stay transparent.
-vi.mock('../src/core/store.js', async (importOriginal) => ({
+vi.mock('../src/core/store', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

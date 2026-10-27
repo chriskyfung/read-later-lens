@@ -1,7 +1,7 @@
 import './styles/main.css';
 
 import * as state from './core/state.js';
-import { saveState, loadState } from './core/store.js';
+import { saveState, loadState } from './core/store';
 import { STALE_STATE_MESSAGE } from './core/guard.js';
 import { showToast } from './utils/dom';
 import { initDomains } from './views/domains.js';
