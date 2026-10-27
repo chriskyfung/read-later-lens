@@ -5,16 +5,16 @@
  * picks an explicit source profile, then 選擇檔案… opens #fileInput. There is
  * deliberately no auto-detect card (see src/providers/profiles.js). The
  * official-CSV footnote explains why that format is not offered. Behavior
- * lives in src/io/importer.js (open/close, radiogroup keyboard, file input);
+ * lives in src/io/import/ (open/close, radiogroup keyboard, file input);
  * the layer registration lives in src/views/modalListeners.js.
  */
 
 import { IMPORT_PROFILES, selectableProfiles } from '../../providers/profiles.js';
 
-/** Radio-card classes for the selected state (toggled at runtime by src/io/importer.js). */
+/** Radio-card classes for the selected state (toggled at runtime by src/io/import/). */
 export const SELECTED_CARD_CLASSES = ['border-indigo-500', 'bg-indigo-600/20'];
 
-/** Radio-card classes for the unselected state (toggled at runtime by src/io/importer.js). */
+/** Radio-card classes for the unselected state (toggled at runtime by src/io/import/). */
 export const UNSELECTED_CARD_CLASSES = [
   'border-slate-700',
   'bg-slate-900/60',

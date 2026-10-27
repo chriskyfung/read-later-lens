@@ -2,7 +2,7 @@
  * @fileoverview Duplicate file warning modal — presentational markup only.
  *
  * Extracted byte-for-byte from the original monolith (index.html "MODAL 4").
- * Behavior lives in src/io/importer.js (waitForDuplicateResolution).
+ * Behavior lives in src/io/import/ (waitForDuplicateResolution).
  */
 
 /** @returns {string} The duplicate-file warning modal markup. */

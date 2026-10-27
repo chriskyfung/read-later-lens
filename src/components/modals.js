@@ -10,8 +10,8 @@
  * - readerModal      -> src/views/readerModal.js
  * - similarityModal  -> src/views/similarityModal.js
  * - saveModal        -> src/io/exporter.js
- * - importModal      -> src/io/importer.js
- * - duplicateModal   -> src/io/importer.js
+ * - importModal      -> src/io/import/
+ * - duplicateModal   -> src/io/import/
  * - trashModal       -> src/components/bookmarks/trash/modal.js
  * - toast            -> src/utils/dom
  *

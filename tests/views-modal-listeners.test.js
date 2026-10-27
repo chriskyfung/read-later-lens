@@ -10,7 +10,7 @@ import { openLinkageForBookmark } from '../src/views/linkage.js';
 import { openReaderModal, getReaderBookmarkId } from '../src/views/readerModal.js';
 import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/exporter.js';
-import { openImportModal } from '../src/io/importer.js';
+import { openImportModal } from '../src/io/import';
 import { resetLayers, stackDepth } from '../src/utils/dom';
 import { setBookmarks, bookmarks } from '../src/core/state.js';
 

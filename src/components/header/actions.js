@@ -5,7 +5,7 @@
  * state, no user data interpolated.
  *
  * Listener ownership (unchanged by the split):
- *  - #importBtn / #fileInput  → src/io/importer.js  (source picker modal)
+ *  - #importBtn / #fileInput  → src/io/import/  (source picker modal)
  *  - #saveBackBtn             → src/io/exporter.js  (save-back / export)
  *  - #clearCacheBtn           → src/views/header.js  (clear-cache flow)
  */
