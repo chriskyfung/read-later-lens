@@ -10,10 +10,10 @@
  * old trash-panel markup: the DOM-XSS registry audit (tests/dom-xss-sinks.js)
  * targets them by the same string shape, so they keep the original
  * fallbacks and class names. Escaping is not re-implemented here: builders
- * use the shared escapeHtml() from src/utils/dom.js — the helper named by
+ * use the shared escapeHtml() from src/utils/dom/ — the helper named by
  * CONTRIBUTING and the eslint DOM-sink tripwire.
  */
-import { escapeHtml } from '../../../utils/dom.js';
+import { escapeHtml } from '../../../utils/dom';
 import { trashItemClass } from './constants.js';
 import { formatDeletedAt } from './formatters.js';
 

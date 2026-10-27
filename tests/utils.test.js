@@ -16,7 +16,7 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
-} from '../src/utils/dom.js';
+} from '../src/utils/dom';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 
 // Submodule references, used only by the facade-surface contract: the facade

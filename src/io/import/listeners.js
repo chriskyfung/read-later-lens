@@ -7,7 +7,7 @@
  */
 
 import { selectableProfiles } from '../../providers/profiles.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import {
   applyProfileSelection,
   cardEl,

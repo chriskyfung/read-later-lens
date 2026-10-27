@@ -32,7 +32,7 @@ import { getFilteredBookmarksTop } from '../core/filters.js';
 import { buildLinkageGraph, buildGraphNodes } from '../analytics/linkage.js';
 import { linkageEmptyStateHtml } from '../components/linkage/graph.js';
 import { activateTab } from './tabs.js';
-import { showToast } from '../utils/dom.js';
+import { showToast } from '../utils/dom';
 import {
   createForceSimulation,
   createLinkSelection,

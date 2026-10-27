@@ -13,7 +13,7 @@
  * cycle.
  *
  * It also registers every stackable overlay (reader, similarity, save and the
- * import source picker) with the layer stack (src/utils/dom.js) and owns the
+ * import source picker) with the layer stack (src/utils/dom/) and owns the
  * single document-level keydown handler: Escape unwinds one layer per press,
  * Tab stays inside the topmost layer. The duplicate-file prompt deliberately
  * stays outside the stack: the import picker closes before parsing starts, so
@@ -33,7 +33,7 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
-} from '../utils/dom.js';
+} from '../utils/dom';
 import { openLinkageForBookmark } from './linkage.js';
 
 /**

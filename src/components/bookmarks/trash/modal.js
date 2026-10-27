@@ -7,7 +7,7 @@
  * so they live apart; mounting concatenates this string in
  * src/components/modals.js.
  *
- * The modal rides the shared layer stack (src/utils/dom.js) with Escape unwind
+ * The modal rides the shared layer stack (src/utils/dom/) with Escape unwind
  * + Tab trap registered in src/views/modalListeners.js; the view that
  * orchestrates it lives in src/views/trash/.
  */

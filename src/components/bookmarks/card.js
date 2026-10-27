@@ -9,7 +9,7 @@
  * (see `createBookmarkCard`).
  */
 
-import { escapeHtml, safeUrl } from '../../utils/dom.js';
+import { escapeHtml, safeUrl } from '../../utils/dom';
 
 /**
  * Card wrapper class list, driven by selection state (monolith parity).

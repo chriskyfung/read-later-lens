@@ -7,7 +7,7 @@
  * plain download. A user-cancelled picker (AbortError) aborts silently.
  */
 
-import { showToast } from './dom.js';
+import { showToast } from './dom';
 
 /**
  * Grace period before releasing a download's object URL.

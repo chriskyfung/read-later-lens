@@ -11,7 +11,7 @@
 
 import * as state from '../../core/state.js';
 import { STALE_STATE_REASON } from '../../core/guard.js';
-import { showToast } from '../../utils/dom.js';
+import { showToast } from '../../utils/dom';
 import { deps } from './deps.js';
 import { buildImportedMessage } from './messages.js';
 import {

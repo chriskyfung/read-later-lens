@@ -2,7 +2,7 @@
  * @fileoverview Notification toast — presentational markup only.
  *
  * Extracted byte-for-byte from the original monolith (index.html toast block).
- * Behavior lives in src/utils/dom.js (showToast).
+ * Behavior lives in src/utils/dom/ (showToast).
  */
 
 /** @returns {string} The toast markup. */

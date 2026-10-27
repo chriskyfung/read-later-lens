@@ -12,7 +12,7 @@ import {
   selectableProfiles,
 } from '../../providers/profiles.js';
 import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../../components/io/importModal.js';
-import { pushLayer, popLayer, topLayerId } from '../../utils/dom.js';
+import { pushLayer, popLayer, topLayerId } from '../../utils/dom';
 
 /** Currently selected source profile id (session-only; defaults to InstapaperScraper). */
 export let selectedProfileId = defaultProfileId();

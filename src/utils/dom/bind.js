@@ -7,7 +7,7 @@
  * sibling bindings, so every call is independent and total. The warning keeps a
  * renamed/relocated element id visible instead of silently disabling a feature.
  *
- * Re-exported by the public facade src/utils/dom.js so importers and the
+ * Re-exported by the public barrel src/utils/dom/index.js so importers and the
  * wiring-contract test keep working unchanged.
  */
 

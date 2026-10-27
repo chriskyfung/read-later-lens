@@ -8,7 +8,7 @@
 
 import * as state from '../../core/state.js';
 import { saveSourceFileRowHtml } from '../../components/io/saveModal.js';
-import { pushLayer, popLayer } from '../../utils/dom.js';
+import { pushLayer, popLayer } from '../../utils/dom';
 
 /**
  * Populate the source-file list of the save/export modal without touching

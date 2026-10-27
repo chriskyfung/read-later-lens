@@ -3,7 +3,7 @@
  * helpers, not DOM helpers: they guard imported data before it becomes markup
  * or an `href`, so they live here (side-effect free, no document dependency).
  *
- * Re-exported by the public facade src/utils/dom.js. See CONTRIBUTING.md:
+ * Re-exported by the public barrel src/utils/dom/index.js. See CONTRIBUTING.md:
  * never sanitize data on import (that corrupts data and breaks round-trips);
  * escape at the sink — inside markup builders — or prefer textContent.
  */

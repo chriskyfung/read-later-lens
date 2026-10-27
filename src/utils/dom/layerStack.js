@@ -8,7 +8,7 @@
  * therefore unwinds nested dialogs in reverse order.
  *
  * This is the *only* stateful module in src/utils/dom. The `layers` array and
- * `layerRegistry` Map live here alone; the public facade (src/utils/dom.js)
+ * `layerRegistry` Map live here alone; the public barrel (src/utils/dom/index.js)
  * re-exports functions, never the array, so a second copy of the stack cannot
  * be created. The stack invariant — stack order => z-index => inert/aria-hidden
  * reachability — is kept inside syncLayers() for exactly that reason.

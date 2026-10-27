@@ -7,12 +7,12 @@
  * behaviour, the id of the open bookmark is tracked (getReaderBookmarkId) so
  * src/views/modalListeners.js can drive the 刪除 / 相似 / 收藏 buttons without
  * an import cycle into workspaceActions.js. Opening/closing goes through
- * pushLayer/popLayer (src/utils/dom.js), so a reader opened from a
+ * pushLayer/popLayer (src/utils/dom/), so a reader opened from a
  * similarity drawer stacks on top of it and unwinds back to it.
  */
 
 import { getBookmarkById } from '../core/state.js';
-import { pushLayer, popLayer, safeUrl } from '../utils/dom.js';
+import { pushLayer, popLayer, safeUrl } from '../utils/dom';
 
 /**
  * Currently-open bookmark id, consumed by the reader action buttons (刪除,
