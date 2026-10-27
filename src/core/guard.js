@@ -11,7 +11,7 @@
  * memory, is refused at persist, and is reported by `persistAfterAction`.
  */
 
-import { isStateFresh } from './store.js';
+import { isStateFresh } from './store';
 import { showToast } from '../utils/dom';
 
 /**

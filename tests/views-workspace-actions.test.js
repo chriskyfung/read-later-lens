@@ -24,7 +24,7 @@ import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmark
 // The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
 // must be transparent everywhere else, so it defaults to "fresh".
 const gate = vi.hoisted(() => ({ fresh: true }));
-vi.mock('../src/core/store.js', async (importOriginal) => ({
+vi.mock('../src/core/store', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => gate.fresh,
 }));

@@ -11,7 +11,7 @@ import { initSidebarActions, registerSidebarListeners } from '../src/views/sideb
 import { setBookmarks, setSelectedIds } from '../src/core/state.js';
 import { MODAL_Z_BASE } from '../src/utils/dom';
 
-vi.mock('../src/core/store.js', async (importOriginal) => ({
+vi.mock('../src/core/store', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

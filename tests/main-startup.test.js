@@ -2,7 +2,7 @@
 describe('entry-point feature wiring', () => {
   it('persists and renders uploads through the registered input listener', async () => {
     await start();
-    const { saveState } = await import('../src/core/store.js');
+    const { saveState } = await import('../src/core/store');
     els.fileInput.dispatch('change', {
       target: {
         files: [
@@ -20,7 +20,7 @@ describe('entry-point feature wiring', () => {
   });
 
   it('rolls the import back when the cache write fails (e2e)', async () => {
-    const store = await import('../src/core/store.js');
+    const store = await import('../src/core/store');
     const { saveState } = store;
     const { showToast } = await import('../src/utils/dom');
     // A write can fail outright (rejected promise): the import must be undone
@@ -55,7 +55,7 @@ describe('entry-point feature wiring', () => {
   });
 
   it('keeps the write-failure toast when a delete cannot be cached (e2e)', async () => {
-    const store = await import('../src/core/store.js');
+    const store = await import('../src/core/store');
     const { showToast } = await import('../src/utils/dom');
     // The cache write fails, so the session is no longer cached. The action
     // must not replace that warning with its own "moved to trash" success
@@ -116,7 +116,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state.js');
     const { renderAll } = await import('../src/views/main-view.js');
-    const { saveState } = await import('../src/core/store.js');
+    const { saveState } = await import('../src/core/store');
     const id = `bookmark'"id`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
     state.selectedIds.add(id);
@@ -143,7 +143,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state.js');
     const { renderAll } = await import('../src/views/main-view.js');
-    const { saveState } = await import('../src/core/store.js');
+    const { saveState } = await import('../src/core/store');
     const id = `keep"bookmark`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
     renderAll();
@@ -169,7 +169,7 @@ describe('entry-point feature wiring', () => {
   it('trashes the open bookmark from the reader modal (e2e)', async () => {
     await start();
     const state = await import('../src/core/state.js');
-    const { saveState } = await import('../src/core/store.js');
+    const { saveState } = await import('../src/core/store');
     const { openReaderModal } = await import('../src/views/readerModal.js');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
@@ -208,7 +208,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state.js');
     const { renderAll } = await import('../src/views/main-view.js');
-    const { saveState } = await import('../src/core/store.js');
+    const { saveState } = await import('../src/core/store');
     const id = `folder'"id`;
     state.setSourceFiles(new Map([[id, { id, name: 'test.json', type: 'json' }]]));
     state.setBookmarks([{ ...bookmark('1', 'Apple', 'https://apple.com'), source_file_id: id }]);
@@ -340,7 +340,7 @@ vi.mock('../src/utils/download.js', () => ({
   saveFileWithFallback: vi.fn(async () => {}),
 }));
 
-vi.mock('../src/core/store.js', () => ({
+vi.mock('../src/core/store', () => ({
   loadState: vi.fn(async () => false),
   saveState: vi.fn(async () => {}),
   getStorageUsage: vi.fn(async () => ({ usageKB: 2, limitMB: 50 })),
@@ -460,7 +460,7 @@ beforeEach(async () => {
         )
         .map(([, el]) => el),
   });
-  const store = await import('../src/core/store.js');
+  const store = await import('../src/core/store');
   store.loadState.mockReset().mockResolvedValue(false);
   store.getStorageUsage.mockReset().mockResolvedValue({ usageKB: 2, limitMB: 50 });
 });
@@ -528,7 +528,7 @@ describe('module-owned startup', () => {
 
   it('restores bookmarks before the first render and reports restoration', async () => {
     const state = await import('../src/core/state.js');
-    const { loadState } = await import('../src/core/store.js');
+    const { loadState } = await import('../src/core/store');
     const { showToast } = await import('../src/utils/dom');
     loadState.mockImplementation(async () => {
       state.setBookmarks([bookmark('1', 'Apple', 'https://apple.com')]);
@@ -540,7 +540,7 @@ describe('module-owned startup', () => {
   });
 
   it.each(['loadState', 'getStorageUsage'])('still renders when %s fails', async (method) => {
-    const store = await import('../src/core/store.js');
+    const store = await import('../src/core/store');
     store[method].mockRejectedValue(new Error('unavailable'));
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     await start();
