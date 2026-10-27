@@ -19,7 +19,7 @@ import { domainBarHtml } from '../src/components/domains/bar.js';
 import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';
 import { linkageTooltipTagsHtml } from '../src/components/linkage/graph.js';
 import { saveSourceFileRowHtml } from '../src/components/io/saveModal.js';
-import { renderSaveModal } from '../src/io/exporter.js';
+import { renderSaveModal } from '../src/io/export';
 import { setSourceFiles } from '../src/core/state.js';
 
 const HOSTILE = '<img src=x onerror=alert(1)>';

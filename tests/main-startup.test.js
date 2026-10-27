@@ -510,7 +510,7 @@ describe('module-owned startup', () => {
 
   it('mounts every element the export wiring contract expects', async () => {
     await start();
-    const { EXPORT_LISTENERS } = await import('../src/io/exporter.js');
+    const { EXPORT_LISTENERS } = await import('../src/io/export');
     const mountedIds = new Set(
       mounts.flatMap((html) => [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1])),
     );
@@ -518,13 +518,11 @@ describe('module-owned startup', () => {
     // Guard against a vacuous pass if the mount capture ever changes shape.
     expect(mountedIds.size).toBeGreaterThan(0);
 
-    // src/io/exporter.js is resilient to missing markup (dom.on warns and
+    // src/io/export/ is resilient to missing markup (dom.on warns and
     // skips), so this test is what keeps a renamed/relocated modal id loud:
     // it fails in CI instead of silently disabling an export button in prod.
     for (const [id] of EXPORT_LISTENERS) {
-      expect(mountedIds.has(id), `#${id} is wired by src/io/exporter.js but never mounted`).toBe(
-        true,
-      );
+      expect(mountedIds.has(id), `#${id} is wired by src/io/export/ but never mounted`).toBe(true);
     }
   });
 

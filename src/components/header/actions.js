@@ -6,7 +6,7 @@
  *
  * Listener ownership (unchanged by the split):
  *  - #importBtn / #fileInput  → src/io/import/  (source picker modal)
- *  - #saveBackBtn             → src/io/exporter.js  (save-back / export)
+ *  - #saveBackBtn             → src/io/export/  (save-back / export)
  *  - #clearCacheBtn           → src/views/header.js  (clear-cache flow)
  */
 

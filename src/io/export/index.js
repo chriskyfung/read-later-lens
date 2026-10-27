@@ -1,8 +1,9 @@
 /**
- * @fileoverview Export barrel — the only import target for src/io/export/*.
+ * @fileoverview Export barrel — stable public surface for the split.
  *
- * Mirrors src/io/import/index.js: callers import the same names from
- * src/io/exporter.js (the thin facade at the original path).
+ * Importers reach through this barrel (src/io/export/index.js), not into the
+ * individual modules, so the internal file layout can evolve without touching
+ * callers. Mirrors src/io/import/index.js.
  */
 
 export { renderSaveModal, openSaveModal, closeSaveModal } from './modal.js';

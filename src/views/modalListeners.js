@@ -24,7 +24,7 @@ import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from 
 import { closeTrashModal } from '../views/trash';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from './workspace';
-import { closeSaveModal } from '../io/exporter.js';
+import { closeSaveModal } from '../io/export';
 import { closeImportModal } from '../io/import';
 import {
   closeLayer,
