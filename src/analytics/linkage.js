@@ -11,14 +11,15 @@
  * 'unknown' domain fallback, 'www.' leading prefix stripped.
  *
  * One opt-in deviation, default-off: `weighting: 'tfidf'` scales each shared
- * term by its inverse document frequency (see `buildIdf` /
- * `cosineScoreWeighted` in similarity.js) before the same threshold. Generic
+ * term by its inverse document frequency (see `buildIdf` / `cosineScore` in
+ * scoring.js) before the same threshold. Generic
  * words that appear in many documents ('ai', 'news') then contribute less,
  * which collapses hairball clusters while distinctive pairs survive. The
  * default 'tf' is byte-identical to the monolith.
  */
 
-import { bookmarkTokenFreq, buildIdf, cosineScore, cosineScoreWeighted } from './similarity.js';
+import { bookmarkTokenFreq } from './similarity.js';
+import { buildIdf, cosineScore } from './scoring.js';
 import { extractDomain } from '../utils/url.js';
 
 /** Monolith cap for the graph (top 50 filtered bookmarks). */
@@ -87,11 +88,10 @@ function buildNodes(selected) {
  * @param {Map<string, number>|null} idf null → plain TF scoring (monolith)
  */
 function buildLinks(nodes, freqs, threshold, idf = null) {
-  const score = idf ? cosineScoreWeighted : cosineScore;
   const links = [];
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      const sim = idf ? score(freqs[i], freqs[j], idf) : score(freqs[i], freqs[j]);
+      const sim = cosineScore(freqs[i], freqs[j], idf);
       if (sim > threshold) {
         links.push({ source: nodes[i].id, target: nodes[j].id, value: sim });
         nodes[i].degree++;
