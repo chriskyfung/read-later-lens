@@ -9,7 +9,7 @@ import {
   emptyTrash,
   confirmEmptyTrash,
 } from '../src/views/trash';
-import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state.js';
+import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state';
 import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
 
 const OLDER = '2026-01-01T00:00:00.000Z';

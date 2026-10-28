@@ -6,7 +6,7 @@
  * selection → harden → write → unmapped-column report.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getActiveBookmarks } from '../../core/filters.js';
 import { saveFileWithFallback } from '../../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../../utils/csv.js';

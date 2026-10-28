@@ -12,7 +12,7 @@
  * reset never feels laggy.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getDeps } from './deps.js';
 import { syncClearButton } from './view.js';
 import { HEADER_IDS } from '../../components/header/constants.js';

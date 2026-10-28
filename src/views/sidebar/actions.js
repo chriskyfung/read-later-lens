@@ -7,7 +7,7 @@
  * src/views/sidebar/storage.js.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { stateStillFresh } from '../../core/guard.js';
 import { showToast } from '../../utils/dom';
 import { getDeps } from './deps.js';

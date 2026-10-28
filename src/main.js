@@ -1,6 +1,6 @@
 import './styles/main.css';
 
-import * as state from './core/state.js';
+import * as state from './core/state';
 import { saveState, loadState } from './core/store';
 import { STALE_STATE_MESSAGE } from './core/guard.js';
 import { showToast } from './utils/dom';

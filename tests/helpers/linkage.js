@@ -10,7 +10,7 @@
  * side effects beyond defining these functions.
  */
 
-import { setBookmarks } from '../../src/core/state.js';
+import { setBookmarks } from '../../src/core/state';
 import { renderConceptLinkageGraph } from '../../src/views/linkage.js';
 
 /**

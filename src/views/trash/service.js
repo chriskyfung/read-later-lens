@@ -1,8 +1,8 @@
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getTrashedBookmarks } from '../../core/filters.js';
 
 /**
- * Find a trashed bookmark by id — O(1) via the id index in core/state.js,
+ * Find a trashed bookmark by id — O(1) via the id index in core/state,
  * which every mutator keeps in sync (pinned by
  * tests/views-trash-index-parity.test.js). Semantics match the original linear
  * `find`: only a truthy `deleted_at` counts as trashed, so a record with a

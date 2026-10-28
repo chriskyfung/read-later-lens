@@ -21,7 +21,7 @@ import {
   selectedIds,
   sourceFiles,
   bookmarks,
-} from '../src/core/state.js';
+} from '../src/core/state';
 
 function makeEl() {
   return {

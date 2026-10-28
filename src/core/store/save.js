@@ -2,7 +2,7 @@
  * @fileoverview Persist the current working set (bookmarks + source metadata).
  */
 
-import { bookmarks, sourceFiles } from '../state.js';
+import { bookmarks, sourceFiles } from '../state';
 import { REV_KEY, STORE_NAME } from './constants.js';
 import { getDb } from './connection.js';
 import { getKnownRev, setKnownRev } from './revision.js';

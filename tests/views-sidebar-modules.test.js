@@ -21,7 +21,7 @@ import {
   getActiveSidebarBookmarks,
 } from '../src/views/sidebar/service.js';
 import { renderSidebarFolders, applyTrashFallback } from '../src/views/sidebar/folders.js';
-import * as state from '../src/core/state.js';
+import * as state from '../src/core/state';
 
 function makeEl() {
   const el = {

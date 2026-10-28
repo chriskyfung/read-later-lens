@@ -7,7 +7,7 @@
  * `data-filter-tag` dataset wiring.
  */
 
-import { activeTag } from '../../core/state.js';
+import { activeTag } from '../../core/state';
 import {
   sidebarTagCloudEmptyStateHtml,
   sidebarTagPillClass,

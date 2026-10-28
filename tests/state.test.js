@@ -19,7 +19,7 @@ import {
   isFavorite,
   setFavorite,
   toggleFavorite,
-} from '../src/core/state.js';
+} from '../src/core/state';
 
 const mk = (id, sourceId = 'f1') => ({ id: String(id), source_file_id: sourceId });
 

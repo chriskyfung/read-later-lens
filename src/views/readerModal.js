@@ -11,7 +11,7 @@
  * similarity drawer stacks on top of it and unwinds back to it.
  */
 
-import { getBookmarkById } from '../core/state.js';
+import { getBookmarkById } from '../core/state';
 import { pushLayer, popLayer, safeUrl } from '../utils/dom';
 
 /**

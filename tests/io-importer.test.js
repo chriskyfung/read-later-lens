@@ -8,7 +8,7 @@ import {
 } from '../src/io/import';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
-import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state.js';
+import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state';
 import { resetLayers, stackDepth } from '../src/utils/dom';
 import { STALE_STATE_REASON } from '../src/core/guard.js';
 
@@ -237,7 +237,7 @@ describe('handleFileUploads — format dispatch', () => {
   });
 
   it('routes .db files through importSqlite with a Uint8Array and the SQL engine', async () => {
-    const { SQL: engine } = await import('../src/core/state.js');
+    const { SQL: engine } = await import('../src/core/state');
     await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
 
     expect(initSql).toHaveBeenCalledTimes(1);
@@ -353,7 +353,7 @@ describe('handleFileUploads — format dispatch', () => {
     await pending;
 
     expect(persist).toHaveBeenCalled();
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     const dup = bookmarks.filter((b) => b.id === 'dup');
     expect(dup).toHaveLength(1);
     expect(dup[0].title).toBe('new');
@@ -376,7 +376,7 @@ describe('handleFileUploads — format dispatch', () => {
     expect(el('toastMsg').innerText).toBe(
       '已成功載入檔案: a.csv（1 筆已存在於回收桶的書籤已被新匯入資料取代）',
     );
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     expect(bookmarks).toHaveLength(1);
     expect(bookmarks[0].title).toBe('fresh');
     expect(bookmarks[0].deleted_at).toBeUndefined();
@@ -391,7 +391,7 @@ describe('handleFileUploads — format dispatch', () => {
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
 
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     expect(bookmarks).toHaveLength(2);
   });
 });
@@ -525,7 +525,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     expect(bookmarks.map((b) => b.title)).toEqual(['x']);
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
@@ -542,7 +542,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     // Neither half survives: no imported records and no ghost folder.
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
@@ -559,7 +559,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     // Same rollback as any failed write: the overtaken tab keeps what it had.
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
@@ -581,7 +581,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     // Without the rollback the merge stayed in memory while the catch deleted
     // the source record — a bookmark pointing at a source_file_id that no
     // longer exists, invisible in the folder list.
@@ -596,7 +596,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     expect(bookmarks.map((b) => b.title)).toEqual(['x']);
     expect(sourceFiles.size).toBe(1);
   });

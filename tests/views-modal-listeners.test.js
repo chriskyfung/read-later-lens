@@ -12,7 +12,7 @@ import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/export';
 import { openImportModal } from '../src/io/import';
 import { resetLayers, stackDepth } from '../src/utils/dom';
-import { setBookmarks, bookmarks } from '../src/core/state.js';
+import { setBookmarks, bookmarks } from '../src/core/state';
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};

@@ -8,7 +8,7 @@
  * (src/utils/dom/) so nested dialogs stack and unwind in reverse order.
  */
 
-import { bookmarks } from '../core/state.js';
+import { bookmarks } from '../core/state';
 import { getActiveBookmarks } from '../core/filters.js';
 import { mostSimilarAuto } from '../analytics/similarity.js';
 import { escapeHtml, pushLayer, popLayer } from '../utils/dom';

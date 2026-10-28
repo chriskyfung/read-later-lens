@@ -6,7 +6,7 @@
  * Semantics match the original monolith exactly.
  */
 
-import { bookmarks, activeFolder, activeLang, activeTag, searchQuery, sortBy } from './state.js';
+import { bookmarks, activeFolder, activeLang, activeTag, searchQuery, sortBy } from './state';
 import { parseSearchQuery } from './searchParser.js';
 
 /**

@@ -46,7 +46,7 @@ const SCRAPER_EXPORT_COLUMNS = ['id', 'title', 'url', 'article_preview', 'conten
 /**
  * Choose the column list a source's own export must carry.
  *
- * @param {import('../../core/state.js').SourceFileRecord} file
+ * @param {import('../../core/state').SourceFileRecord} file
  * @returns {string[]|null} Columns in the source's own order, or `null` to keep
  *   the full internal (unified) schema.
  */

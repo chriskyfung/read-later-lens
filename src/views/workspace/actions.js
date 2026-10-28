@@ -8,7 +8,7 @@
  * before that write settles let the view show a state the cache did not
  * have yet.
  */
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { stateStillFresh } from '../../core/guard.js';
 import { updateBatchActionBar } from '../bookmarks.js';
 import { showToast } from '../../utils/dom';

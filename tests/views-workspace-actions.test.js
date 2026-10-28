@@ -16,7 +16,7 @@ import {
   selectedIds,
   setSourceFiles,
   trashBookmarks,
-} from '../src/core/state.js';
+} from '../src/core/state';
 import { getFilteredBookmarks } from '../src/core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks.js';
 
@@ -40,7 +40,7 @@ vi.mock('../src/views/linkage.js', () => ({
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
 }));
-vi.mock('../src/core/state.js', () => {
+vi.mock('../src/core/state', () => {
   const state = {
     bookmarks: [],
     selectedIds: new Set(),
@@ -216,7 +216,7 @@ describe('deleteBookmark', () => {
     expect(mockRender).toHaveBeenCalled();
     expect(updateBatchActionBar).toHaveBeenCalled();
     // The record itself is kept alive for the trash view.
-    const { bookmarks } = await import('../src/core/state.js');
+    const { bookmarks } = await import('../src/core/state');
     expect(bookmarks).toHaveLength(2);
     expect(bookmarks.find((b) => b.id === '1').deleted_at).toBeTruthy();
     expect(bookmarks.find((b) => b.id === '2').deleted_at).toBeUndefined();
@@ -411,7 +411,7 @@ describe('toggleFavoriteBookmark', () => {
   it('looks the bookmark up through the id index, not an array scan', async () => {
     initWorkspaceActions({ persist: vi.fn(async () => {}), render: vi.fn() });
     setBookmarks([{ id: '1', title: 'T1' }]);
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
 
     expect(await toggleFavoriteBookmark('1')).toBe(true);
     expect(state.getBookmarkById).toHaveBeenCalledWith('1');

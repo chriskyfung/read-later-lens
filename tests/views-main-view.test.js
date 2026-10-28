@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setActiveFolder, setActiveTab } from '../src/core/state.js';
+import { setActiveFolder, setActiveTab } from '../src/core/state';
 import { renderAll } from '../src/views/main-view.js';
 import { renderSidebar } from '../src/views/sidebar';
 import { renderBookmarkCards } from '../src/views/bookmarks.js';
