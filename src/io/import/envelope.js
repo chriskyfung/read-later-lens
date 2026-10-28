@@ -7,10 +7,10 @@
  * (reads `state.sourceFiles` only to detect an already-loaded source).
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { normalizeProfileId } from '../../providers/profiles.js';
 
-/** Source types a source record may declare; mirrors the union documented in `state.js`. */
+/** Source types a source record may declare; mirrors the union documented in `state`. */
 export const SOURCE_FILE_TYPES = new Set(['csv', 'json', 'sqlite', 'db']);
 
 /**
@@ -126,11 +126,11 @@ export function typeFromSourceName(name) {
  *
  * @param {string} profile
  * @param {object[]} rows
- * @param {import('../core/state.js').SourceFileRecord} baseRecord
+ * @param {import('../core/state').SourceFileRecord} baseRecord
  * @param {object[]|null} manifest `sources` entries from a unified envelope.
  * @param {ReturnType<import('../providers/index.js').resolveImportAdapter>} adapter
  * @returns {{
- *   fileRecords: import('../core/state.js').SourceFileRecord[],
+ *   fileRecords: import('../core/state').SourceFileRecord[],
  *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
  *   stats: { droppedNoUrl: number },
  * }|null} Rebuilt sources and records, plus the URL-less-row count summed

@@ -10,7 +10,7 @@
  * Register listeners AFTER mountSidebar() (src/components/sidebar/panel.js).
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { openTrashModal } from '../trash';
 import { getDeps } from './deps.js';
 import { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL } from './constants.js';

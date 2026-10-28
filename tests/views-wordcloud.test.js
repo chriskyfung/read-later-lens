@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { renderWordCloud, initWordCloud } from '../src/views/wordcloud.js';
-import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state.js';
+import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state';
 import { loadKeywordsEngine } from '../src/analytics/keywords.js';
 
 function makeEl() {
@@ -150,7 +150,7 @@ describe('renderWordCloud — lazy engine load', () => {
     vi.resetModules();
     const keywords = await import('../src/analytics/keywords.js');
     const view = await import('../src/views/wordcloud.js');
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
 
     state.setSearchQuery('');
     state.setBookmarks([
@@ -188,7 +188,7 @@ describe('renderWordCloud — lazy engine load', () => {
     });
     const keywords = await import('../src/analytics/keywords.js');
     const view = await import('../src/views/wordcloud.js');
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
 
     state.setSearchQuery('');
     state.setBookmarks([

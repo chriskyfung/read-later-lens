@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderSidebarFolders, renderTagCloud, renderSidebar } from '../src/views/sidebar';
 import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebar';
 import { sidebarTrashBtnClass } from '../src/components/sidebar/folderRow.js';
-import * as state from '../src/core/state.js';
+import * as state from '../src/core/state';
 
 // Model only the DOM operations used by the sidebar, including replacement
 // and removal so repeated-render tests detect stale or duplicate children.

@@ -15,7 +15,7 @@
 
 import { getFilteredBookmarks } from '../core/filters.js';
 import { topDomains } from '../analytics/domains.js';
-import { setSearchQuery } from '../core/state.js';
+import { setSearchQuery } from '../core/state';
 import { setSearchInputValue } from './header';
 import { activateTab } from './tabs.js';
 import {

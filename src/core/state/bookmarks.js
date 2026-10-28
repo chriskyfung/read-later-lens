@@ -2,7 +2,7 @@
  * @fileoverview Bookmark library state + mutators.
  *
  * Owns the `bookmarks` binding, the id -> position index, and every transition
- * that touches the library. Re-exported through `src/core/state.js`, so the
+ * that touches the library. Re-exported through `src/core/state`, so the
  * public entry point and all live bindings stay unchanged.
  */
 /** @typedef {import('../../model/BookmarkRecord.js').BookmarkRecord} BookmarkRecord */

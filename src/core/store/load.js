@@ -2,7 +2,7 @@
  * @fileoverview Restore state from IndexedDB into the module-level bindings.
  */
 
-import { setBookmarks, setSourceFiles } from '../state.js';
+import { setBookmarks, setSourceFiles } from '../state';
 import { REV_KEY, STORE_NAME } from './constants.js';
 import { getDb } from './connection.js';
 import { migrateLegacyDb } from './migration.js';

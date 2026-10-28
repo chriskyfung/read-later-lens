@@ -11,7 +11,7 @@ import {
   setSourceFiles,
   searchQuery,
   sourceFiles,
-} from '../src/core/state.js';
+} from '../src/core/state';
 import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
 
 // ---- DOM stubs -----------------------------------------------------------
@@ -335,7 +335,7 @@ describe('registerHeaderListeners — clear cache', () => {
       // Nothing was wiped and nothing was persisted: the in-memory session
       // still matches what the next reload will show.
       expect(sourceFiles.size).toBe(1);
-      const { bookmarks } = await import('../src/core/state.js');
+      const { bookmarks } = await import('../src/core/state');
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
     } finally {

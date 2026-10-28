@@ -11,7 +11,7 @@
  * converted to strings to match browser innerText coercion.
  */
 
-import { activeFolder, setActiveFolder, sourceFiles } from '../../core/state.js';
+import { activeFolder, setActiveFolder, sourceFiles } from '../../core/state';
 import {
   sidebarAllFolderBtnClass,
   sidebarFolderItemClass,

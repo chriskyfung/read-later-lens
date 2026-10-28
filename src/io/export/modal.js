@@ -6,7 +6,7 @@
  * in src/views/modalListeners.js.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { saveSourceFileRowHtml } from '../../components/io/saveModal.js';
 import { pushLayer, popLayer } from '../../utils/dom';
 

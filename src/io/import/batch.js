@@ -8,7 +8,7 @@
  * last-write-wins.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { normalizeProfileId } from '../../providers/profiles.js';
 import { showToast } from '../../utils/dom';
 import { buildBatchSummary, createUniqueSourceName, promptUnavailableMessage } from './messages.js';

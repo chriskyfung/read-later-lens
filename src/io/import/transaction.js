@@ -9,7 +9,7 @@
  * together.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { STALE_STATE_REASON } from '../../core/guard.js';
 import { showToast } from '../../utils/dom';
 import { deps } from './deps.js';

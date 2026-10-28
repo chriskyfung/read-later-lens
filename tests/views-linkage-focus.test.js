@@ -22,7 +22,7 @@ import {
   renderConceptLinkageGraph,
   FOCUS_ZOOM,
 } from '../src/views/linkage.js';
-import { setBookmarks } from '../src/core/state.js';
+import { setBookmarks } from '../src/core/state';
 import { graphState } from '../src/views/linkage/state.js';
 import {
   BM,

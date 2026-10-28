@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderTrashView, initTrash, emptyTrash } from '../src/views/trash';
-import { setBookmarks, setSelectedIds } from '../src/core/state.js';
+import { setBookmarks, setSelectedIds } from '../src/core/state';
 
 // The cross-tab gate is transparent for these observations.
 vi.mock('../src/core/store', async (importOriginal) => ({

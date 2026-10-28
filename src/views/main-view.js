@@ -6,7 +6,7 @@
  * invoking this full render.
  */
 
-import { activeTab } from '../core/state.js';
+import { activeTab } from '../core/state';
 import { renderSidebar } from './sidebar';
 import { renderBookmarkCards } from './bookmarks.js';
 

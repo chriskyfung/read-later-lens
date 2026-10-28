@@ -5,7 +5,7 @@
  * Extracted from the monolith's DOMContentLoaded block in index.html.
  * Must be registered AFTER mountWorkspace() (src/components/workspace.js).
  */
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getFilteredBookmarks } from '../../core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '../bookmarks.js';
 import { WORKSPACE_IDS } from '../../components/workspace/constants.js';

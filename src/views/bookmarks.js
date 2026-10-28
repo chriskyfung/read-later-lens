@@ -9,7 +9,7 @@
  * remain in src/views/workspaceActions.js for now.
  */
 
-import { selectedIds, activeFolder, activeLang, sourceFiles } from '../core/state.js';
+import { selectedIds, activeFolder, activeLang, sourceFiles } from '../core/state';
 import { getFilteredBookmarks } from '../core/filters.js';
 import { bookmarkCardClass, bookmarkCardHtml } from '../components/bookmarks/card.js';
 import { openReaderModal } from './readerModal.js';

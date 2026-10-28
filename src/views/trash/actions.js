@@ -1,4 +1,4 @@
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getTrashedBookmarks } from '../../core/filters.js';
 import { stateStillFresh } from '../../core/guard.js';
 import { showToast } from '../../utils/dom';

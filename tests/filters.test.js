@@ -6,7 +6,7 @@ import {
   setActiveTag,
   setSearchQuery,
   setSortBy,
-} from '../src/core/state.js';
+} from '../src/core/state';
 import {
   applyFilters,
   getFilteredBookmarks,

@@ -11,7 +11,7 @@
  * observable in the UI and predates the split — it is preserved on purpose.
  */
 
-import { bookmarks } from '../../core/state.js';
+import { bookmarks } from '../../core/state';
 
 /**
  * The active (non-trashed) bookmarks — the population the folder badges and

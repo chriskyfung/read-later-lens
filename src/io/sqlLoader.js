@@ -4,7 +4,7 @@
  */
 
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import { setSQL, SQL } from '../core/state.js';
+import { setSQL, SQL } from '../core/state';
 
 /** @type {Promise<object>|null} Shared while initialization is in flight. */
 let sqlInitPromise = null;

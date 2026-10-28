@@ -4,7 +4,7 @@
  * Extracted from src/io/exporter.js when the exporter split into src/io/export/*.
  */
 
-import * as state from '../../core/state.js';
+import * as state from '../../core/state';
 import { getActiveBookmarks } from '../../core/filters.js';
 import { downloadBlob } from '../../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../../utils/csv.js';

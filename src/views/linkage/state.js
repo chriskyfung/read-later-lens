@@ -2,7 +2,7 @@
  * @fileoverview Module-private state for the concept-linkage graph view.
  *
  * The zoomable SVG, the running simulation and the current focus are all
- * view-scoped, so they cannot live in src/core/state.js — but they are read
+ * view-scoped, so they cannot live in src/core/state — but they are read
  * from every module in this directory, so they live here instead of in
  * ../views/linkage.js. One exported object, mutated in place: the object is
  * private to the feature by convention, never imported outside the linkage

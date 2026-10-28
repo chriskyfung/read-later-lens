@@ -2,7 +2,7 @@
  * @fileoverview Source-file registry state + mutators.
  *
  * Owns the `sourceFiles` binding and the source-file deletion transition.
- * Re-exported through `src/core/state.js`.
+ * Re-exported through `src/core/state`.
  */
 
 /**

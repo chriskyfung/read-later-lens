@@ -7,7 +7,7 @@
  * matching the original execution order.
  */
 
-import { setActiveTab } from '../core/state.js';
+import { setActiveTab } from '../core/state';
 
 const ACTIVE_TAB_CLASS =
   'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm';

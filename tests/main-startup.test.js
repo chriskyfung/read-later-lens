@@ -47,7 +47,7 @@ describe('entry-point feature wiring', () => {
     // session can never disagree with what the next reload will show. This must
     // hold for both module state and the rendered view — persistAndRender()
     // renders the merged state before it discovers the write failure.
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     expect(state.bookmarks).toHaveLength(0);
     expect(state.sourceFiles.size).toBe(0);
     expect(els.filteredCount.innerText).toBe(0);
@@ -64,7 +64,7 @@ describe('entry-point feature wiring', () => {
     store.saveState.mockResolvedValueOnce({ persisted: false, conflict: false });
 
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     state.setBookmarks([bookmark('d1', 'Apple', 'https://apple.com')]);
     const { renderAll } = await import('../src/views/main-view.js');
     renderAll();
@@ -107,14 +107,14 @@ describe('entry-point feature wiring', () => {
     expect(stackDepth()).toBe(0);
     expect(els.importModal.classList.contains('hidden')).toBe(true);
 
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const [source] = [...state.sourceFiles.values()];
     expect(source.profile).toBe('rll-unified');
   });
 
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { renderAll } = await import('../src/views/main-view.js');
     const { saveState } = await import('../src/core/store');
     const id = `bookmark'"id`;
@@ -141,7 +141,7 @@ describe('entry-point feature wiring', () => {
 
   it('keeps a trashed bookmark recoverable and ignores a repeated delete click', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { renderAll } = await import('../src/views/main-view.js');
     const { saveState } = await import('../src/core/store');
     const id = `keep"bookmark`;
@@ -168,7 +168,7 @@ describe('entry-point feature wiring', () => {
 
   it('trashes the open bookmark from the reader modal (e2e)', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { saveState } = await import('../src/core/store');
     const { openReaderModal } = await import('../src/views/readerModal.js');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
@@ -185,7 +185,7 @@ describe('entry-point feature wiring', () => {
 
   it('closes the reader modal with Escape (e2e)', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { openReaderModal } = await import('../src/views/readerModal.js');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
@@ -206,7 +206,7 @@ describe('entry-point feature wiring', () => {
 
   it('keeps folder deletion separate from selection and handles nested clicks', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { renderAll } = await import('../src/views/main-view.js');
     const { saveState } = await import('../src/core/store');
     const id = `folder'"id`;
@@ -243,7 +243,7 @@ describe('entry-point feature wiring', () => {
 
   it('exports a source through a nested click after reopening the save modal', async () => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { saveFileWithFallback } = await import('../src/utils/download.js');
     const id = `source'"id`;
     state.setSourceFiles(new Map([[id, { id, name: 'test.json', type: 'json' }]]));
@@ -269,7 +269,7 @@ describe('entry-point feature wiring', () => {
     ['domains', 'domainChartContainer'],
   ])('wires %s clicks opened through tab navigation', async (tab, container) => {
     await start();
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     // The word-cloud view loads its keyword engine lazily; the click-to-search
     // assertion needs the rendered terms, so warm the engine first.
     const keywords = await import('../src/analytics/keywords.js');
@@ -527,7 +527,7 @@ describe('module-owned startup', () => {
   });
 
   it('restores bookmarks before the first render and reports restoration', async () => {
-    const state = await import('../src/core/state.js');
+    const state = await import('../src/core/state');
     const { loadState } = await import('../src/core/store');
     const { showToast } = await import('../src/utils/dom');
     loadState.mockImplementation(async () => {
