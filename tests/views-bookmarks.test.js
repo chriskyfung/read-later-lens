@@ -13,7 +13,7 @@ import {
   resolveFolderName,
   updateBookmarksHeader,
   createBookmarkCard,
-} from '../src/views/bookmarks.js';
+} from '../src/views/bookmarks';
 import { openLinkageForBookmark } from '../src/views/linkage.js';
 import {
   setBookmarks,

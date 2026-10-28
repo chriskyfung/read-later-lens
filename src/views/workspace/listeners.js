@@ -7,7 +7,7 @@
  */
 import * as state from '../../core/state';
 import { getFilteredBookmarks } from '../../core/filters.js';
-import { renderBookmarkCards, updateBatchActionBar } from '../bookmarks.js';
+import { renderBookmarkCards, updateBatchActionBar } from '../bookmarks';
 import { WORKSPACE_IDS } from '../../components/workspace/constants.js';
 import { getDeps } from './deps.js';
 import { switchTab } from './tabActions.js';

@@ -6,7 +6,7 @@
  *  - .main-tab buttons → src/views/workspaceActions.js (registerWorkspaceListeners)
  *  - sortSelect        → src/views/workspaceActions.js
  *  - batch actions     → src/views/workspaceActions.js
- *  - filteredCount     → src/views/bookmarks.js / tabs.js (renderers)
+ *  - filteredCount     → src/views/bookmarks/ / tabs.js (renderers)
  */
 import { WORKSPACE_IDS } from './constants.js';
 
