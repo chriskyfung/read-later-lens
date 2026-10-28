@@ -4,7 +4,7 @@
  * Extraction policy (leading `www.` strip) is applied in one place:
  * * `src/analytics/domains.js` — top-domains, skip-on-invalid
  * * `src/analytics/linkage.js` — graph node domains, 'unknown' fallback
- * * `src/views/bookmarks.js` — bookmark domain badge, 'web' fallback
+ * * `src/views/bookmarks/` — card domain badge, 'web' fallback (via getBookmarkDomain)
  */
 
 /**
@@ -22,4 +22,15 @@ export function extractDomain(url, fallback = '') {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * Domain badge text for a bookmark URL (monolith parity: invalid URLs fall
+ * back to 'web').
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+export function getBookmarkDomain(url) {
+  return extractDomain(url, 'web');
 }

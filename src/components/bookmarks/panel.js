@@ -3,7 +3,7 @@
  *
  * Extracted from the original monolith (index.html "Panel 1: Bookmarks Grid
  * View"). The layout, ids and DOM hooks are preserved; the utility classes use
- * Tailwind v4 idioms. Card rendering lives in src/views/bookmarks.js.
+ * Tailwind v4 idioms. Card rendering lives in src/views/bookmarks/.
  */
 
 /** @returns {string} The bookmarks panel markup. */

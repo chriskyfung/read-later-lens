@@ -8,7 +8,7 @@
 
 import { activeTab } from '../core/state';
 import { renderSidebar } from './sidebar';
-import { renderBookmarkCards } from './bookmarks.js';
+import { renderBookmarkCards } from './bookmarks';
 
 import { renderWordCloud } from './wordcloud.js';
 import { renderDomainChart } from './domains.js';

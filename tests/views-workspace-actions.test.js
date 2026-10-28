@@ -18,7 +18,7 @@ import {
   trashBookmarks,
 } from '../src/core/state';
 import { getFilteredBookmarks } from '../src/core/filters.js';
-import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks.js';
+import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks';
 
 // Isolate the pure view collaborators.
 // The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
@@ -93,7 +93,7 @@ vi.mock('../src/core/state', () => {
 vi.mock('../src/core/filters.js', () => ({
   getFilteredBookmarks: vi.fn(),
 }));
-vi.mock('../src/views/bookmarks.js', () => ({
+vi.mock('../src/views/bookmarks', () => ({
   renderBookmarkCards: vi.fn(),
   updateBatchActionBar: vi.fn(),
 }));
