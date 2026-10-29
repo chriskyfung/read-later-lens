@@ -65,7 +65,7 @@ export function renderConceptLinkageGraph(focusId = null) {
   // bookmark, node coordinates, and camera position instead of resetting.
   const previousFocusId = graphState.focusedNodeId;
   const positionSnapshot = graphState.nodes
-    ? new Map(graphState.nodes.map((d) => [d.id, { x: d.x, y: d.y, fx: d.fx, fy: d.fy }]))
+    ? new Map(graphState.nodes.map((d) => [d.id, { x: d.x, y: d.y }]))
     : null;
   let cameraTransform = null;
   if (graphState.svg && graphState.zoom) {
