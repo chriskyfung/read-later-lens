@@ -20,6 +20,7 @@ import {
   focusLinkageNode,
   resetGraphZoom,
   renderConceptLinkageGraph,
+  setLinkageWeighting,
   FOCUS_ZOOM,
 } from '../src/views/linkage';
 import { setBookmarks } from '../src/core/state';
@@ -346,5 +347,63 @@ describe('focus & camera API', () => {
     renderConceptLinkageGraph();
     expect(focusLinkageNode('1')).toBe(false);
     expect(openLinkageForBookmark('1')).toBe(false);
+  });
+
+  describe('TF-IDF weighting toggle keeps focus', () => {
+    beforeEach(() => {
+      createTabShell();
+      createCanvas();
+    });
+
+    it('preserves the pinned node and camera across a toggle to tfidf', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      // Confirm focus is established before the toggle.
+      const before = nodesByLabel(canvas);
+      expect(before.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+      expect(graphState.focusedNodeId).toBe('10');
+      expect(graphState.nodes.find((d) => d.id === '10').fx).not.toBeUndefined();
+
+      // Toggle TF ⇄ TF-IDF (the panel checkbox path).
+      setLinkageWeighting('tfidf');
+      const canvas2 = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas2, 2);
+
+      const after = nodesByLabel(canvas2);
+      expect(after.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+      expect(after.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: '0.4' });
+      expect(graphState.focusedNodeId).toBe('10');
+      const focused = graphState.nodes.find((d) => d.id === '10');
+      expect(focused.fx).toBe(focused.x);
+      expect(focused.fy).toBe(focused.y);
+
+      await waitForTransform(canvas2);
+      const t = parseTransform(canvas2.querySelector('svg > g').getAttribute('transform'));
+      expect(t).not.toBeNull();
+      expect(t.k).toBeCloseTo(FOCUS_ZOOM, 5);
+    });
+
+    it('preserves the pinned node and camera across a toggle back to tf', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      setLinkageWeighting('tfidf');
+      await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
+
+      setLinkageWeighting('tf');
+      const canvas2 = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas2, 2);
+
+      const after = nodesByLabel(canvas2);
+      expect(after.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+      expect(graphState.focusedNodeId).toBe('10');
+    });
   });
 });
