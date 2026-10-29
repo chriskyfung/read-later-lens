@@ -1,12 +1,15 @@
 /**
- * @fileoverview Reader view modal — presentational markup only.
+ * @fileoverview Reader modal markup — presentational, behind the reader barrel.
  *
- * Based on the original monolith (index.html "MODAL 1"). The 🗑️ 刪除 and ⚡ 相似
- * action buttons are a Phase 2 enhancement layered onto the footer; their
- * behaviour lives in src/views/modalListeners.js (the acyclic leaf that owns
- * modal wiring) so this component stays free of destructive-action imports.
- * Behavior lives in src/views/readerModal.js; listeners are registered by
- * src/views/modalListeners.js after mounting.
+ * Based on the original monolith (index.html "MODAL 1"). The 🗑️ 刪除 and
+ * ⚡ 相似 action buttons are a Phase 2 enhancement layered onto the footer;
+ * their behaviour lives in src/views/modalListeners.js (the acyclic leaf that
+ * owns modal wiring) so this component stays free of destructive-action
+ * imports. Behavior lives in src/views/readerModal.js; listeners are registered
+ * by src/views/modalListeners.js after mounting.
+ *
+ * Re-exported through src/components/reader/index.js (the public surface); do
+ * not import this file directly.
  */
 
 /** @returns {string} The reader modal markup. */
