@@ -69,7 +69,10 @@ export function renderConceptLinkageGraph(focusId = null) {
     : null;
   let cameraTransform = null;
   if (graphState.svg && graphState.zoom) {
-    cameraTransform = graphState.zoom.transform(graphState.svg) || null;
+    // Read the current zoom transform from the SVG node's __zoom property.
+    // graphState.zoom.transform(graphState.svg) as a getter is unreliable in
+    // some environments, so read __zoom directly.
+    cameraTransform = graphState.svg.node().__zoom || null;
   }
 
   // Clear render + focus state first, so an early return (no container, or an
@@ -211,7 +214,7 @@ export function renderConceptLinkageGraph(focusId = null) {
     wireSimulationHandlers(simulation, {
       getNodes: () => graphState.nodeSelection,
       getLinks: () => linkRef.current,
-      ...focusSimulationHooks(),
+      ...focusSimulationHooks(!!cameraTransform),
     });
   };
 
@@ -224,7 +227,18 @@ export function renderConceptLinkageGraph(focusId = null) {
     // visible at the centre on the first paint instead of flashing at (0,0).
     node.attr('transform', (d) => `translate(${d.x},${d.y})`);
     decorateNodes(node);
-    setFocusCamera();
+    // Preserve the user's zoom level when re-rendering after an external
+    // action (e.g. deleting a node) so the camera does not snap back to
+    // FOCUS_ZOOM. On a first-ever render (no saved camera), fall back to
+    // setFocusCamera() which centres at the default FOCUS_ZOOM.
+    if (cameraTransform) {
+      const k = cameraTransform.k;
+      const dx = width / 2 - focusNode.x * k;
+      const dy = height / 2 - focusNode.y * k;
+      graphState.svg.call(graphState.zoom.transform, d3.zoomIdentity.translate(dx, dy).scale(k));
+    } else {
+      setFocusCamera();
+    }
     applyFocusStyles();
 
     graphState.pendingTopologyTimer = afterPaint(() => {

@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as d3 from 'd3';
 import {
   openLinkageForBookmark,
   focusLinkageNode,
@@ -410,25 +411,94 @@ describe('focus & camera API', () => {
       expect(canvas.textContent).toContain('尚無書籤可構建關聯網絡拓撲圖');
     });
 
-    it('preserves camera transform on unfocused re-render after deletion', async () => {
+    it('preserves user zoom level when focus survives deletion', async () => {
       setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
-      renderConceptLinkageGraph();
+
+      openLinkageForBookmark('10');
       const canvas = document.getElementById('d3GraphCanvas');
       await waitForTopology(canvas, 2);
 
-      // Zoom in to set a non-default camera transform.
-      // (Just verify the transform is identity initially and stays valid.)
-      const svg = canvas.querySelector('svg');
-      expect(svg).not.toBeNull();
+      // Simulate user zooming to 2.0× after the initial focused render.
+      const svg = d3.select(canvas.querySelector('svg'));
+      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      await waitForTransform(canvas, /scale\(2/);
 
-      // Simulate deletion.
+      // Confirm zoom was applied.
+      const tBefore = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
+      expect(tBefore).not.toBeNull();
+      expect(tBefore.k).toBeCloseTo(2.0, 5);
+
+      // Delete '20' (non-focused) — focus on '10' survives.
       setBookmarks([BM(10, 'alpha zeta')]);
       renderConceptLinkageGraph();
       await waitForTopology(canvas, 1);
 
-      // The graph should still render with a valid SVG.
-      expect(canvas.querySelector('svg')).not.toBeNull();
-      expect(canvas.querySelectorAll('circle')).toHaveLength(1);
+      // Focus still on '10'.
+      expect(graphState.focusedNodeId).toBe('10');
+      const nodes = nodesByLabel(canvas);
+      expect(nodes.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+
+      // User's zoom level preserved (not snapped back to FOCUS_ZOOM).
+      const tAfter = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
+      expect(tAfter).not.toBeNull();
+      expect(tAfter.k).toBeCloseTo(2.0, 5);
+    });
+
+    it('clears focus and preserves camera when focused node is deleted', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      // Simulate user zooming to 2.0×.
+      const svg = d3.select(canvas.querySelector('svg'));
+      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      await waitForTransform(canvas, /scale\(2/);
+
+      // Delete '10' (the focused node).
+      setBookmarks([BM(20, 'gamma beta')]);
+      renderConceptLinkageGraph();
+      await waitForTopology(canvas, 1);
+
+      // Focus cleared.
+      expect(graphState.focusedNodeId).toBeNull();
+      const nodes = nodesByLabel(canvas);
+      expect(nodes.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: null });
+
+      // Camera preserved at 2.0× (unfocused render restores snapshot).
+      const t = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
+      expect(t).not.toBeNull();
+      expect(t.k).toBeCloseTo(2.0, 5);
+    });
+
+    it('preserves camera when no focus exists before deletion', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+      renderConceptLinkageGraph();
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      // No focus.
+      expect(graphState.focusedNodeId).toBeNull();
+
+      // Set a non-default camera transform.
+      const svg = d3.select(canvas.querySelector('svg'));
+      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      await waitForTransform(canvas, /scale\(2/);
+
+      // Delete '20'.
+      setBookmarks([BM(10, 'alpha zeta')]);
+      renderConceptLinkageGraph();
+      await waitForTopology(canvas, 1);
+
+      // No focus.
+      expect(graphState.focusedNodeId).toBeNull();
+
+      // Camera preserved at 2.0×.
+      const t = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
+      expect(t).not.toBeNull();
+      expect(t.k).toBeCloseTo(2.0, 5);
     });
   });
 

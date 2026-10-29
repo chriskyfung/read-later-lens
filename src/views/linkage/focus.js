@@ -151,11 +151,18 @@ export function resetFocus() {
  *
  * @returns {{ onTick: () => void, onSettled: () => void }}
  */
-export function focusSimulationHooks() {
+export function focusSimulationHooks(preserveZoom = false) {
   return {
-    onTick: () => centerFocusedNode(),
+    onTick: () => {
+      // When zoom is being preserved (e.g. after a deletion-driven re-render),
+      // the camera was already centred in Frame A at the user's saved zoom
+      // level. Re-centering on every tick would override it with FOCUS_ZOOM.
+      if (preserveZoom) return;
+      centerFocusedNode();
+    },
     onSettled: () => {
       if (graphState.focusedNodeId != null) {
+        if (preserveZoom) return;
         graphState.pendingFocusCenter = true;
         centerFocusedNode();
       }
