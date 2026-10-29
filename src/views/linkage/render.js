@@ -317,11 +317,12 @@ export function zoomGraphBy(factor) {
  * Reset the graph view to the identity transform and re-render (monolith parity).
  */
 export function resetGraphZoom() {
+  // Flush the render-state snapshot first so the reset rebuilds the D3 graph
+  // entirely — no preserved focus, node coordinates, or camera transform
+  // from the previous render.
+  clearRenderState();
   resetFocus();
   renderConceptLinkageGraph();
-  // The new SVG starts at identity by default, but renderConceptLinkageGraph
-  // may have restored a previous camera transform — override it here so the
-  // reset actually returns the viewport to the identity transform.
   const { svg, zoom } = graphState;
   if (svg && zoom) svg.call(zoom.transform, d3.zoomIdentity);
 }
