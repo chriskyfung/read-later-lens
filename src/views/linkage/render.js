@@ -69,10 +69,13 @@ export function renderConceptLinkageGraph(focusId = null) {
     : null;
   let cameraTransform = null;
   if (graphState.svg && graphState.zoom) {
-    // Read the current zoom transform from the SVG node's __zoom property.
-    // graphState.zoom.transform(graphState.svg) as a getter is unreliable in
-    // some environments, so read __zoom directly.
-    cameraTransform = graphState.svg.node().__zoom || null;
+    // Read the current zoom transform. d3.zoomTransform (the public API) walks
+    // up the DOM tree looking for __zoom, so guard with hasOwnProperty to
+    // distinguish "no previous camera" (null) from "camera at identity".
+    const node = graphState.svg.node();
+    cameraTransform = Object.prototype.hasOwnProperty.call(node, '__zoom')
+      ? d3.zoomTransform(node)
+      : null;
   }
 
   // Clear render + focus state first, so an early return (no container, or an
