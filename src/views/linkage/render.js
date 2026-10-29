@@ -173,9 +173,12 @@ export function renderConceptLinkageGraph(focusId = null) {
     // ./linkage/topology.js for why object identity matters here.
     prepareFocusedTopology(freshNodes, focusNode, width, height);
 
-    // Preserve surviving nodes' previous positions as starting coordinates so
-    // they do not flash to the origin on the first paint after a re-render
-    // (e.g. after deleting a node). The focus node stays pinned at centre.
+    const simulation = createForceSimulation(freshNodes, links, width, height);
+
+    // Restore surviving nodes' previous positions so they do not jump to the
+    // origin on first paint after a deletion-driven re-render. Applied
+    // *after* createForceSimulation because initializeNodes() re-randomizes
+    // any node without fx/fy. The focus node stays pinned at centre.
     if (positionSnapshot) {
       freshNodes.forEach((d) => {
         if (d === focusNode) return;
@@ -186,8 +189,6 @@ export function renderConceptLinkageGraph(focusId = null) {
         }
       });
     }
-
-    const simulation = createForceSimulation(freshNodes, links, width, height);
 
     graphState.simulation = simulation;
     simRef.current = simulation;
@@ -246,10 +247,12 @@ export function renderConceptLinkageGraph(focusId = null) {
   domains = built.domains;
   colorScale.domain(domains);
 
-  // Preserve surviving nodes' previous positions as starting coordinates so
-  // they do not flash to the origin on the first paint after a re-render
-  // (e.g. after deleting a node). Nodes absent from the snapshot (newly
-  // added) keep the builder's initial positions.
+  const simulation = createForceSimulation(nodesList, links, width, height);
+
+  // Restore surviving nodes' previous positions so they do not jump to the
+  // origin on first paint after a deletion-driven re-render. Applied *after*
+  // createForceSimulation because initializeNodes() re-randomizes any node
+  // without fx/fy.
   if (positionSnapshot) {
     nodesList.forEach((d) => {
       const saved = positionSnapshot.get(d.id);
@@ -259,8 +262,6 @@ export function renderConceptLinkageGraph(focusId = null) {
       }
     });
   }
-
-  const simulation = createForceSimulation(nodesList, links, width, height);
 
   graphState.simulation = simulation;
   simRef.current = simulation;
