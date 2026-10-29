@@ -15,9 +15,15 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from '../src/views/linkage';
+import {
+  renderConceptLinkageGraph,
+  zoomGraphBy,
+  resetGraphZoom,
+  focusLinkageNode,
+} from '../src/views/linkage';
 import { setBookmarks } from '../src/core/state';
-import { BM, createCanvas, resetModuleState } from './helpers/linkage.js';
+import { BM, createCanvas, resetModuleState, nodesByLabel } from './helpers/linkage.js';
+import { graphState } from '../src/views/linkage/state.js';
 
 afterEach(() => {
   resetModuleState();
@@ -118,6 +124,26 @@ describe('resetGraphZoom', () => {
     resetGraphZoom();
 
     expect(canvas.querySelector('svg')).not.toBeNull();
+  });
+
+  it('flushes focus and rebuilds the graph entirely', () => {
+    const canvas = createCanvas();
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+    // Focus a node first so there is something to flush.
+    renderConceptLinkageGraph();
+    focusLinkageNode('10');
+
+    // Confirm focus is established before reset.
+    const nodesBefore = nodesByLabel(canvas);
+    expect(nodesBefore.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+
+    resetGraphZoom();
+
+    // After reset, no focus highlight remains — the graph is rebuilt fresh.
+    const nodesAfter = nodesByLabel(canvas);
+    expect(nodesAfter.get('alpha zeta')).toEqual({ stroke: '#0f172a', opacity: null });
+    expect(graphState.focusedNodeId).toBeNull();
   });
 
   it('resets to an empty state for an empty library', () => {

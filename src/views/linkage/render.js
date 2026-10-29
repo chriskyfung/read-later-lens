@@ -59,6 +59,25 @@ export { FOCUS_ZOOM };
  */
 export function renderConceptLinkageGraph(focusId = null) {
   if (graphState.simulation) graphState.simulation.stop();
+
+  // Snapshot pre-render state so a re-render triggered by an external action
+  // (e.g. deleting a node via the reader modal) can preserve the focused
+  // bookmark, node coordinates, and camera position instead of resetting.
+  const previousFocusId = graphState.focusedNodeId;
+  const positionSnapshot = graphState.nodes
+    ? new Map(graphState.nodes.map((d) => [d.id, { x: d.x, y: d.y }]))
+    : null;
+  let cameraTransform = null;
+  if (graphState.svg && graphState.zoom) {
+    // Read the current zoom transform. d3.zoomTransform (the public API) walks
+    // up the DOM tree looking for __zoom, so guard with hasOwnProperty to
+    // distinguish "no previous camera" (null) from "camera at identity".
+    const node = graphState.svg.node();
+    cameraTransform = Object.prototype.hasOwnProperty.call(node, '__zoom')
+      ? d3.zoomTransform(node)
+      : null;
+  }
+
   // Clear render + focus state first, so an early return (no container, or an
   // empty library) cannot leave stale references for the focus API below.
   clearRenderState();
@@ -94,14 +113,22 @@ export function renderConceptLinkageGraph(focusId = null) {
   // build's output, which is the only place each node's degree becomes known.
   let { nodes: nodesList, domains } = buildGraphNodes(filtered);
 
+  // Resolve the effective focus id: an explicit argument takes precedence;
+  // otherwise, if the previously focused node survived the re-render (i.e. it
+  // was not the one deleted), re-focus it so the camera and highlight hold.
+  let effectiveFocusId = focusId;
+  if (effectiveFocusId == null && previousFocusId != null) {
+    effectiveFocusId = nodesList.some((n) => n.id === previousFocusId) ? previousFocusId : null;
+  }
+
   // Resolve the focus target. A null here means "nothing to focus": fall
   // through to a plain, single-pass render so the graph still appears, and
   // report it so the caller can toast.
   let focusNode = null;
-  if (focusId != null) {
+  if (effectiveFocusId != null) {
     // Pins the node to the canvas centre (see ./linkage/topology.js), which is
     // what lets the camera be placed on it in this same call.
-    focusNode = resolveFocusTarget(nodesList, focusId, width, height);
+    focusNode = resolveFocusTarget(nodesList, effectiveFocusId, width, height);
     if (focusNode) graphState.focusedNodeId = focusNode.id;
   }
 
@@ -120,6 +147,15 @@ export function renderConceptLinkageGraph(focusId = null) {
   // linkWrapper is the pre-ordered UNDER layer — links go there, never as a
   // fresh sibling of nodeWrapper, or they paint over the circles.
   const { linkWrapper, nodeWrapper } = createScene(width, height);
+
+  // Restore the camera position from the previous render (zoom/pan) so a
+  // re-render triggered by an external action (e.g. deleting a node) does not
+  // reset the viewport. In the focused path, setFocusCamera() below overrides
+  // this to centre the focused node; in the unfocused path it persists.
+  if (cameraTransform) {
+    graphState.svg.call(graphState.zoom.transform, cameraTransform);
+  }
+
   const { appendNodeGroups, decorateNodes } = createNodeLayer({
     nodeWrapper,
     colorScale,
@@ -145,6 +181,21 @@ export function renderConceptLinkageGraph(focusId = null) {
 
     const simulation = createForceSimulation(freshNodes, links, width, height);
 
+    // Restore surviving nodes' previous positions so they do not jump to the
+    // origin on first paint after a deletion-driven re-render. Applied
+    // *after* createForceSimulation because initializeNodes() re-randomizes
+    // any node without fx/fy. The focus node stays pinned at centre.
+    if (positionSnapshot) {
+      freshNodes.forEach((d) => {
+        if (d === focusNode) return;
+        const saved = positionSnapshot.get(d.id);
+        if (saved) {
+          d.x = saved.x;
+          d.y = saved.y;
+        }
+      });
+    }
+
     graphState.simulation = simulation;
     simRef.current = simulation;
 
@@ -166,7 +217,7 @@ export function renderConceptLinkageGraph(focusId = null) {
     wireSimulationHandlers(simulation, {
       getNodes: () => graphState.nodeSelection,
       getLinks: () => linkRef.current,
-      ...focusSimulationHooks(),
+      ...focusSimulationHooks(!!cameraTransform),
     });
   };
 
@@ -179,7 +230,18 @@ export function renderConceptLinkageGraph(focusId = null) {
     // visible at the centre on the first paint instead of flashing at (0,0).
     node.attr('transform', (d) => `translate(${d.x},${d.y})`);
     decorateNodes(node);
-    setFocusCamera();
+    // Preserve the user's zoom level when re-rendering after an external
+    // action (e.g. deleting a node) so the camera does not snap back to
+    // FOCUS_ZOOM. On a first-ever render (no saved camera), fall back to
+    // setFocusCamera() which centres at the default FOCUS_ZOOM.
+    if (cameraTransform) {
+      const k = cameraTransform.k;
+      const dx = width / 2 - focusNode.x * k;
+      const dy = height / 2 - focusNode.y * k;
+      graphState.svg.call(graphState.zoom.transform, d3.zoomIdentity.translate(dx, dy).scale(k));
+    } else {
+      setFocusCamera();
+    }
     applyFocusStyles();
 
     graphState.pendingTopologyTimer = afterPaint(() => {
@@ -203,6 +265,20 @@ export function renderConceptLinkageGraph(focusId = null) {
   colorScale.domain(domains);
 
   const simulation = createForceSimulation(nodesList, links, width, height);
+
+  // Restore surviving nodes' previous positions so they do not jump to the
+  // origin on first paint after a deletion-driven re-render. Applied *after*
+  // createForceSimulation because initializeNodes() re-randomizes any node
+  // without fx/fy.
+  if (positionSnapshot) {
+    nodesList.forEach((d) => {
+      const saved = positionSnapshot.get(d.id);
+      if (saved) {
+        d.x = saved.x;
+        d.y = saved.y;
+      }
+    });
+  }
 
   graphState.simulation = simulation;
   simRef.current = simulation;
@@ -258,10 +334,14 @@ export function zoomGraphBy(factor) {
  * Reset the graph view to the identity transform and re-render (monolith parity).
  */
 export function resetGraphZoom() {
-  const { svg, zoom } = graphState;
-  if (svg && zoom) svg.transition().call(zoom.transform, d3.zoomIdentity);
+  // Flush the render-state snapshot first so the reset rebuilds the D3 graph
+  // entirely — no preserved focus, node coordinates, or camera transform
+  // from the previous render.
+  clearRenderState();
   resetFocus();
   renderConceptLinkageGraph();
+  const { svg, zoom } = graphState;
+  if (svg && zoom) svg.call(zoom.transform, d3.zoomIdentity);
 }
 
 /**
