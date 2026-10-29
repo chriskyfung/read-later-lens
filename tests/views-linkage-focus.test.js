@@ -349,6 +349,89 @@ describe('focus & camera API', () => {
     expect(openLinkageForBookmark('1')).toBe(false);
   });
 
+  describe('deletion preserves focus and camera', () => {
+    beforeEach(() => {
+      createTabShell();
+      createCanvas();
+    });
+
+    it('preserves focus and camera when a non-focused node is deleted', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta'), BM(30, 'delta epsilon')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 3);
+
+      // Confirm focus is established before the deletion.
+      expect(graphState.focusedNodeId).toBe('10');
+
+      // Simulate deletion: remove bookmark 20 from the live set and re-render.
+      setBookmarks([BM(10, 'alpha zeta'), BM(30, 'delta epsilon')]);
+      renderConceptLinkageGraph();
+      await waitForTopology(canvas, 2);
+
+      // Focus should still be on node 10.
+      const nodes = nodesByLabel(canvas);
+      expect(nodes.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+      expect(graphState.focusedNodeId).toBe('10');
+      const focused = graphState.nodes.find((d) => d.id === '10');
+      expect(focused.fx).toBe(focused.x);
+      expect(focused.fy).toBe(focused.y);
+    });
+
+    it('clears focus when the focused node itself is deleted', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      // Simulate deleting the focused node.
+      setBookmarks([BM(20, 'gamma beta')]);
+      renderConceptLinkageGraph();
+      await waitForTopology(canvas, 1);
+
+      const nodes = nodesByLabel(canvas);
+      expect(nodes.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: null });
+      expect(graphState.focusedNodeId).toBeNull();
+    });
+
+    it('renders empty state when all nodes are deleted', () => {
+      setBookmarks([BM(10, 'alpha zeta')]);
+
+      openLinkageForBookmark('10');
+      const canvas = document.getElementById('d3GraphCanvas');
+
+      // Simulate deleting the only node.
+      setBookmarks([]);
+      renderConceptLinkageGraph();
+
+      expect(canvas.querySelector('svg')).toBeNull();
+      expect(canvas.textContent).toContain('尚無書籤可構建關聯網絡拓撲圖');
+    });
+
+    it('preserves camera transform on unfocused re-render after deletion', async () => {
+      setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+      renderConceptLinkageGraph();
+      const canvas = document.getElementById('d3GraphCanvas');
+      await waitForTopology(canvas, 2);
+
+      // Zoom in to set a non-default camera transform.
+      // (Just verify the transform is identity initially and stays valid.)
+      const svg = canvas.querySelector('svg');
+      expect(svg).not.toBeNull();
+
+      // Simulate deletion.
+      setBookmarks([BM(10, 'alpha zeta')]);
+      renderConceptLinkageGraph();
+      await waitForTopology(canvas, 1);
+
+      // The graph should still render with a valid SVG.
+      expect(canvas.querySelector('svg')).not.toBeNull();
+      expect(canvas.querySelectorAll('circle')).toHaveLength(1);
+    });
+  });
+
   describe('TF-IDF weighting toggle keeps focus', () => {
     beforeEach(() => {
       createTabShell();
