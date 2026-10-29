@@ -69,7 +69,7 @@ export function renderConceptLinkageGraph(focusId = null) {
     : null;
   let cameraTransform = null;
   if (graphState.svg && graphState.zoom) {
-    cameraTransform = graphState.svg.node().__zoom || null;
+    cameraTransform = graphState.zoom.transform(graphState.svg) || null;
   }
 
   // Clear render + focus state first, so an early return (no container, or an
