@@ -9,7 +9,7 @@ import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks/
 import { getBookmarkDomain } from '../../utils/url.js';
 import { openReaderModal } from '../readerModal.js';
 import { openSimilarityModal } from '../similarityModal.js';
-import { openLinkageForBookmark } from '../linkage.js';
+import { openLinkageForBookmark } from '../linkage';
 import { toggleSelectBookmark } from './selection.js';
 
 // Descendants that own their own click behaviour; clicking them must NOT

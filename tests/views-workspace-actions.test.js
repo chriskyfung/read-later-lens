@@ -35,7 +35,7 @@ vi.mock('../src/utils/dom', async (importOriginal) => ({
 }));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
-vi.mock('../src/views/linkage.js', () => ({
+vi.mock('../src/views/linkage', () => ({
   renderConceptLinkageGraph: vi.fn(),
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
@@ -103,7 +103,7 @@ const { showToast } = await import('../src/utils/dom');
 const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
-  await import('../src/views/linkage.js');
+  await import('../src/views/linkage');
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};

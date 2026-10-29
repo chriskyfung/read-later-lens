@@ -1,50 +1,28 @@
 /**
- * @fileoverview D3 concept-linkage graph view.
+ * @fileoverview Linkage graph view orchestration — Frame A / Frame B render paths.
  *
- * NOTE: ported from the monolith with one deliberate deviation: the monolith
- * refused to render with fewer than 2 bookmarks (`filtered.length < 2`); a lone
- * bookmark now renders its single node. The rest of the port is otherwise
- * verbatim.
+ * Pure render logic moved out of linkage.js so it can be consumed through
+ * the barrel (./linkage) without circular-import risk. All submodule imports
+ * use direct relative paths (./focus.js, ./state.js, etc.) rather than
+ * the barrel, keeping the dependency graph acyclic.
  *
- * domain-based colour scale, degree-based sizing, drag + zoom, the hover
- * tooltip (`#graphTooltip` / `#ttTitle` / `#ttDomain` / `#ttTags`), and node
- * click → reader modal. Zoom/pan state is module-private here and driven by
- * the toolbar buttons through `zoomGraphBy` / `resetGraphZoom`.
- *
- * One deliberate improvement over the monolith: the previous force simulation
- * is stopped before a re-render (the monolith leaked it).
- *
- * The string-built markup (the empty-state div and the tooltip tag pills) has
- * been moved to src/components/linkage/graph.js to keep components pure; this
- * file now handles only render orchestration and delegates the DOM details via
- * the ./linkage/ submodules named above.
- *
- * The pieces that carried real rules are extracted alongside, so this file is
- * left with render orchestration alone: ./linkage/nodes.js (sizing),
- * ./linkage/topology.js (focus pinning and the Frame A/Frame B merge),
- * ./linkage/simulation.js (force config, link elements, tick wiring),
- * ./linkage/focus.js (camera and node emphasis), and ./linkage/scene.js (the
- * zoomable svg scaffold, the per-node DOM layer, and the frame deferral).
+ * External consumers import from ./linkage (the barrel) rather than this
+ * file directly.
  */
 
 import * as d3 from 'd3';
-import { getFilteredBookmarksTop } from '../core/filters.js';
-import { buildLinkageGraph, buildGraphNodes } from '../analytics';
-import { linkageEmptyStateHtml } from '../components/linkage/graph.js';
-import { activateTab } from './tabs.js';
-import { showToast } from '../utils/dom';
+import { getFilteredBookmarksTop } from '../../core/filters.js';
+import { buildLinkageGraph, buildGraphNodes } from '../../analytics';
+import { linkageEmptyStateHtml } from '../../components/linkage/graph.js';
+import { activateTab } from '../tabs.js';
+import { showToast } from '../../utils/dom';
 import {
   createForceSimulation,
   createLinkSelection,
   refreshNodeRadii,
   wireSimulationHandlers,
-} from './linkage/simulation.js';
-import {
-  prepareFocusedTopology,
-  resolveFocusTarget,
-  unpinNode,
-  pinNodeAt,
-} from './linkage/topology.js';
+} from './simulation.js';
+import { prepareFocusedTopology, resolveFocusTarget, unpinNode, pinNodeAt } from './topology.js';
 import {
   graphState,
   cancelPendingTopology,
@@ -52,7 +30,7 @@ import {
   isCurrentGeneration,
   nextRenderGeneration,
   resolveCanvasSize,
-} from './linkage/state.js';
+} from './state.js';
 import {
   FOCUS_ZOOM,
   applyFocusStyles,
@@ -61,8 +39,8 @@ import {
   focusSimulationHooks,
   resetFocus,
   setFocusCamera,
-} from './linkage/focus.js';
-import { afterPaint, createNodeLayer, createScene, gatherTooltipRefs } from './linkage/scene.js';
+} from './focus.js';
+import { afterPaint, createNodeLayer, createScene, gatherTooltipRefs } from './scene.js';
 
 // FOCUS_ZOOM is re-exported so the module's public surface is unchanged for
 // callers that imported it from here rather than from ./linkage/focus.js.
@@ -257,16 +235,16 @@ export function renderConceptLinkageGraph(focusId = null) {
 }
 
 /**
- * Zoom the graph by a multiplicative factor (toolbar buttons).
- *
- * @param {number} factor
+ * Switch the graph's link scoring mode ('tf' | 'tfidf') and re-render. Panel checkbox.
  */
-/** Switch the graph's link scoring mode ('tf' | 'tfidf') and re-render. Panel checkbox. */
 export function setLinkageWeighting(mode) {
   graphState.weighting = mode;
   renderConceptLinkageGraph();
 }
 
+/**
+ * Zoom the graph by a multiplicative factor (toolbar buttons).
+ */
 export function zoomGraphBy(factor) {
   const { svg, zoom } = graphState;
   if (svg && zoom) svg.transition().call(zoom.scaleBy, factor);

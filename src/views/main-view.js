@@ -12,7 +12,7 @@ import { renderBookmarkCards } from './bookmarks';
 
 import { renderWordCloud } from './wordcloud.js';
 import { renderDomainChart } from './domains.js';
-import { renderConceptLinkageGraph } from './linkage.js';
+import { renderConceptLinkageGraph } from './linkage';
 
 /**
  * Re-render the sidebar and the bookmark grid (or the trash view), then the

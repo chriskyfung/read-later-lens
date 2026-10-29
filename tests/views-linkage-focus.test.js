@@ -21,7 +21,7 @@ import {
   resetGraphZoom,
   renderConceptLinkageGraph,
   FOCUS_ZOOM,
-} from '../src/views/linkage.js';
+} from '../src/views/linkage';
 import { setBookmarks } from '../src/core/state';
 import { graphState } from '../src/views/linkage/state.js';
 import {
