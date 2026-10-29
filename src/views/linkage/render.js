@@ -238,8 +238,12 @@ export function renderConceptLinkageGraph(focusId = null) {
  * Switch the graph's link scoring mode ('tf' | 'tfidf') and re-render. Panel checkbox.
  */
 export function setLinkageWeighting(mode) {
+  // Remember the focused bookmark before resetFocus() clears it, so the
+  // re-render can re-pin the same node at canvas centre and re-place the
+  // camera on it — toggling TF ⇄ TF-IDF must not lose the focus.
+  const focusId = graphState.focusedNodeId;
   graphState.weighting = mode;
-  renderConceptLinkageGraph();
+  renderConceptLinkageGraph(focusId);
 }
 
 /**
