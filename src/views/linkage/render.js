@@ -318,6 +318,11 @@ export function zoomGraphBy(factor) {
 export function resetGraphZoom() {
   resetFocus();
   renderConceptLinkageGraph();
+  // The new SVG starts at identity by default, but renderConceptLinkageGraph
+  // may have restored a previous camera transform — override it here so the
+  // reset actually returns the viewport to the identity transform.
+  const { svg, zoom } = graphState;
+  if (svg && zoom) svg.call(zoom.transform, d3.zoomIdentity);
 }
 
 /**
