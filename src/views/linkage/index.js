@@ -49,3 +49,11 @@ export {
   resolveFocusTarget,
   prepareFocusedTopology,
 } from './topology.js';
+export {
+  renderConceptLinkageGraph,
+  setLinkageWeighting,
+  zoomGraphBy,
+  resetGraphZoom,
+  focusLinkageNode,
+  openLinkageForBookmark,
+} from './render.js';
