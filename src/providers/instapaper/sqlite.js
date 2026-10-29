@@ -14,7 +14,7 @@ import {
   normalizeFavorite,
 } from '../../model/normalize.js';
 import { makeReaderUrl } from '../../model/BookmarkRecord.js';
-import { detectLanguage } from '../../analytics/detectLanguage.js';
+import { detectLanguage } from '../../analytics';
 
 /**
  * @param {Uint8Array} wasmBuffer      Raw bytes of a `.db` file.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildLinkageGraph, LINKAGE_LIMIT, LINKAGE_THRESHOLD } from '../src/analytics/linkage.js';
-import { buildIdf, cosineScore } from '../src/analytics/scoring.js';
+import { buildIdf, cosineScore } from '../src/analytics/core/scoring.js';
 
 const bm = (id, over = {}) => ({
   id: String(id),

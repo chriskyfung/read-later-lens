@@ -22,10 +22,10 @@
  * every pairwise score.
  */
 
-import { bookmarkText } from './tokenize.js';
+import { bookmarkText } from './core/tokenize.js';
 import { extractPlainTerms, documentLanguage } from './keywords.js';
-import { MIN_AUTO_N, MIN_IDF_SPREAD, AUTO_K } from './constants.js';
-import { cosineScore, buildIdf, targetSpecificity, sigmoid } from './scoring.js';
+import { MIN_AUTO_N, MIN_IDF_SPREAD, AUTO_K } from './core/constants.js';
+import { cosineScore, buildIdf, targetSpecificity, sigmoid } from './core/scoring.js';
 
 /**
  * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b

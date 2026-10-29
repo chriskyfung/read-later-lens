@@ -14,7 +14,7 @@ import {
 } from '../../model/normalize.js';
 import { processSqliteAsBookmarks } from './sqlite.js';
 import { makeReaderUrl } from '../../model/BookmarkRecord.js';
-import { detectLanguage } from '../../analytics/detectLanguage.js';
+import { detectLanguage } from '../../analytics';
 
 /**
  * @param {string[]|Record[]} rawRows      PapaParse rows (CSV) or JSON items.

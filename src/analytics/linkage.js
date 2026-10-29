@@ -19,7 +19,7 @@
  */
 
 import { bookmarkTokenFreq } from './similarity.js';
-import { buildIdf, cosineScore } from './scoring.js';
+import { buildIdf, cosineScore } from './core/scoring.js';
 import { extractDomain } from '../utils/url.js';
 
 /** Monolith cap for the graph (top 50 filtered bookmarks). */

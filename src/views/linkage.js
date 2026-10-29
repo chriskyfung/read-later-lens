@@ -29,7 +29,7 @@
 
 import * as d3 from 'd3';
 import { getFilteredBookmarksTop } from '../core/filters.js';
-import { buildLinkageGraph, buildGraphNodes } from '../analytics/linkage.js';
+import { buildLinkageGraph, buildGraphNodes } from '../analytics';
 import { linkageEmptyStateHtml } from '../components/linkage/graph.js';
 import { activateTab } from './tabs.js';
 import { showToast } from '../utils/dom';

@@ -4,14 +4,14 @@ import {
   tokenizeText,
   tokenizeFrequency,
   bookmarkText,
-} from '../src/analytics/tokenize.js';
+} from '../src/analytics/core/tokenize.js';
 import {
   BASE_EN,
   CLOUD_EN,
   CJK_STOPWORDS,
   JA_STOPWORDS,
   cjkStopsetFor,
-} from '../src/analytics/stopwords.js';
+} from '../src/analytics/core/stopwords.js';
 import { cosineSimilarity, mostSimilar, bookmarkTokenFreq } from '../src/analytics/similarity.js';
 import { wordCloudFrequencies, wordCloudItems } from '../src/analytics/wordcloud.js';
 import { topDomains } from '../src/analytics/domains.js';
