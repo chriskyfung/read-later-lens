@@ -11,23 +11,18 @@
  */
 
 import * as d3 from 'd3';
-import { getFilteredBookmarksTop } from '../core/filters.js';
-import { buildLinkageGraph, buildGraphNodes } from '../analytics';
-import { linkageEmptyStateHtml } from '../components/linkage/graph.js';
-import { activateTab } from './tabs.js';
-import { showToast } from '../utils/dom';
+import { getFilteredBookmarksTop } from '../../core/filters.js';
+import { buildLinkageGraph, buildGraphNodes } from '../../analytics';
+import { linkageEmptyStateHtml } from '../../components/linkage/graph.js';
+import { activateTab } from '../tabs.js';
+import { showToast } from '../../utils/dom';
 import {
   createForceSimulation,
   createLinkSelection,
   refreshNodeRadii,
   wireSimulationHandlers,
-} from './linkage/simulation.js';
-import {
-  prepareFocusedTopology,
-  resolveFocusTarget,
-  unpinNode,
-  pinNodeAt,
-} from './linkage/topology.js';
+} from './simulation.js';
+import { prepareFocusedTopology, resolveFocusTarget, unpinNode, pinNodeAt } from './topology.js';
 import {
   graphState,
   cancelPendingTopology,
@@ -35,7 +30,7 @@ import {
   isCurrentGeneration,
   nextRenderGeneration,
   resolveCanvasSize,
-} from './linkage/state.js';
+} from './state.js';
 import {
   FOCUS_ZOOM,
   applyFocusStyles,
@@ -44,8 +39,8 @@ import {
   focusSimulationHooks,
   resetFocus,
   setFocusCamera,
-} from './linkage/focus.js';
-import { afterPaint, createNodeLayer, createScene, gatherTooltipRefs } from './linkage/scene.js';
+} from './focus.js';
+import { afterPaint, createNodeLayer, createScene, gatherTooltipRefs } from './scene.js';
 
 // FOCUS_ZOOM is re-exported so the module's public surface is unchanged for
 // callers that imported it from here rather than from ./linkage/focus.js.

@@ -11,7 +11,7 @@
  */
 
 import { setBookmarks } from '../../src/core/state';
-import { renderConceptLinkageGraph } from '../../src/views/linkage.js';
+import { renderConceptLinkageGraph } from '../../src/views/linkage';
 
 /**
  * A minimal bookmark record, shaped like a parsed CSV row.

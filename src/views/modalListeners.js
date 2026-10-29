@@ -34,7 +34,7 @@ import {
   topLayerId,
   trapFocus,
 } from '../utils/dom';
-import { openLinkageForBookmark } from './linkage.js';
+import { openLinkageForBookmark } from './linkage';
 
 /**
  * Close the topmost layer on Escape and keep Tab focus inside it. No-ops when

@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from '../src/views/linkage.js';
+import { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } from '../src/views/linkage';
 import { setBookmarks } from '../src/core/state';
 import { BM, createCanvas, resetModuleState } from './helpers/linkage.js';
 

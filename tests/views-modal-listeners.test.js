@@ -2,11 +2,11 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 // The reader's linkage button navigates to the graph; the graph behaviour
 // itself is covered by tests/views-linkage.test.js. Mock it so this file stays
 // a wiring test and does not pull d3 into the node environment.
-vi.mock('../src/views/linkage.js', () => ({
+vi.mock('../src/views/linkage', () => ({
   openLinkageForBookmark: vi.fn(() => true),
 }));
 import { registerModalListeners } from '../src/views/modalListeners.js';
-import { openLinkageForBookmark } from '../src/views/linkage.js';
+import { openLinkageForBookmark } from '../src/views/linkage';
 import { openReaderModal, getReaderBookmarkId } from '../src/views/readerModal.js';
 import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/export';
