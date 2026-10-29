@@ -7,7 +7,8 @@
 import { selectedIds } from '../../core/state';
 import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks/card.js';
 import { getBookmarkDomain } from '../../utils/url.js';
-import { openReaderModal } from '../readerModal.js';
+import { openReaderModal } from '../reader';
+
 import { openSimilarityModal } from '../similarityModal.js';
 import { openLinkageForBookmark } from '../linkage';
 import { toggleSelectBookmark } from './selection.js';

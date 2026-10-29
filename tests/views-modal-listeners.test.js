@@ -7,7 +7,8 @@ vi.mock('../src/views/linkage', () => ({
 }));
 import { registerModalListeners } from '../src/views/modalListeners.js';
 import { openLinkageForBookmark } from '../src/views/linkage';
-import { openReaderModal, getReaderBookmarkId } from '../src/views/readerModal.js';
+import { openReaderModal, getReaderBookmarkId } from '../src/views/reader';
+
 import { openSimilarityModal } from '../src/views/similarityModal.js';
 import { openSaveModal } from '../src/io/export';
 import { openImportModal } from '../src/io/import';

@@ -18,7 +18,7 @@
  * Listener registration (close buttons) lives in src/views/modalListeners.js
  * and must run AFTER mountModals().
  */
-import { readerModalHtml } from './readerModal.js';
+import { readerModalHtml } from './reader';
 import { similarityModalHtml } from './similarityModal.js';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
