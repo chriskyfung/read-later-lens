@@ -20,7 +20,8 @@
  * the two never overlap.
  */
 
-import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from './readerModal.js';
+import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from './reader';
+
 import { closeTrashModal } from '../views/trash';
 import { openSimilarityModal, closeSimilarityModal } from './similarityModal.js';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from './workspace';

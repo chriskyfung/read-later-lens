@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import {
-  openReaderModal,
-  closeReaderModal,
-  getReaderBookmarkId,
-} from '../src/views/readerModal.js';
+import { openReaderModal, closeReaderModal, getReaderBookmarkId } from '../src/views/reader';
+
 import { openSimilarityModal, closeSimilarityModal } from '../src/views/similarityModal.js';
 import { setBookmarks } from '../src/core/state';
 import { resetLayers } from '../src/utils/dom';
