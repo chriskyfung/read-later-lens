@@ -35,11 +35,11 @@
  * require the engine. Language routing happens upstream in `wordcloud.js`.
  */
 
-import { bookmarkText, simpleStem } from './tokenize.js';
-import { detectLanguage } from './detectLanguage.js';
-import { BASE_EN, CLOUD_EN, cjkStopsetFor } from './stopwords.js';
-import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './constants.js';
-import { segmentCjkWords, segmentWords, LATIN_WORD } from './segmentZh.js';
+import { bookmarkText, simpleStem } from './core/tokenize.js';
+import { detectLanguage } from './core/detectLanguage.js';
+import { BASE_EN, CLOUD_EN, cjkStopsetFor } from './core/stopwords.js';
+import { DIGITS_ONLY, MIN_TOKEN_LENGTH } from './core/constants.js';
+import { segmentCjkWords, segmentWords, LATIN_WORD } from './core/segmentZh.js';
 
 /** Engine lifecycle state — see the fileoverview. */
 let engineState = 'idle';

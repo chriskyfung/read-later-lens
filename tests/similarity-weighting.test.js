@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  mostSimilar,
-  mostSimilarAuto,
-  sigmoid,
-  targetSpecificity,
-  buildIdf,
-} from '../src/analytics/similarity.js';
+import { mostSimilar, mostSimilarAuto } from '../src/analytics/similarity.js';
+import { sigmoid, targetSpecificity, buildIdf } from '../src/analytics/core/scoring.js';
 const bm = (id, title, preview = '') => ({
   id: String(id),
   title,

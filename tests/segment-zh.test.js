@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { segmentCjkWords, zhSegmentationAvailable } from '../src/analytics/segmentZh.js';
+import { segmentCjkWords, zhSegmentationAvailable } from '../src/analytics/core/segmentZh.js';
 
 describe('zhSegmentationAvailable', () => {
   it('reports Intl.Segmenter availability (present on every evergreen runtime)', () => {

@@ -7,7 +7,7 @@
 // before and after the docs-only change they accompany; they guard the
 // FUTURE deletion, not this commit.
 import { describe, it, expect } from 'vitest';
-import { simpleStem } from '../src/analytics/tokenize.js';
+import { simpleStem } from '../src/analytics/core/tokenize.js';
 
 describe('simpleStem (legacy stemmer, load-bearing)', () => {
   it('stems the suffix rules in order, exactly as the original monolith', () => {

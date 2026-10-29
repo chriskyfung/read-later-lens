@@ -10,7 +10,7 @@
 
 import { bookmarks } from '../core/state';
 import { getActiveBookmarks } from '../core/filters.js';
-import { mostSimilarAuto } from '../analytics/similarity.js';
+import { mostSimilarAuto } from '../analytics';
 import { escapeHtml, pushLayer, popLayer } from '../utils/dom';
 import { openReaderModal } from './readerModal.js';
 

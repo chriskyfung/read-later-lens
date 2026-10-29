@@ -10,8 +10,8 @@ import {
   segmentationAvailable,
   zhSegmentationAvailable,
   segmentCjkWords,
-} from '../src/analytics/segmentZh.js';
-import { tokenizeText } from '../src/analytics/tokenize.js';
+} from '../src/analytics/core/segmentZh.js';
+import { tokenizeText } from '../src/analytics/core/tokenize.js';
 
 beforeEach(() => {
   vi.resetModules();
@@ -108,7 +108,8 @@ describe('word cloud English plain path (engine never loaded)', () => {
         writable: true,
         configurable: true,
       });
-      const { segmentationAvailable: available } = await import('../src/analytics/segmentZh.js');
+      const { segmentationAvailable: available } =
+        await import('../src/analytics/core/segmentZh.js');
       const { wordCloudFrequencies } = await import('../src/analytics/wordcloud.js');
       expect(available('en')).toBe(false);
 

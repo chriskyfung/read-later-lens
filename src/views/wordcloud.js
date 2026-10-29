@@ -14,13 +14,13 @@
  */
 
 import { getFilteredBookmarks } from '../core/filters.js';
-import { wordCloudFrequencies, wordCloudItems } from '../analytics/wordcloud.js';
+import { wordCloudFrequencies, wordCloudItems } from '../analytics';
 import { setSearchQuery } from '../core/state';
 import { setSearchInputValue } from './header';
 import { activateTab } from './tabs.js';
 import { wordCloudEmptyStateHtml } from '../components/wordcloud/item.js';
 import { wordCloudItemClass, wordCloudItemLabel } from '../components/wordcloud/item.js';
-import { needsKeywordEngine, loadKeywordsEngine } from '../analytics/keywords.js';
+import { needsKeywordEngine, loadKeywordsEngine } from '../analytics';
 
 let deps = { render: () => {} };
 

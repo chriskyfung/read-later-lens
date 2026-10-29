@@ -30,7 +30,7 @@
  * substring query.
  */
 
-import { bookmarkText, tokenizeFrequency } from './tokenize.js';
+import { bookmarkText, tokenizeFrequency } from './core/tokenize.js';
 import {
   extractKeywordTerms,
   extractPlainEnglishTerms,
@@ -39,7 +39,7 @@ import {
   keywordsFailed,
   documentLanguage,
 } from './keywords.js';
-import { segmentationAvailable } from './segmentZh.js';
+import { segmentationAvailable } from './core/segmentZh.js';
 
 /**
  * Per-record memo of the extracted terms, keyed on the bookmark object itself.
