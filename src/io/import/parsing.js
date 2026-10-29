@@ -9,7 +9,7 @@
 import Papa from 'papaparse';
 import { checkImport } from '../../providers/profiles.js';
 import { resolveImportAdapter } from '../../providers/index.js';
-import { captureCsvDialect } from '../../utils/csv.js';
+import { captureCsvDialect } from '../../utils/csv';
 import { newFileId } from '../../utils/id.js';
 import { initSql } from '../sqlLoader.js';
 import { UNSUPPORTED_SOURCE_FLAG, UNSUPPORTED_TYPE_FLAG } from './constants.js';

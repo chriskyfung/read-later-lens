@@ -7,7 +7,7 @@ import {
   exportAllUnifiedCsv,
   registerExporterListeners,
 } from '../src/io/export';
-import { captureCsvDialect } from '../src/utils/csv.js';
+import { captureCsvDialect } from '../src/utils/csv';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
 import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state';
