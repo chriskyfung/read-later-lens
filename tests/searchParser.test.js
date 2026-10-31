@@ -119,3 +119,52 @@ describe('parseSearchQuery', () => {
     });
   });
 });
+
+describe('is:fav / is:♥ favorite filter', () => {
+  it('parses is:fav as a favorite filter term', () => {
+    expect(parseSearchQuery('is:fav')).toEqual([
+      { terms: 'fav', exact: false, urlOnly: false, isFav: true },
+    ]);
+  });
+
+  it('parses is:♥ as a favorite filter term', () => {
+    expect(parseSearchQuery('is:♥')).toEqual([
+      { terms: '♥', exact: false, urlOnly: false, isFav: true },
+    ]);
+  });
+
+  it('is case-insensitive for the operator', () => {
+    expect(parseSearchQuery('IS:FAV')).toEqual([
+      { terms: 'fav', exact: false, urlOnly: false, isFav: true },
+    ]);
+    expect(parseSearchQuery('Is:♥')).toEqual([
+      { terms: '♥', exact: false, urlOnly: false, isFav: true },
+    ]);
+  });
+
+  it('combines is:fav with keywords and link: in any order', () => {
+    expect(parseSearchQuery('is:fav keyword')).toEqual([
+      { terms: 'fav', exact: false, urlOnly: false, isFav: true },
+      { terms: 'keyword', exact: false, urlOnly: false },
+    ]);
+    expect(parseSearchQuery('keyword is:fav link:google.com')).toEqual([
+      { terms: 'keyword', exact: false, urlOnly: false },
+      { terms: 'fav', exact: false, urlOnly: false, isFav: true },
+      { terms: 'google.com', exact: false, urlOnly: true },
+    ]);
+  });
+
+  it('treats a bare is: with no value as a literal keyword', () => {
+    expect(parseSearchQuery('is:')).toEqual([{ terms: 'is:', exact: false, urlOnly: false }]);
+    expect(parseSearchQuery('is: keyword')).toEqual([
+      { terms: 'is:', exact: false, urlOnly: false },
+      { terms: 'keyword', exact: false, urlOnly: false },
+    ]);
+  });
+
+  it('treats an unrecognized is:<value> as a literal bare term', () => {
+    expect(parseSearchQuery('is:unread')).toEqual([
+      { terms: 'is:unread', exact: false, urlOnly: false },
+    ]);
+  });
+});

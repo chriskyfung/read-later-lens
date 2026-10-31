@@ -38,11 +38,18 @@ export function applyFilters(list) {
     filtered = filtered.filter((b) => b.tags && b.tags.includes(activeTag));
   }
 
+  // Favorite filter — 'is:fav' / 'is:♥' narrows to starred bookmarks (AND-ed).
+  const parsed = parseSearchQuery(searchQuery);
+  const favTerms = parsed.filter((t) => t.isFav);
+  if (favTerms.length > 0) {
+    filtered = filtered.filter((b) => Boolean(b.is_favorite));
+  }
+
   // Keyword search (with relevance scoring).
   // Multi-term support: bare terms are AND-ed keywords; quoted phrases are
   // exact matches. Order-independent ('term1 term2' ≡ 'term2 term1').
-  const parsed = parseSearchQuery(searchQuery);
-  if (parsed.length > 0) {
+  const keywordTerms = parsed.filter((t) => !t.isFav);
+  if (keywordTerms.length > 0) {
     filtered = filtered
       .map((b) => {
         const titleLower = (b.title || '').toLowerCase();
@@ -51,7 +58,7 @@ export function applyFilters(list) {
         const tagsLower = (b.tags || []).map((t) => t.toLowerCase());
         let totalScore = 0;
 
-        for (const term of parsed) {
+        for (const term of keywordTerms) {
           // Every term must match in at least one field (AND semantics);
           // quoted phrases match as contiguous substrings within each field.
           let score = 0;
