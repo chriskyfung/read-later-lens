@@ -15,6 +15,13 @@
  *                                     { terms: 'keyword', urlOnly: false }]
  *    The operator is case-insensitive ('LINK:' works too) and the value may
  *    be quoted: link:"exact phrase".
+ *  - 'is:fav' / 'is:♥' is a favorite filter — the term narrows the result set
+ *    to starred bookmarks (AND-ed with the rest of the query):
+ *      'is:fav keyword' -> [{ terms: 'fav', isFav: true },
+ *                           { terms: 'keyword', urlOnly: false }]
+ *    The operator is case-insensitive ('IS:FAV' / 'IS:♥' work too). Only
+ *    'fav' and '♥' are recognized values; any other 'is:<value>' (or a bare
+ *    'is:' with no value) is kept as a literal keyword.
  *  - An unbalanced trailing quote is treated literally (graceful degradation);
  *    a bare 'link:' with no value is kept as a literal keyword.
  */
@@ -25,6 +32,7 @@
  * @property {string} terms - Lowercased term text.
  * @property {boolean} exact - True when the term was quoted (exact phrase).
  * @property {boolean} urlOnly - True for 'link:' terms (URL field operator).
+ * @property {boolean} [isFav] - True for 'is:fav' / 'is:♥' favorite filters.
  */
 
 /**
@@ -40,24 +48,27 @@ export function parseSearchQuery(raw) {
   const terms = [];
   // Order matters: link:<value> (quoted or bare, case-insensitive),
   // then a quoted phrase, then any other run of non-space characters.
-  const re = /link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
+  const re = /is:(fav|♥)|link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
   let m;
   while ((m = re.exec(q)) !== null) {
-    if (m[1] !== undefined || m[2] !== undefined) {
+    if (m[1] !== undefined) {
+      // Favorite filter operator — value is already restricted to fav/♥.
+      terms.push({ terms: m[1].toLowerCase(), exact: false, urlOnly: false, isFav: true });
+    } else if (m[2] !== undefined || m[3] !== undefined) {
       // link: operator — value may be quoted or bare.
-      const value = (m[1] !== undefined ? m[1] : m[2]).trim();
+      const value = (m[2] !== undefined ? m[2] : m[3]).trim();
       if (value !== '') {
-        terms.push({ terms: value.toLowerCase(), exact: m[1] !== undefined, urlOnly: true });
+        terms.push({ terms: value.toLowerCase(), exact: m[2] !== undefined, urlOnly: true });
       } else {
         // link:"" — empty value: keep the operator literally.
         terms.push({ terms: 'link:', exact: false, urlOnly: false });
       }
-    } else if (m[3] !== undefined) {
+    } else if (m[4] !== undefined) {
       // Quoted phrase — may be empty after trimming; skip empties.
-      const phrase = m[3].trim();
+      const phrase = m[4].trim();
       if (phrase !== '') terms.push({ terms: phrase.toLowerCase(), exact: true, urlOnly: false });
     } else {
-      terms.push({ terms: m[4].toLowerCase(), exact: false, urlOnly: false });
+      terms.push({ terms: m[5].toLowerCase(), exact: false, urlOnly: false });
     }
   }
   return terms;
