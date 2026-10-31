@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeEach } from 'vitest';
 import {
   setBookmarks,
   setActiveFolder,
@@ -254,5 +254,54 @@ describe('trash awareness', () => {
 
     expect(getTrashedBookmarks()).toEqual([]);
     expect(getActiveBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+});
+
+describe('is:fav favorite filter', () => {
+  it('narrows to favored bookmarks with is:fav', () => {
+    setBookmarks([mk(1, { is_favorite: true }), mk(2), mk(3, { is_favorite: true })]);
+    setSearchQuery('is:fav');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('narrows to favored bookmarks with is:♥', () => {
+    setBookmarks([mk(1, { is_favorite: true }), mk(2)]);
+    setSearchQuery('is:♥');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('ANDs is:fav with keywords', () => {
+    setBookmarks([
+      mk(1, { title: 'alpha', is_favorite: true }),
+      mk(2, { title: 'alpha' }),
+      mk(3, { title: 'beta', is_favorite: true }),
+    ]);
+    setSearchQuery('is:fav alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('ANDs is:fav with link:', () => {
+    setBookmarks([
+      mk(1, { url: 'https://github.com/a', is_favorite: true }),
+      mk(2, { url: 'https://github.com/b' }),
+      mk(3, { url: 'https://other.org', is_favorite: true }),
+    ]);
+    setSearchQuery('is:fav link:github.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('excludes trashed bookmarks even when favored', () => {
+    setBookmarks([
+      mk(1, { is_favorite: true, deleted_at: '2026-01-01T00:00:00.000Z' }),
+      mk(2, { is_favorite: true }),
+    ]);
+    setSearchQuery('is:fav');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['2']);
+  });
+
+  it('returns empty when no bookmarks are favored', () => {
+    setBookmarks([mk(1), mk(2)]);
+    setSearchQuery('is:fav');
+    expect(getFilteredBookmarks()).toEqual([]);
   });
 });
