@@ -22,7 +22,7 @@ const Papa = vi.hoisted(() => ({
 }));
 
 vi.mock('papaparse', () => ({ default: Papa }));
-vi.mock('../src/io/sqlLoader.js', () => ({ initSql }));
+vi.mock('../src/services/sqlLoader.js', () => ({ initSql }));
 
 vi.mock('../src/providers/index.js', () => {
   const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) => ({
