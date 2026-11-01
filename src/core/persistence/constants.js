@@ -1,7 +1,7 @@
 /**
  * @fileoverview Database identity and row keys for the IndexedDB cache.
  *
- * Leaf module: depends on nothing, so every other module in `src/core/store/`
+ * Leaf module: depends on nothing, so every other module in `src/core/persistence/`
  * can import the names it needs without creating a cycle.
  */
 

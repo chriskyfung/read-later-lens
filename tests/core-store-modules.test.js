@@ -14,9 +14,9 @@ import {
   STORE_NAME,
   DB_VERSION,
   REV_KEY,
-} from '../src/core/store/constants.js';
-import { toPersistedSources } from '../src/core/store/serialize.js';
-import { getKnownRev, setKnownRev, clearKnownRev } from '../src/core/store/revision.js';
+} from '../src/core/persistence/constants.js';
+import { toPersistedSources } from '../src/core/persistence/serialize.js';
+import { getKnownRev, setKnownRev, clearKnownRev } from '../src/core/persistence/revision.js';
 
 describe('store/constants', () => {
   it('pins the database identity and row keys', () => {
@@ -162,7 +162,7 @@ describe('store/revision', () => {
 
 describe('store barrel', () => {
   it('exposes the public API unchanged', async () => {
-    const barrel = await import('../src/core/store');
+    const barrel = await import('../src/core/persistence');
 
     for (const name of ['saveState', 'loadState', 'isStateFresh', 'getStorageUsage', 'closeDb']) {
       expect(typeof barrel[name]).toBe('function');
@@ -173,7 +173,7 @@ describe('store barrel', () => {
     // `views-header.test.js` and `core/guard.js` both reach the probe through
     // this module, so a spy installed on the barrel must be the value the
     // implementation resolves to — i.e. the barrel re-exports, never wraps.
-    const barrel = await import('../src/core/store');
+    const barrel = await import('../src/core/persistence');
     const probe = vi.spyOn(barrel, 'isStateFresh').mockResolvedValue(false);
 
     try {

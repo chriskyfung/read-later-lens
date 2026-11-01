@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({ probe: vi.fn(), showToast: vi.fn() }));
 
-vi.mock('../src/core/store', async (importOriginal) => ({
+vi.mock('../src/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: () => h.probe(),
 }));

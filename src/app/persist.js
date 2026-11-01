@@ -9,7 +9,7 @@
  *
  * @returns {Promise<{persisted: boolean, conflict: boolean}>}
  */
-import { saveState } from '../core/store';
+import { saveState } from '../core/persistence';
 import { updateStorageUsageUI } from '../views/sidebar';
 import { showToast } from '../utils/dom';
 import { STALE_STATE_MESSAGE } from '../core/guard.js';

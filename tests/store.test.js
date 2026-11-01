@@ -1,7 +1,13 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { openDB, deleteDB } from 'idb';
-import { saveState, loadState, isStateFresh, getStorageUsage, closeDb } from '../src/core/store';
+import {
+  saveState,
+  loadState,
+  isStateFresh,
+  getStorageUsage,
+  closeDb,
+} from '../src/core/persistence';
 import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '../src/core/state';
 
 const DB_NAME = 'ReadLaterLensDB';
