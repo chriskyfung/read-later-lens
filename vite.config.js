@@ -15,7 +15,13 @@ export default defineConfig({
       // to become its own chunk. Without it the bundler inlines the dynamic
       // import back into the entry chunk, defeating the lazy load (verified in
       // the adoption spike: identical 531 kB entry chunk with and without).
-      output: { codeSplitting: true },
+      output: {
+        codeSplitting: true,
+        manualChunks(id) {
+          if (id.includes('node_modules/compromise')) return 'compromise';
+          if (id.includes('node_modules/d3')) return 'd3';
+        },
+      },
     },
   },
   test: {
