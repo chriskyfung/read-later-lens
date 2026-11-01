@@ -28,8 +28,16 @@ export default defineConfig({
     globals: true,
     include: ['tests/**/*.test.js'],
     coverage: {
+      provider: 'v8',
       reporter: ['text', 'lcov'],
       exclude: ['src/views/**', 'src/app/main.js'],
+      all: true,
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 70,
+        statements: 80,
+      },
     },
   },
 });

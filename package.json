@@ -16,7 +16,8 @@
     "lint-staged": "lint-staged",
     "test": "vitest run --passWithNoTests",
     "test:quiet": "vitest run --passWithNoTests --silent=passed-only",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "lint-staged": {
     "*.{js,mjs,cjs}": [
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "@tailwindcss/vite": "^4.3.3",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
