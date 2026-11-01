@@ -29,7 +29,7 @@ export default defineConfig({
     include: ['tests/**/*.test.js'],
     coverage: {
       reporter: ['text', 'lcov'],
-      exclude: ['src/views/**', 'src/main.js'],
+      exclude: ['src/views/**', 'src/app/main.js'],
     },
   },
 });
