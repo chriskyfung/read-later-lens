@@ -4,12 +4,10 @@ import {
   sourceFiles,
   activeFolder,
   selectedIds,
-  SQL,
   setBookmarks,
   setSourceFiles,
   setActiveFolder,
   setSelectedIds,
-  setSQL,
   mergeBookmarks,
   removeSourceFile,
   isTrashed,
@@ -20,6 +18,7 @@ import {
   setFavorite,
   toggleFavorite,
 } from '../src/core/state';
+import { SQL, setSQL } from '../src/services/sqlEngine.js';
 
 const mk = (id, sourceId = 'f1') => ({ id: String(id), source_file_id: sourceId });
 

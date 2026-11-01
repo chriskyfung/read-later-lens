@@ -11,7 +11,7 @@ import { checkImport } from '../../providers/profiles.js';
 import { resolveImportAdapter } from '../../providers/index.js';
 import { captureCsvDialect } from '../../utils/csv';
 import { newFileId } from '../../utils/id.js';
-import { initSql } from '../../services/sqlLoader.js';
+import { initSql } from '../../services/sqlEngine.js';
 import { UNSUPPORTED_SOURCE_FLAG, UNSUPPORTED_TYPE_FLAG } from './constants.js';
 import { expandEnvelopeSources } from './envelope.js';
 

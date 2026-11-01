@@ -28,4 +28,3 @@ export {
   setSortBy,
   setSelectedIds,
 } from './session.js';
-export { SQL, setSQL } from './sql.js';

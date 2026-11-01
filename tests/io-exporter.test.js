@@ -10,7 +10,8 @@ import {
 import { captureCsvDialect } from '../src/utils/csv';
 import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
 import { checkImport } from '../src/providers/profiles.js';
-import { bookmarks, setBookmarks, setSourceFiles, setSQL } from '../src/core/state';
+import { bookmarks, setBookmarks, setSourceFiles } from '../src/core/state';
+import { setSQL } from '../src/services/sqlEngine.js';
 import { resetLayers } from '../src/utils/dom';
 
 // Stands in for the `papaparse` dependency that `src/io/export/` imports,
