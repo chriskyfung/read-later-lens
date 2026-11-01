@@ -56,11 +56,11 @@
     "samsung >= 24"
   ],
   "dependencies": {
-    "compromise": "^14.18.0",
+    "compromise": "^14.19.0",
     "d3": "^7.9.0",
     "idb": "^8.0.4",
     "papaparse": "^5.7.0",
-    "sql.js": "^1.15.1"
+    "sql.js": "^1.15.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
