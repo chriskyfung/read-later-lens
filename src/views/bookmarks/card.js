@@ -5,7 +5,7 @@
  * bookmarkCardHtml); this module owns element creation and wiring only.
  */
 import { selectedIds } from '../../core/state';
-import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks/card.js';
+import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks';
 import { getBookmarkDomain } from '../../utils/url.js';
 import { openReaderModal } from '../reader';
 

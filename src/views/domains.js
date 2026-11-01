@@ -18,11 +18,7 @@ import { topDomains } from '../analytics';
 import { setSearchQuery } from '../core/state';
 import { setSearchInputValue } from './header';
 import { activateTab } from './tabs.js';
-import {
-  domainChartEmptyStateHtml,
-  domainBarClass,
-  domainBarHtml,
-} from '../components/domains/bar.js';
+import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '../components/domains';
 
 let deps = { render: () => {} };
 

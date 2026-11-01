@@ -2,7 +2,7 @@ import {
   domainChartEmptyStateHtml,
   domainBarClass,
   domainBarHtml,
-} from '../src/components/domains/bar.js';
+} from '../src/components/domains';
 import { describe, it, expect } from 'vitest';
 
 /**

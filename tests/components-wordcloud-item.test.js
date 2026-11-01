@@ -2,7 +2,7 @@ import {
   wordCloudEmptyStateHtml,
   wordCloudItemClass,
   wordCloudItemLabel,
-} from '../src/components/wordcloud/item.js';
+} from '../src/components/wordcloud';
 import { describe, it, expect } from 'vitest';
 
 /**
