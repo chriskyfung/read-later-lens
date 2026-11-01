@@ -2,7 +2,7 @@
  * @fileoverview Instapaper import adapters.
  *
  * Converts Instapaper CSV/JSON/SQLite exports into normalized BookmarkRecord
- * shapes via `src/model/normalize`. Field resolution is intentionally tolerant
+ * shapes via `src/core/model/normalize`. Field resolution is intentionally tolerant
  * (alias-based) so it round-trips the original monolith's `processRawRecords`.
  */
 
@@ -11,9 +11,9 @@ import {
   normalizeFields,
   normalizeTags,
   normalizeFavorite,
-} from '../../model/normalize.js';
+} from '../../core/model/normalize.js';
 import { processSqliteAsBookmarks } from './sqlite.js';
-import { makeReaderUrl } from '../../model/BookmarkRecord.js';
+import { makeReaderUrl } from '../../core/model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics';
 
 /**
@@ -24,7 +24,7 @@ import { detectLanguage } from '../../analytics';
  * @param {boolean} [options.preserveMeta] Round-trip `provider` /
  *   `instapaper_url` from the source record (Read Later Lens unified profile)
  *   instead of forcing Instapaper values.
- * @returns {{ records: import('../../model/BookmarkRecord.js').BookmarkRecord[], stats: { droppedNoUrl: number } }}
+ * @returns {{ records: import('../../core/model/BookmarkRecord.js').BookmarkRecord[], stats: { droppedNoUrl: number } }}
  *   The kept bookmarks, plus the count of URL-less rows dropped (reported by
  *   the adapter that applied the URL check, so the importer never infers it).
  */
@@ -70,7 +70,7 @@ export function importFromJsonOrCsv(rawRows, sourceFileId, sourceFileName, optio
  * @param {string} sourceFileName
  * @param {import('sql.js').initSqlJs.SqlJsStatic} SQL
  * @param {object} [options] See importFromJsonOrCsv.
- * @returns {Promise<import('../../model/BookmarkRecord.js').BookmarkRecord[]>}
+ * @returns {Promise<import('../../core/model/BookmarkRecord.js').BookmarkRecord[]>}
  */
 export function importFromSqlite(wasmBuffer, sourceFileId, sourceFileName, SQL, options = {}) {
   return processSqliteAsBookmarks(

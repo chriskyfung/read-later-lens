@@ -131,7 +131,7 @@ export function typeFromSourceName(name) {
  * @param {ReturnType<import('../providers/index.js').resolveImportAdapter>} adapter
  * @returns {{
  *   fileRecords: import('../core/state').SourceFileRecord[],
- *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
+ *   records: import('../../core/model/BookmarkRecord.js').BookmarkRecord[],
  *   stats: { droppedNoUrl: number },
  * }|null} Rebuilt sources and records, plus the URL-less-row count summed
  *   across the per-group adapter calls.

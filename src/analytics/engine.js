@@ -77,7 +77,7 @@ export function getEngineState() {
 /**
  * Detected language of a bookmark's analysis text, memoized per record.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {string}
  */
 export function documentLanguage(b) {
@@ -95,7 +95,7 @@ export function documentLanguage(b) {
  * chunk — it segments with the built-in `Intl.Segmenter` instead (see
  * `extractCjkKeywordTerms`) — so `loadKeywordsEngine()` stays untouched.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
  * @returns {boolean}
  */
 export function needsKeywordEngine(list) {

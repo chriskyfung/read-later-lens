@@ -27,7 +27,7 @@ export function resolveFolderName() {
  * Update the grid header side-effects (#filteredCount, #selectAllCheckbox,
  * #activeFilterSummary). Reads activeLang / folder / selection state.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord[]} filtered
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} filtered
  */
 export function updateBookmarksHeader(filtered) {
   document.getElementById(WORKSPACE_IDS.FILTERED_COUNT).innerText = filtered.length;

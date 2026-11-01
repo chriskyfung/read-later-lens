@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeFields, normalizeTags, stableIdFromUrl } from '../src/model/normalize.js';
+import { normalizeFields, normalizeTags, stableIdFromUrl } from '../src/core/model/normalize.js';
 
 describe('normalizeFields', () => {
   it('prefers canonical id and aliases', () => {

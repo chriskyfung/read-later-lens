@@ -47,7 +47,7 @@ export function parseCsvWithPapa(text) {
  * @param {string} profile Import profile id chosen in the source picker.
  * @returns {Promise<{
  *   fileRecords: import('../core/state').SourceFileRecord[],
- *   records: import('../model/BookmarkRecord.js').BookmarkRecord[],
+ *   records: import('../../core/model/BookmarkRecord.js').BookmarkRecord[],
  *   count: number,
  *   skipped: number,
  *   droppedNoUrl: number,

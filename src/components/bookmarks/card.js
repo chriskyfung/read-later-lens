@@ -52,7 +52,7 @@ function tagsHtml(tags) {
  * reads — this is a pure string builder.
  *
  * @param {object} opts
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord} opts.bookmark
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} opts.bookmark
  * @param {string} opts.domain  Resolved domain badge text (caller derives).
  * @param {boolean} opts.isSelected
  * @returns {string}

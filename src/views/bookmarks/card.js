@@ -27,7 +27,7 @@ const CARD_INTERACTIVE = 'a, button, input, label, [data-delete-bookmark]';
  * removed because the modal only surfaces the truncated preview. The card is
  * keyboard-activatable via Enter/Space.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord} bookmark
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} bookmark
  * @returns {HTMLDivElement}
  */
 export function createBookmarkCard(bookmark) {

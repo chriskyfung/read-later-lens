@@ -12,8 +12,8 @@ import {
   normalizeFields,
   normalizeTags,
   normalizeFavorite,
-} from '../../model/normalize.js';
-import { makeReaderUrl } from '../../model/BookmarkRecord.js';
+} from '../../core/model/normalize.js';
+import { makeReaderUrl } from '../../core/model/BookmarkRecord.js';
 import { detectLanguage } from '../../analytics';
 
 /**
@@ -26,7 +26,7 @@ import { detectLanguage } from '../../analytics';
  * @param {boolean} [options.preserveMeta] Round-trip `provider` /
  *   `instapaper_url` columns from the source rows when present.
  * @returns {Promise<{
- *   records: import('../../model/BookmarkRecord.js').BookmarkRecord[],
+ *   records: import('../../core/model/BookmarkRecord.js').BookmarkRecord[],
  *   schema: { table: string, columns: string[] } | null,
  *   stats: { droppedNoUrl: number },
  * }>} The normalized rows, the table layout that was actually read (so the
