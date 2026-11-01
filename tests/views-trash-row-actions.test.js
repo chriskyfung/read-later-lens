@@ -16,7 +16,7 @@ import { registerTrashListeners, renderTrashView, initTrash } from '../src/views
 import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state';
 
 // Only the row wiring is under test; the cross-tab gate must stay transparent.
-vi.mock('../src/core/store', async (importOriginal) => ({
+vi.mock('../src/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

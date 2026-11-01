@@ -6,7 +6,7 @@
  * src/components/sidebar/sections/storage.js.
  */
 
-import { getStorageUsage } from '../../core/store';
+import { getStorageUsage } from '../../core/persistence';
 import { SIDEBAR_IDS } from './constants.js';
 
 /**

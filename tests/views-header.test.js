@@ -326,7 +326,7 @@ describe('registerHeaderListeners — clear cache', () => {
 
     // Force the gate closed: the production isStateFresh() would see another
     // tab's revision here. The mock lives on the store module the guard reads.
-    const store = await import('../src/core/store');
+    const store = await import('../src/core/persistence');
     const probe = vi.spyOn(store, 'isStateFresh').mockResolvedValue(false);
     try {
       await armClearCache();

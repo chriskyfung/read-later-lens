@@ -1,7 +1,7 @@
 /**
  * @fileoverview Lifecycle of the single IndexedDB connection.
  *
- * Owns the `dbPromise` singleton, so the rest of `src/core/store/` can ask for
+ * Owns the `dbPromise` singleton, so the rest of `src/core/persistence/` can ask for
  * "the database" without each keeping its own handle.
  */
 
