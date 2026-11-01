@@ -16,7 +16,8 @@
     "lint-staged": "lint-staged",
     "test": "vitest run --passWithNoTests",
     "test:quiet": "vitest run --passWithNoTests --silent=passed-only",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "lint-staged": {
     "*.{js,mjs,cjs}": [
