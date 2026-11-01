@@ -8,7 +8,8 @@ import {
 } from '../src/io/import';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
-import { bookmarks, setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state';
+import { bookmarks, setBookmarks, setSourceFiles, sourceFiles } from '../src/core/state';
+import { setSQL } from '../src/services/sqlEngine.js';
 import { resetLayers, stackDepth } from '../src/utils/dom';
 import { STALE_STATE_REASON } from '../src/core/guard.js';
 
@@ -22,7 +23,19 @@ const Papa = vi.hoisted(() => ({
 }));
 
 vi.mock('papaparse', () => ({ default: Papa }));
-vi.mock('../src/services/sqlLoader.js', () => ({ initSql }));
+vi.mock('../src/services/sqlEngine.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    initSql,
+    get SQL() {
+      return actual.SQL;
+    },
+    set SQL(v) {
+      actual.SQL = v;
+    },
+  };
+});
 
 vi.mock('../src/providers/index.js', () => {
   const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) => ({
@@ -237,7 +250,7 @@ describe('handleFileUploads — format dispatch', () => {
   });
 
   it('routes .db files through importSqlite with a Uint8Array and the SQL engine', async () => {
-    const { SQL: engine } = await import('../src/core/state');
+    const { SQL: engine } = await import('../src/services/sqlEngine.js');
     await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
 
     expect(initSql).toHaveBeenCalledTimes(1);

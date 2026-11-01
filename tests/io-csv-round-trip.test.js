@@ -3,7 +3,8 @@ import { handleFileUploads, initImporter, applyProfileSelection } from '../src/i
 import { saveSingleFile } from '../src/io/export';
 import { defaultProfileId } from '../src/providers/profiles.js';
 import { saveFileWithFallback } from '../src/utils/download.js';
-import { setBookmarks, setSourceFiles, setSQL, sourceFiles } from '../src/core/state';
+import { setBookmarks, setSourceFiles, sourceFiles } from '../src/core/state';
+import { setSQL } from '../src/services/sqlEngine.js';
 import { resetLayers } from '../src/utils/dom';
 
 vi.mock('../src/utils/download.js', () => ({
