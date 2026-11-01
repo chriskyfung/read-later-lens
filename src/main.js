@@ -45,7 +45,17 @@ export const PERSIST_WRITE_FAILED_MESSAGE = '無法寫入本機快取，剛才�
  *   false when the IndexedDB write failed (this session is not cached);
  *   `rendered` is false when the view refresh threw.
  */
-async function persistAndRender() {
+/**
+ * Shared persistence core — save state to IndexedDB and refresh the storage
+ * meter. Used by both `persistAndRender` (importer) and `persistAfterAction`
+ * (view actions) so the save/conflict/storage-UI logic lives in one place.
+ *
+ * Never rejects: a failed cache write must never break the UI flow. Returns the
+ * write outcome so callers can decide on toasts/rendering.
+ *
+ * @returns {Promise<{persisted: boolean, conflict: boolean}>}
+ */
+async function persistCore() {
   let persisted = false;
   let conflict = false;
   try {
@@ -66,6 +76,12 @@ async function persistAndRender() {
   } catch (err) {
     console.warn('Storage usage update failed:', err);
   }
+
+  return { persisted, conflict };
+}
+
+async function persistAndRender() {
+  const { persisted, conflict } = await persistCore();
 
   let rendered = false;
   try {
@@ -96,29 +112,12 @@ async function persistAndRender() {
  * @returns {Promise<{persisted: boolean, conflict: boolean}>} The write outcome.
  */
 async function persistAfterAction() {
-  let persisted = true;
-  let conflict = false;
-  try {
-    const saved = await saveState();
-    // A stub that says nothing counts as committed: `saved !== false` and
-    // `saved?.persisted !== false` both mean "the save reported no failure".
-    persisted = saved !== false && saved?.persisted !== false;
-    conflict = saved?.conflict === true;
-  } catch (err) {
-    console.warn('IndexedDB save failed:', err);
-    persisted = false;
-  }
+  const { persisted, conflict } = await persistCore();
 
   if (!persisted && !conflict) {
     showToast(PERSIST_WRITE_FAILED_MESSAGE);
   } else if (conflict) {
     showToast(STALE_STATE_MESSAGE);
-  }
-
-  try {
-    await updateStorageUsageUI();
-  } catch (err) {
-    console.warn('Storage usage update failed:', err);
   }
 
   return { persisted, conflict };
