@@ -11,7 +11,7 @@ import { getActiveBookmarks } from '../../core/filters.js';
 import { saveFileWithFallback } from '../../utils/download.js';
 import { csvUnparseConfig, hardenRecordsForCsv } from '../../utils/csv';
 import { showToast } from '../../utils/dom';
-import { initSql } from '../sqlLoader.js';
+import { initSql } from '../../services/sqlLoader.js';
 import {
   exportColumnsFor,
   projectRecord,
