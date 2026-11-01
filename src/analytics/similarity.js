@@ -28,7 +28,7 @@ import { MIN_AUTO_N, MIN_IDF_SPREAD, AUTO_K } from './core/constants.js';
 import { cosineScore, buildIdf, targetSpecificity, sigmoid } from './core/scoring.js';
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {Map<string, number>}
  */
 export function bookmarkTokenFreq(b) {
@@ -36,8 +36,8 @@ export function bookmarkTokenFreq(b) {
 }
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} a
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} a
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {number} 0..1
  */
 export function cosineSimilarity(a, b) {
@@ -47,8 +47,8 @@ export function cosineSimilarity(a, b) {
 /**
  * Rank all bookmarks by similarity to a target, excluding the target itself.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} target
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} target
  * @param {number} [top=5]
  * @param {{ weighting?: 'tf'|'tfidf' }} [options]
  *   - `'tf'` (default): plain cosine over term-frequency maps — byte-identical
@@ -56,7 +56,7 @@ export function cosineSimilarity(a, b) {
  *   - `'tfidf'`: each shared term scaled by its inverse document frequency over
  *     `list` (see `buildIdf` / `cosineScore` in `scoring.js`), so generic terms that
  *     appear in many documents contribute less than distinctive ones.
- * @returns {{ doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
+ * @returns {{ doc: import('../../core/model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
  */
 export function mostSimilar(list, target, top = 5, options = {}) {
   const weighting = options.weighting ?? 'tf';
@@ -80,11 +80,11 @@ export function mostSimilar(list, target, top = 5, options = {}) {
  *   leans into TF. Lambda is returned alongside the ranked results and the mode
  *   label ('tf' | 'blend' | 'tfidf') is fit for a UI status line.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} target
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} target
  * @param {number} [top=5]
  * @returns {{
- *   results: { doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[],
+ *   results: { doc: import('../../core/model/BookmarkRecord.js').BookmarkRecord, score: number }[],
  *   lambda: number,
  *   mode: 'tf' | 'blend' | 'tfidf',
  * }}
@@ -127,13 +127,13 @@ export function mostSimilarAuto(list, target, top = 5) {
 /**
  * Rank candidates by a convex blend of TF and TF-IDF cosine scores.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
  * @param {Map<string, number>[]} freqs one frequency map per list entry
  * @param {Map<string, number>} targetFreq
  * @param {Map<string, number> | null} idf null -> plain TF
  * @param {number} lambda TF-IDF mix (0 = pure TF, 1 = pure TF-IDF)
  * @param {number} top
- * @returns {{ doc: import('../model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
+ * @returns {{ doc: import('../../core/model/BookmarkRecord.js').BookmarkRecord, score: number }[]}
  */
 function rankByWeights(list, freqs, targetFreq, targetId, idf, lambda, top) {
   const score = (fa, fb) => (1 - lambda) * cosineScore(fa, fb) + lambda * cosineScore(fa, fb, idf);

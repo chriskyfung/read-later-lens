@@ -70,7 +70,7 @@ export function exportColumnsFor(file) {
  * literal `{}` cell — and the unmapped-column count would silently under-report.
  *
  * @param {string} column Source column name, matched case-insensitively.
- * @returns {((b: import('../../model/BookmarkRecord.js').BookmarkRecord) => unknown)|undefined}
+ * @returns {((b: import('../../core/model/BookmarkRecord.js').BookmarkRecord) => unknown)|undefined}
  */
 export function sourceColumnReader(column) {
   const key = String(column).toLowerCase();
@@ -95,7 +95,7 @@ export function sourceColumnReader(column) {
  * path lowercases keys (`lowerKeyed`), so a source declaring `Title` / `URL`
  * must find its values rather than round-trip as blanks.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord} record
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} record
  * @param {string[]} columns
  * @returns {Record<string, unknown>} A new object; the record is not mutated.
  */

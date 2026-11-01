@@ -5,7 +5,7 @@
 /**
  * Extract `www.`-stripped hostnames and return sorted [domain, count] pairs.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
  * @param {number} [limit=15]
  * @returns {Array<[string, number]>} sorted desc by count
  */

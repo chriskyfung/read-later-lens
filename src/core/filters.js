@@ -10,8 +10,8 @@ import { bookmarks, activeFolder, activeLang, activeTag, searchQuery, sortBy } f
 import { parseSearchQuery } from './searchParser.js';
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
- * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function applyFilters(list) {
   // Trashed bookmarks are invisible to every active view; the trash view reads
@@ -99,7 +99,7 @@ export function applyFilters(list) {
 }
 
 /**
- * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function getFilteredBookmarks() {
   return applyFilters(bookmarks);
@@ -109,7 +109,7 @@ export function getFilteredBookmarks() {
  * Top-N items for a given filter. Useful for charts that cap their render.
  *
  * @param {number} n
- * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function getFilteredBookmarksTop(n) {
   return applyFilters(bookmarks).slice(0, n);
@@ -121,7 +121,7 @@ export function getFilteredBookmarksTop(n) {
  * The export paths need "everything except the trash" rather than the user's
  * current view, so they must not go through applyFilters().
  *
- * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function getActiveBookmarks() {
   return bookmarks.filter((b) => !b.deleted_at);
@@ -130,7 +130,7 @@ export function getActiveBookmarks() {
 /**
  * Trashed bookmarks, newest-deleted first (the trash view's projection).
  *
- * @returns {import('../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function getTrashedBookmarks() {
   return bookmarks

@@ -28,7 +28,7 @@ export const LINKAGE_LIMIT = 50;
 export const LINKAGE_THRESHOLD = 0.15;
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} bookmarks
  * @param {{ limit?: number, threshold?: number,
  *   weighting?: 'tf'|'tfidf' }} [options]
  * @returns {{
@@ -60,7 +60,7 @@ export function buildLinkageGraph(bookmarks, options = {}) {
  * paying for the O(n^2) link pass. `degree` is 0 here; only the link pass
  * (which the caller runs later) can know the real values.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} selected
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} selected
  *   Already-limited selection — this function does NOT re-apply `LINKAGE_LIMIT`.
  * @returns {{ nodes: { id: string, title: string, url: string, domain: string, degree: number, tags: string[] }[], domains: Set<string> }}
  */

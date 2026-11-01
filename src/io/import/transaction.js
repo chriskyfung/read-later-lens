@@ -216,7 +216,7 @@ export async function processSingleFile(file, finalName, profile, options = {}) 
  * record from here — processSingleFile() restores a full snapshot captured
  * before parsing, so a failed write rewinds the purge and the merge together.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord[]} newBookmarks
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} newBookmarks
  * @returns {{displaced: number}} `displaced`: trashed records this batch resurrected.
  */
 function acceptRecords(newBookmarks) {

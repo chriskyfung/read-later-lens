@@ -83,7 +83,7 @@ const recordSerial = new WeakMap();
 let nextSerial = 1;
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {number} the record's serial, assigned on first sight
  */
 function serialOf(b) {
@@ -144,7 +144,7 @@ function modeFor(lang, gate) {
  * moves CJK documents from 'grouped' to 'plain' while both states are
  * 'legacy'), so the cache must compare it explicitly.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {{ mode: 'grouped'|'plain', terms: object[] }} `grouped`:
  *   `{ key, display, count }[]` (English via compromise once loaded, CJK
  *   via Intl.Segmenter); `plain`: `[term, count][]` surface entries
@@ -188,7 +188,7 @@ function termsFor(b) {
  *
  * @param {{ lemmas: Map<string, {count: number,
  *   surfaces: Map<string, number>}>, plain: Map<string, number> }} acc
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  */
 function accumulate(acc, b) {
   const { mode, terms } = termsFor(b);
@@ -240,7 +240,7 @@ function displayFor(surfaces) {
  */
 let aggregateMemo = null;
 
-/** @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list */
+/** @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list */
 function aggregateKey(list) {
   const gate = gating();
   // Each record's serial carries its grouping mode too: a chunk failure
@@ -251,7 +251,7 @@ function aggregateKey(list) {
 }
 
 /**
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
  * @returns {Array<[string, number]>} sorted desc by count, capped at 60.
  *   The term is the display form (a verbatim substring of the source text).
  */

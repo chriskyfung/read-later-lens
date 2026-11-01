@@ -17,7 +17,7 @@ import { bookmarks } from '../../core/state';
  * The active (non-trashed) bookmarks — the population the folder badges and
  * the grid agree on.
  *
- * @returns {import('../../model/BookmarkRecord.js').BookmarkRecord[]}
+ * @returns {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]}
  */
 export function getActiveSidebarBookmarks() {
   return bookmarks.filter((b) => !b.deleted_at);
@@ -29,8 +29,8 @@ export function getActiveSidebarBookmarks() {
  * One filter pass serves both the folder badges (active only) and the trash
  * badge (trashed only).
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord[]} [list]
- * @returns {{activeList: import('../../model/BookmarkRecord.js').BookmarkRecord[], active: number, trashed: number}}
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} [list]
+ * @returns {{activeList: import('../../core/model/BookmarkRecord.js').BookmarkRecord[], active: number, trashed: number}}
  */
 export function partitionBookmarks(list = bookmarks) {
   const activeList = list.filter((b) => !b.deleted_at);
@@ -48,7 +48,7 @@ export function partitionBookmarks(list = bookmarks) {
  * file (O(files × bookmarks)) and read `source_file_id` that many times per
  * bookmark; this map reads it once. The resulting numbers are identical.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord[]} [activeList]
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} [activeList]
  * @returns {Map<string, number>} Count per source_file_id (absent = 0).
  */
 export function countActiveByFolder(activeList = getActiveSidebarBookmarks()) {
@@ -67,7 +67,7 @@ export function countActiveByFolder(activeList = getActiveSidebarBookmarks()) {
  * distinct bookmarks, trims each tag and drops blank ones. First-seen order is
  * preserved (Map iteration order), which the pill order depends on.
  *
- * @param {import('../../model/BookmarkRecord.js').BookmarkRecord[]} [list]
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} [list]
  * @returns {Map<string, number>}
  */
 export function collectTagCounts(list = bookmarks) {

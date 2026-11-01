@@ -102,7 +102,7 @@ export function tokenizeText(text) {
  * Text source for frequency analysis: bookmark title + plain-text preview.
  * Single definition so field renames/additions happen in one place.
  *
- * @param {import('../model/BookmarkRecord.js').BookmarkRecord} b
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} b
  * @returns {string}
  */
 export function bookmarkText(b) {
