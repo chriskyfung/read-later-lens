@@ -19,7 +19,7 @@
  * and must run AFTER mountModals().
  */
 import { readerModalHtml } from './reader';
-import { similarityModalHtml } from './similarityModal.js';
+import { similarityModalHtml } from './similarityModal';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';
