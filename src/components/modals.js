@@ -24,7 +24,7 @@ import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';
 import { trashModalHtml } from './bookmarks/trash';
-import { toastHtml } from './toast.js';
+import { toastHtml } from './toast';
 
 /**
  * Append all overlay markup to the end of <body> (monolith order preserved).
