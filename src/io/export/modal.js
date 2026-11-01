@@ -7,7 +7,7 @@
  */
 
 import * as state from '../../core/state';
-import { saveSourceFileRowHtml } from '../../components/io/saveModal.js';
+import { saveSourceFileRowHtml } from '../../components/io';
 import { pushLayer, popLayer } from '../../utils/dom';
 
 /**

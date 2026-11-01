@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bookmarkCardClass, bookmarkCardHtml } from '../src/components/bookmarks/card.js';
+import { bookmarkCardClass, bookmarkCardHtml } from '../src/components/bookmarks';
 
 // Minimal record mirroring tests/views-bookmarks.test.js fixtures.
 const bookmark = {

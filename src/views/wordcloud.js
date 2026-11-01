@@ -18,8 +18,11 @@ import { wordCloudFrequencies, wordCloudItems } from '../analytics';
 import { setSearchQuery } from '../core/state';
 import { setSearchInputValue } from './header';
 import { activateTab } from './tabs.js';
-import { wordCloudEmptyStateHtml } from '../components/wordcloud/item.js';
-import { wordCloudItemClass, wordCloudItemLabel } from '../components/wordcloud/item.js';
+import {
+  wordCloudEmptyStateHtml,
+  wordCloudItemClass,
+  wordCloudItemLabel,
+} from '../components/wordcloud';
 import { needsKeywordEngine, loadKeywordsEngine } from '../analytics';
 
 let deps = { render: () => {} };
