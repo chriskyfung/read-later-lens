@@ -1,5 +1,5 @@
-import { trashItemHtml } from '../../components/bookmarks/trash';
-import { getTrashedBookmarks } from '../../core/filters.js';
+import { trashItemHtml } from '../components';
+import { getTrashedBookmarks } from '@/core/filters.js';
 import { TRASH_IDS, summaryText } from './constants.js';
 
 /**

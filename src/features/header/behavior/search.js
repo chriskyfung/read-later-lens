@@ -2,7 +2,7 @@
  * @fileoverview Header search lifecycle — debounce timer and apply.
  *
  * Owns the single searchDebounceTimer so the timer can never have two owners (the
- * drift class that patchTrashRow() guards against in src/views/trash/view.js).
+ * drift class that patchTrashRow() guards against in src/features/trash/behavior/view.js).
  *
  * Search execution model: full re-renders are too expensive to run on every
  * keystroke (visible input lag on large datasets), so non-empty queries are

@@ -1,5 +1,5 @@
-import * as state from '../../core/state';
-import { getTrashedBookmarks } from '../../core/filters.js';
+import * as state from '@/core/state';
+import { getTrashedBookmarks } from '@/core/filters.js';
 
 /**
  * Find a trashed bookmark by id — O(1) via the id index in core/state,

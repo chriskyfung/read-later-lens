@@ -1,10 +1,8 @@
 /**
  * @fileoverview Trash display formatters — pure functions, zero imports.
  *
- * Extracted verbatim from src/components/bookmarks/trashModal.js when the trash
- * markup split into src/components/bookmarks/trash/*. Isolated so unit tests can
- * import the timestamp formatting without pulling in the markup builders or a DOM
- * environment.
+ * Isolated so unit tests can import the timestamp formatting without pulling in
+ * the markup builders or a DOM environment.
  */
 
 /**

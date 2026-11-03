@@ -6,7 +6,7 @@
  *
  * The shell changes rarely (layout / a11y) while the blocks churn with copy
  * and styling, so they live apart — same rationale as
- * src/components/bookmarks/trash/modal.js vs item.js.
+ * src/features/trash vs item.js.
  */
 
 import { HEADER_IDS } from './constants.js';

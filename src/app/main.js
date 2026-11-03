@@ -29,7 +29,7 @@ import {
 } from '../views/sidebar';
 import { initWorkspaceActions, registerWorkspaceListeners } from '../views/workspace';
 import { registerModalListeners } from './modalListeners.js';
-import { initTrash, registerTrashListeners } from '../views/trash';
+import { initTrash, registerTrashListeners } from '@/features/trash';
 import { persistAndRender, persistAfterAction } from './persist.js';
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.

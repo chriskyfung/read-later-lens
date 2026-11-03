@@ -4,12 +4,12 @@
 // banner; any drift must fall back to the full rebuild so the screen never
 // disagrees with state.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderTrashView, patchTrashRow, captureDomRowCount } from '../src/views/trash/view.js';
-import { initTrash, restoreBookmark, purgeBookmark } from '../src/views/trash';
-import { setBookmarks, bookmarks, setSelectedIds } from '../src/core/state';
+import { renderTrashView, initTrash, restoreBookmark, purgeBookmark } from '@/features/trash';
+import { patchTrashRow, captureDomRowCount } from '@/features/trash/behavior/view.js';
+import { setBookmarks, bookmarks, setSelectedIds } from '@/core/state';
 
 // The patch path is under test; the cross-tab gate must stay transparent.
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

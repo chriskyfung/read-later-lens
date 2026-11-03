@@ -10,8 +10,8 @@ import {
   getBookmarkById,
   bookmarks,
   isTrashed,
-} from '../src/core/state';
-import { findTrashedBookmark } from '../src/views/trash/service.js';
+} from '@/core/state';
+import { findTrashedBookmark } from '@/features/trash';
 
 const mk = (id, extras = {}) => ({ id: String(id), title: `t${id}`, ...extras });
 

@@ -11,7 +11,7 @@
  */
 
 import * as state from '../../core/state';
-import { openTrashModal } from '../trash';
+import { openTrashModal } from '@/features/trash';
 import { getDeps } from './deps.js';
 import { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL } from './constants.js';
 import { selectFolder, confirmDeleteFolder } from './actions.js';

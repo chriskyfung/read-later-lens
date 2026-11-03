@@ -1,9 +1,7 @@
 /**
  * @fileoverview Trash row constants — presentation tokens for one trashed row.
  *
- * Extracted verbatim from src/components/bookmarks/trashModal.js when the trash
- * markup split into src/components/bookmarks/trash/*. The class string is pinned
- * verbatim by tests/components-bookmarks-trashModal.test.js.
+ * The class string is pinned verbatim by tests/components-bookmarks-trashModal.test.js.
  */
 
 /** Columns for each trashed row (documentation of the row structure). */

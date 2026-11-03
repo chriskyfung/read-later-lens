@@ -3,14 +3,14 @@ import { setActiveFolder, setActiveTab } from '../src/core/state';
 import { renderAll } from '../src/app/shell.js';
 import { renderSidebar } from '../src/views/sidebar';
 import { renderBookmarkCards } from '@/features/bookmarks';
-import { renderTrashView } from '../src/views/trash';
+import { renderTrashView } from '@/features/trash';
 import { renderWordCloud } from '../src/views/wordcloud.js';
 import { renderDomainChart } from '../src/views/domains.js';
 import { renderConceptLinkageGraph } from '@/features/linkage';
 
 vi.mock('../src/views/sidebar', () => ({ renderSidebar: vi.fn() }));
 vi.mock('@/features/bookmarks', () => ({ renderBookmarkCards: vi.fn() }));
-vi.mock('../src/views/trash', () => ({ renderTrashView: vi.fn() }));
+vi.mock('@/features/trash', () => ({ renderTrashView: vi.fn() }));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
 vi.mock('@/features/linkage', () => ({ renderConceptLinkageGraph: vi.fn() }));

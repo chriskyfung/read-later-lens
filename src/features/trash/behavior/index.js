@@ -1,7 +1,7 @@
 /**
  * @fileoverview Trash view barrel — stable public surface for the split.
  *
- * Importers reach through this barrel (src/views/trash/index.js), not into the
+ * Importers reach through this barrel (src/features/trash/behavior/), not into the
  * individual modules, so the internal file layout can evolve without touching
  * callers.
  */

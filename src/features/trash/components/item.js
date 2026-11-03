@@ -1,19 +1,18 @@
 /**
  * @fileoverview Trash row markup — the DOM-XSS audit target for the trash.
  *
- * Extracted verbatim from src/components/bookmarks/trashModal.js when the trash
- * markup split into src/components/bookmarks/trash/*. Keeping the row builder
- * alone means tests/dom-xss-sinks.test.js pins exactly this file: any edit that
- * drops an escape() fails the audit without re-reviewing the modal shell.
+ * The row builder is isolated so tests/dom-xss-sinks.test.js pins exactly this
+ * file: any edit that drops an escape() fails the audit without re-reviewing
+ * the modal shell.
  *
- * `trashItemHtml` and `formatDeletedAt` are the parity builders for the
- * old trash-panel markup: the DOM-XSS registry audit (tests/dom-xss-sinks.js)
- * targets them by the same string shape, so they keep the original
- * fallbacks and class names. Escaping is not re-implemented here: builders
- * use the shared escapeHtml() from src/utils/dom/ — the helper named by
- * CONTRIBUTING and the eslint DOM-sink tripwire.
+ * trashItemHtml and formatDeletedAt are the parity builders for the old
+ * trash-panel markup: the DOM-XSS registry audit (tests/dom-xss-sinks.js)
+ * targets them by the same string shape, so they keep the original fallbacks
+ * and class names. Escaping is not re-implemented here: builders use the
+ * shared escapeHtml() from src/utils/dom/ — the helper named by CONTRIBUTING
+ * and the eslint DOM-sink tripwire.
  */
-import { escapeHtml } from '../../../utils/dom';
+import { escapeHtml } from '@/utils/dom';
 import { trashItemClass } from './constants.js';
 import { formatDeletedAt } from './formatters.js';
 

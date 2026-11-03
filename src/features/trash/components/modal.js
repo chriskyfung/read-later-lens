@@ -1,15 +1,13 @@
 /**
  * @fileoverview Trash (回收桶) modal shell markup — mount-time only.
  *
- * Extracted verbatim from src/components/bookmarks/trashModal.js when the trash
- * markup split into src/components/bookmarks/trash/*. The shell changes rarely
- * (a11y, layout) while the row builder (item.js) churns with copy and styling,
- * so they live apart; mounting concatenates this string in
+ * The shell changes rarely (a11y, layout) while the row builder (item.js) churns
+ * with copy and styling, so they live apart; mounting concatenates this string in
  * src/components/modals.js.
  *
- * The modal rides the shared layer stack (src/utils/dom/) with Escape unwind
- * + Tab trap registered in src/app/modalListeners.js; the view that
- * orchestrates it lives in src/views/trash/.
+ * The modal rides the shared layer stack (src/utils/dom/) with Escape unwind +
+ * Tab trap registered in src/app/modalListeners.js; the view that orchestrates
+ * it lives in ../behavior/.
  */
 
 /**

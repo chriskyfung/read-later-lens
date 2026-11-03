@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { bookmarkCardHtml } from '@/features/bookmarks';
-import { trashItemHtml } from '../src/components/bookmarks/trash/item.js';
+import { trashItemHtml } from '@/features/trash';
 import { domainBarHtml } from '../src/components/domains/bar.js';
 import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';
 import { linkageTooltipTagsHtml } from '@/features/linkage';
