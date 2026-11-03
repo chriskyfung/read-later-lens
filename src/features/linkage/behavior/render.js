@@ -11,11 +11,11 @@
  */
 
 import * as d3 from 'd3';
-import { getFilteredBookmarksTop } from '../../core/filters.js';
-import { buildLinkageGraph, buildGraphNodes } from '../../analytics';
-import { linkageEmptyStateHtml } from '../../components/linkage';
-import { activateTab } from '../tabs.js';
-import { showToast } from '../../utils/dom';
+import { getFilteredBookmarksTop } from '@/core/filters.js';
+import { buildLinkageGraph, buildGraphNodes } from '@/analytics';
+import { linkageEmptyStateHtml } from '../components';
+import { activateTab } from '@/views/tabs.js';
+import { showToast } from '@/utils/dom';
 import {
   createForceSimulation,
   createLinkSelection,

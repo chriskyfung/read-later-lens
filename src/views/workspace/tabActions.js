@@ -5,7 +5,7 @@
 import { activateTab } from '../tabs.js';
 import { renderWordCloud } from '../wordcloud.js';
 import { renderDomainChart } from '../domains.js';
-import { renderConceptLinkageGraph } from '../linkage';
+import { renderConceptLinkageGraph } from '@/features/linkage';
 
 /**
  * Activate a tab and lazily render heavy panel content.

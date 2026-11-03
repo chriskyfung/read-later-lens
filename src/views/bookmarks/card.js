@@ -10,7 +10,7 @@ import { getBookmarkDomain } from '../../utils/url.js';
 import { openReaderModal } from '@/features/reader';
 
 import { openSimilarityModal } from '@/features/similarityModal';
-import { openLinkageForBookmark } from '../linkage';
+import { openLinkageForBookmark } from '@/features/linkage';
 import { toggleSelectBookmark } from './selection.js';
 
 // Descendants that own their own click behaviour; clicking them must NOT

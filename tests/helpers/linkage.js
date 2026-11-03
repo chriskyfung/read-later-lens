@@ -10,8 +10,8 @@
  * side effects beyond defining these functions.
  */
 
-import { setBookmarks } from '../../src/core/state';
-import { renderConceptLinkageGraph } from '../../src/views/linkage';
+import { setBookmarks } from '@/core/state';
+import { renderConceptLinkageGraph } from '@/features/linkage';
 
 /**
  * A minimal bookmark record, shaped like a parsed CSV row.

@@ -1,16 +1,12 @@
 /**
  * @fileoverview Concept-linkage graph presentational helpers.
  *
- * Extracted from src/views/linkage.js `renderConceptLinkageGraph()` — the
- * string-built markup (the exact empty-state div and the tooltip tag pills).
- * The helpers preserve the class names and structure of the monolith; the
- * empty-state copy no longer matches the monolith's 'needs at least 2' wording,
- * since the view now renders a single node.
- * host view still owns all D3 rendering, DOM element creation, event wiring
- * and interactions.
+ * Pure string builders for the graph's empty-state div and tooltip tag pills.
+ * The empty-state copy reflects the current view (single-node scaffold); the
+ * host view owns all D3 rendering, DOM element creation, event wiring and
+ * interactions.
  */
-
-import { escapeHtml } from '../../utils/dom';
+import { escapeHtml } from '@/utils/dom';
 
 /**
  * Returns the empty-state markup shown when the graph has no bookmarks to render.

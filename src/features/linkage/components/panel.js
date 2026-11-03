@@ -1,11 +1,10 @@
 /**
  * @fileoverview Concept-linkage graph panel — presentational markup only.
  *
- * Extracted byte-for-byte from the original monolith (index.html
- * "Panel 4: Concept Linkage Graph View"), including the zoom controls and
- * the fixed D3 tooltip. Graph rendering + zoom state live in
- * src/views/linkage.js; the zoom buttons are wired by
- * src/views/workspaceActions.js.
+ * The core markup structure (zoom controls, D3 tooltip, tab-panel wrapper)
+ * is preserved from the monolith; Tailwind classes and DOM hooks match the
+ * original byte-for-byte. Graph rendering + zoom state live in ../behavior/;
+ * the zoom buttons are wired by src/views/workspaceActions.js.
  */
 
 /** @returns {string} The linkage panel markup. */

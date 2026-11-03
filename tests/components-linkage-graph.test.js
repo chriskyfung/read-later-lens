@@ -1,8 +1,8 @@
-import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '../src/components/linkage';
+import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '@/features/linkage';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Tests for the pure markup helpers extracted from src/views/linkage.js.
+ * Tests for the pure markup helpers extracted from src/features/linkage/behavior.js.
  * They mirror the parity guards that the original monolith asserted in
  * tests/views-linkage.test.js (exact guard-message div) and the tooltip tag
  * pill markup.

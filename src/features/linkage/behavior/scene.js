@@ -15,7 +15,7 @@
 import * as d3 from 'd3';
 import { openReaderModal } from '@/features/reader';
 
-import { linkageTooltipTagsHtml } from '../../components/linkage';
+import { linkageTooltipTagsHtml } from '../components/graph.js';
 import { graphState } from './state.js';
 import { nodeLabelOffsetX, nodeRadius, truncateNodeLabel } from './nodes.js';
 import { linkStrokeWidth } from './simulation.js';

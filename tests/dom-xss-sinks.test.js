@@ -17,7 +17,7 @@ import { bookmarkCardHtml } from '../src/components/bookmarks/card.js';
 import { trashItemHtml } from '../src/components/bookmarks/trash/item.js';
 import { domainBarHtml } from '../src/components/domains/bar.js';
 import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';
-import { linkageTooltipTagsHtml } from '../src/components/linkage/graph.js';
+import { linkageTooltipTagsHtml } from '@/features/linkage';
 import { saveSourceFileRowHtml } from '../src/components/io/saveModal.js';
 import { renderSaveModal } from '../src/io/export';
 import { setSourceFiles } from '../src/core/state';

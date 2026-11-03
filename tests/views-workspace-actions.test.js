@@ -35,7 +35,7 @@ vi.mock('../src/utils/dom', async (importOriginal) => ({
 }));
 vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
-vi.mock('../src/views/linkage', () => ({
+vi.mock('@/features/linkage', () => ({
   renderConceptLinkageGraph: vi.fn(),
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
@@ -90,9 +90,13 @@ vi.mock('../src/core/state', () => {
     setSourceFiles: vi.fn(),
   };
 });
-vi.mock('../src/core/filters.js', () => ({
-  getFilteredBookmarks: vi.fn(),
-}));
+vi.mock('../src/core/filters.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    getFilteredBookmarks: vi.fn(),
+  };
+});
 vi.mock('../src/views/bookmarks', () => ({
   renderBookmarkCards: vi.fn(),
   updateBatchActionBar: vi.fn(),
@@ -103,7 +107,7 @@ const { showToast } = await import('../src/utils/dom');
 const { renderWordCloud } = await import('../src/views/wordcloud.js');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
-  await import('../src/views/linkage');
+  await import('@/features/linkage');
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};

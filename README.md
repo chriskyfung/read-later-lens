@@ -172,7 +172,7 @@ An interactive **D3 force-directed graph** (limited to the top 50 filtered bookm
 
 ## Technology Stack
 
-All runtime libraries ship from npm and are bundled by Vite: PapaParse is bundled so the browser runs the parser the round-trip test exercises end-to-end, Tailwind CSS is compiled at build time by `@tailwindcss/vite`, D3.js is imported by `src/views/linkage.js` and bundled into the app (no runtime CDN), and SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
+All runtime libraries ship from npm and are bundled by Vite: PapaParse is bundled so the browser runs the parser the round-trip test exercises end-to-end, Tailwind CSS is compiled at build time by `@tailwindcss/vite`, D3.js is imported by `src/features/linkage/behavior/` and bundled into the app (no runtime CDN), and SQL.js is bundled locally and loaded lazily only for SQLite imports; build tooling and the IndexedDB wrapper are provided through npm dependencies declared in `package.json`.
 
 | Library                                                          | Version | Loading            | Purpose                                           |
 | ---------------------------------------------------------------- | ------- | ------------------ | ------------------------------------------------- |
@@ -211,7 +211,7 @@ Quick summary of the conventions already established in this repository:
 - **Code style** — JavaScript follows the Prettier config (`.prettierrc`) and passes ESLint with zero warnings (`pnpm lint:fix`, `pnpm format:fix`).
 - **Git hooks** — a pre-commit hook runs lint-staged automatically on every commit (installed via `pnpm install`).
 - **UI language** — end-user-facing copy is currently **Traditional Chinese (zh-TW)**; preserve that unless intentionally changing the localization approach.
-- **Architecture discipline** — keep `src/main.js` as the thin bootstrap composing extracted modules, and preserve the component-markup vs. view-behavior separation (markup helpers in `src/components/`, listener wiring in `src/views/`).
+- **Architecture discipline** — keep `src/main.js` as the thin bootstrap composing extracted modules, and preserve the component-markup vs. view-behavior separation (markup helpers in `src/components/`, listener wiring in `src/behavior/`).
 
 ## License
 
