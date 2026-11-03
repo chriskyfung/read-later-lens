@@ -3,7 +3,7 @@
  *
  * Extracted from src/io/importer.js. Presentational markup stays in
  * src/components/io/importModal.js; open/close and radio-card keyboard
- * behaviour live here. The layer registration lives in src/views/modalListeners.js.
+ * behaviour live here. The layer registration lives in src/app/modalListeners.js.
  */
 
 import {

@@ -6,7 +6,7 @@
  * deliberately no auto-detect card (see src/providers/profiles.js). The
  * official-CSV footnote explains why that format is not offered. Behavior
  * lives in src/io/import/ (open/close, radiogroup keyboard, file input);
- * the layer registration lives in src/views/modalListeners.js.
+ * the layer registration lives in src/app/modalListeners.js.
  */
 
 import { IMPORT_PROFILES, selectableProfiles } from '../../providers/profiles.js';

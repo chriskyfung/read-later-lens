@@ -30,7 +30,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      exclude: ['src/views/**', 'src/app/main.js'],
+      exclude: ['src/views/**', 'src/app/main.js', 'src/app/shell.js', 'src/app/modalListeners.js'],
       all: true,
       thresholds: {
         lines: 80,

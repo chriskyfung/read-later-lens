@@ -15,7 +15,7 @@
  * - trashModal       -> src/components/bookmarks/trash/modal.js
  * - toast            -> src/utils/dom
  *
- * Listener registration (close buttons) lives in src/views/modalListeners.js
+ * Listener registration (close buttons) lives in src/app/modalListeners.js
  * and must run AFTER mountModals().
  */
 import { readerModalHtml } from './reader';

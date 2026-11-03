@@ -1,7 +1,7 @@
 /**
  * @fileoverview Reader modal module state — the id of the open bookmark.
  *
- * Kept in a leaf module so src/views/modalListeners.js can read the open
+ * Kept in a leaf module so src/app/modalListeners.js can read the open
  * reader's bookmark id without readerModal.js importing workspaceActions.js
  * (which would close the workspaceActions → bookmarks → readerModal cycle).
  * Null when no reader is open.

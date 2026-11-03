@@ -3,7 +3,7 @@
  * the hidden file input.
  *
  * Extracted from src/io/importer.js. The layer registration lives in
- * src/views/modalListeners.js; only the import-specific listeners live here.
+ * src/app/modalListeners.js; only the import-specific listeners live here.
  */
 
 import { selectableProfiles } from '../../providers/profiles.js';

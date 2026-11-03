@@ -5,7 +5,7 @@
  * `${word} (${count})` labels, the monolith empty-state span, and the click
  * flow (set search query → activateTab('bookmarks') → renderAll()). Tab
  * switching uses the extracted mechanics in ./tabs.js; `renderAll` lives
- * in src/views/main-view.js (set by src/main.js).
+ * in src/app/shell.js (set by src/main.js).
  *
  * The dynamic markup (empty-state span and item spans) has been moved to
  * src/components/wordcloud/item.js to keep components pure; this file now

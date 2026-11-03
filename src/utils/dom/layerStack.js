@@ -4,7 +4,7 @@
  * Owns the *layer stack*: a modal opened on top of another becomes a new layer
  * instance. The layer beneath stays open but is marked inert, and closing the
  * top layer reveals the one beneath it, re-rendering that layer's content from
- * the payload it was pushed with. Escape (see src/views/modalListeners.js)
+ * the payload it was pushed with. Escape (see src/app/modalListeners.js)
  * therefore unwinds nested dialogs in reverse order.
  *
  * This is the *only* stateful module in src/utils/dom. The `layers` array and

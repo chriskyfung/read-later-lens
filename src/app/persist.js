@@ -13,7 +13,7 @@ import { saveState } from '../core/persistence';
 import { updateStorageUsageUI } from '../views/sidebar';
 import { showToast } from '../utils/dom';
 import { STALE_STATE_MESSAGE } from '../core/guard.js';
-import { renderAll } from '../views/main-view.js';
+import { renderAll } from './shell.js';
 
 /** Toast text when a post-action persist write fails for a reason other than a
  * cross-tab conflict (e.g. quota, transaction abort). The conflict case keeps
