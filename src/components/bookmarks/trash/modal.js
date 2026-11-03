@@ -8,7 +8,7 @@
  * src/components/modals.js.
  *
  * The modal rides the shared layer stack (src/utils/dom/) with Escape unwind
- * + Tab trap registered in src/views/modalListeners.js; the view that
+ * + Tab trap registered in src/app/modalListeners.js; the view that
  * orchestrates it lives in src/views/trash/.
  */
 

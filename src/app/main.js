@@ -1,7 +1,7 @@
 /**
  * @fileoverview Application boot sequence — mount UI, wire listeners, restore
  * persisted state, render. Thin orchestrator: all persistence logic lives in
- * ./persist.js, all view rendering in ../views/main-view.js.
+ * ./persist.js, all view rendering in ./shell.js.
  */
 import '../styles/main.css';
 
@@ -10,7 +10,7 @@ import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
 import { initDomains } from '../views/domains.js';
 import { initWordCloud } from '../views/wordcloud.js';
-import { renderAll } from '../views/main-view.js';
+import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
 import { registerExporterListeners } from '../io/export';
@@ -25,7 +25,7 @@ import {
   updateStorageUsageUI,
 } from '../views/sidebar';
 import { initWorkspaceActions, registerWorkspaceListeners } from '../views/workspace';
-import { registerModalListeners } from '../views/modalListeners.js';
+import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '../views/trash';
 import { persistAndRender, persistAfterAction } from './persist.js';
 

@@ -3,7 +3,7 @@
  *
  * Extracted from src/io/exporter.js when the exporter split into src/io/export/*.
  * Markup lives in src/components/io/saveModal.js; the layer registration lives
- * in src/views/modalListeners.js.
+ * in src/app/modalListeners.js.
  */
 
 import * as state from '../../core/state';

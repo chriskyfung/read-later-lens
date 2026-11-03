@@ -7,12 +7,12 @@
  */
 
 import { activeTab } from '../core/state';
-import { renderSidebar } from './sidebar';
-import { renderBookmarkCards } from './bookmarks';
+import { renderSidebar } from '../views/sidebar';
+import { renderBookmarkCards } from '../views/bookmarks';
 
-import { renderWordCloud } from './wordcloud.js';
-import { renderDomainChart } from './domains.js';
-import { renderConceptLinkageGraph } from './linkage';
+import { renderWordCloud } from '../views/wordcloud.js';
+import { renderDomainChart } from '../views/domains.js';
+import { renderConceptLinkageGraph } from '../views/linkage';
 
 /**
  * Re-render the sidebar and the bookmark grid (or the trash view), then the

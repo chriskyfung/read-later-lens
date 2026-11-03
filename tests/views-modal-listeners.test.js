@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 vi.mock('../src/views/linkage', () => ({
   openLinkageForBookmark: vi.fn(() => true),
 }));
-import { registerModalListeners } from '../src/views/modalListeners.js';
+import { registerModalListeners } from '../src/app/modalListeners.js';
 import { openLinkageForBookmark } from '../src/views/linkage';
 import { openReaderModal, getReaderBookmarkId } from '../src/views/reader';
 

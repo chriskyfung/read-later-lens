@@ -4,7 +4,7 @@
  * Matches the original monolith exactly: bordered card markup with the
  * `${count} 篇文章 (${pct}%)` caption, rounded percentages, the exact
  * empty-state span, and the click flow (set search query → activateTab
- * ('bookmarks') → renderAll()). `renderAll` lives in src/views/main-view.js
+ * ('bookmarks') → renderAll()). `renderAll` lives in src/app/shell.js
  * (set by src/main.js).
  *
  * The dynamic markup (empty-state span and bar markup) has been moved to

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Focus-trap helpers for modal overlays.
  *
- * Shared by src/views/modalListeners.js (which calls trapFocus from the
+ * Shared by src/app/modalListeners.js (which calls trapFocus from the
  * document-level Tab handler) and src/utils/dom/layerStack.js (via the public
  * facade). Stateless: no module-level mutable state, so it can be tested in
  * isolation without touching the layer stack.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setActiveFolder, setActiveTab } from '../src/core/state';
-import { renderAll } from '../src/views/main-view.js';
+import { renderAll } from '../src/app/shell.js';
 import { renderSidebar } from '../src/views/sidebar';
 import { renderBookmarkCards } from '../src/views/bookmarks';
 import { renderTrashView } from '../src/views/trash';

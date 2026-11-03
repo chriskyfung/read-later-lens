@@ -66,7 +66,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state');
     state.setBookmarks([bookmark('d1', 'Apple', 'https://apple.com')]);
-    const { renderAll } = await import('../src/views/main-view.js');
+    const { renderAll } = await import('../src/app/shell.js');
     renderAll();
 
     const card = els.bookmarkCardsGrid.children[0];
@@ -115,7 +115,7 @@ describe('entry-point feature wiring', () => {
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
     await start();
     const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/views/main-view.js');
+    const { renderAll } = await import('../src/app/shell.js');
     const { saveState } = await import('../src/core/persistence');
     const id = `bookmark'"id`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
@@ -142,7 +142,7 @@ describe('entry-point feature wiring', () => {
   it('keeps a trashed bookmark recoverable and ignores a repeated delete click', async () => {
     await start();
     const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/views/main-view.js');
+    const { renderAll } = await import('../src/app/shell.js');
     const { saveState } = await import('../src/core/persistence');
     const id = `keep"bookmark`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
@@ -207,7 +207,7 @@ describe('entry-point feature wiring', () => {
   it('keeps folder deletion separate from selection and handles nested clicks', async () => {
     await start();
     const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/views/main-view.js');
+    const { renderAll } = await import('../src/app/shell.js');
     const { saveState } = await import('../src/core/persistence');
     const id = `folder'"id`;
     state.setSourceFiles(new Map([[id, { id, name: 'test.json', type: 'json' }]]));
