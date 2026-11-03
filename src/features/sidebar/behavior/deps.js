@@ -1,9 +1,6 @@
 /**
  * @fileoverview Sidebar dependency injection — same pattern as
- * initTrashDeps (src/views/trash/deps.js).
- *
- * Extracted from src/views/sidebarActions.js when the sidebar split into
- * src/views/sidebar/*.
+ * initTrashDeps (src/features/trash/behavior/deps.js).
  */
 
 /** @typedef {object} SidebarActionsDeps

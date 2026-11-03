@@ -7,7 +7,7 @@
  */
 
 import { activeTab } from '../core/state';
-import { renderSidebar } from '../views/sidebar';
+import { renderSidebar } from '@/features/sidebar';
 import { renderBookmarkCards } from '@/features/bookmarks';
 
 import { renderWordCloud } from '../views/wordcloud.js';

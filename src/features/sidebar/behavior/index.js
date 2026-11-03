@@ -1,9 +1,9 @@
 /**
  * @fileoverview Sidebar barrel — stable public surface for the split.
  *
- * Importers reach through this barrel (src/views/sidebar/index.js), not into the
+ * Importers reach through this barrel (src/features/sidebar/behavior/), not into the
  * individual modules, so the internal file layout can evolve without touching
- * callers. Mirrors src/views/header/index.js.
+ * callers. Mirrors src/features/header/behavior/.
  */
 
 export { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL, FOLDER_TRASH } from './constants.js';

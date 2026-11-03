@@ -5,9 +5,9 @@ import {
   renderSidebar,
   initSidebarActions,
   registerSidebarListeners,
-} from '../src/views/sidebar';
-import { sidebarTrashBtnClass } from '../src/components/sidebar/folderRow.js';
-import * as state from '../src/core/state';
+} from '@/features/sidebar/behavior';
+import { sidebarTrashBtnClass } from '@/features/sidebar/components';
+import * as state from '@/core/state';
 
 // Model only the DOM operations used by the sidebar, including replacement
 // and removal so repeated-render tests detect stale or duplicate children.

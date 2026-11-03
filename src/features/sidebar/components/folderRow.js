@@ -1,13 +1,13 @@
 /**
  * @fileoverview Sidebar folder-row presentational helpers.
  *
- * Extracted from src/views/sidebar/folders.js `renderSidebarFolders()` — the class
- * builder for `#allFolderBtn`, plus the class/badge/markup builders for a
- * dynamic source-file row. Classes and markup are preserved byte-for-byte from
- * the monolith; the host view still owns DOM creation and dataset wiring.
+ * The class builder for `#allFolderBtn`, dynamic source-file rows, and the
+ * static trash row are preserved from the monolith; Tailwind classes and DOM
+ * hooks match the original byte-for-byte. The host view owns DOM creation and
+ * dataset wiring.
  */
 
-import { escapeHtml } from '../../utils/dom';
+import { escapeHtml } from '@/utils/dom';
 
 /**
  * Class list for the "all files" folder button, driven by selection state.

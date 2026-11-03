@@ -1,20 +1,22 @@
 /**
  * @fileoverview Left sidebar — presentational markup only.
  *
- * Extracted byte-for-byte from the original monolith (index.html
- * "Left Sidebar"). Behavior mapping:
- *  - folder rows (dynamic)  → src/views/sidebar/folders.js (renderer)
- *  - folder select/delete   → src/views/sidebar/listeners.js (delegated listeners)
- *  - allFolderBtn / trashFolderBtn / languageFilters → src/views/sidebar/listeners.js
- *  - trash rows (dynamic)   → src/views/trash/ (renderer)
- *  - storage usage          → src/views/sidebar/storage.js (updateStorageUsageUI)
- *  - tag cloud (dynamic)    → src/views/sidebar/tags.js
- *
- * The markup is split into single-concern section modules under ./sections/;
+ * The core markup structure (sidebar wrapper, section modules, folder rows,
+ * trash rows, storage usage, tag cloud) is preserved from the monolith;
+ * Tailwind classes and DOM hooks match the original byte-for-byte. The markup
+ * is split into single-concern section modules under ./sections/;
  * sidebarHtml() composes them in the monolith DOM order. mountSidebar()
  * inserts the sidebar as the FIRST child of the #appBody wrapper
  * (insertAdjacentHTML "afterbegin"), preserving the monolith DOM
  * order (header > body-wrapper > [sidebar, main]).
+ *
+ * Behavior mapping:
+ *  - folder rows (dynamic)  → ../behavior/folders.js (renderer)
+ *  - folder select/delete   → ../behavior/listeners.js (delegated listeners)
+ *  - allFolderBtn / trashFolderBtn / languageFilters → ../behavior/listeners.js
+ *  - trash rows (dynamic)   → src/features/trash/ (renderer)
+ *  - storage usage          → ../behavior/storage.js (updateStorageUsageUI)
+ *  - tag cloud (dynamic)    → ../behavior/tags.js
  */
 
 import { sidebarFoldersSectionHtml } from './sections/folders.js';

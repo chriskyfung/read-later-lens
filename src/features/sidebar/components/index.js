@@ -2,10 +2,10 @@
  * @fileoverview Sidebar presentational barrel.
  *
  * Single import point for the pure sidebar markup/helpers in
- * src/components/sidebar/: the page-level panel (panel.js), the folder-row
+ * src/features/sidebar/components/: the page-level panel (panel.js), the folder-row
  * class/badge/markup builders (folderRow.js) and the tag-pill helpers
  * (tagPill.js), plus the single-concern section modules under sections/.
- * The DOM-owning view layer (src/views/sidebar/) imports the builders it
+ * The DOM-owning view layer (src/features/sidebar/behavior/) imports the builders it
  * needs; consumers that only need markup reach through this barrel.
  */
 

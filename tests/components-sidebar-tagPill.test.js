@@ -3,7 +3,7 @@ import {
   sidebarTagCloudEmptyStateHtml,
   sidebarTagPillClass,
   sidebarTagPillLabel,
-} from '../src/components/sidebar/tagPill.js';
+} from '@/features/sidebar/components';
 
 /**
  * Tests for the pure tag helpers extracted from src/views/sidebar/tags.js.

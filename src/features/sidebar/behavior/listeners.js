@@ -2,15 +2,13 @@
  * @fileoverview Sidebar listeners — tag cloud, folder list, All/Trash rows and
  * the language-filter pills.
  *
- * Extracted from src/views/sidebarActions.js `registerSidebarListeners()` when
- * the sidebar split into src/views/sidebar/*. The element ids come from
- * SIDEBAR_IDS and the row selectors from SIDEBAR_DATA_ATTRS, so the markup
- * side and the view side cannot drift apart.
+ * The element ids come from SIDEBAR_IDS and the row selectors from
+ * SIDEBAR_DATA_ATTRS, so the markup side and the view side cannot drift apart.
  *
- * Register listeners AFTER mountSidebar() (src/components/sidebar/panel.js).
+ * Register listeners AFTER mountSidebar() (../components/panel.js).
  */
 
-import * as state from '../../core/state';
+import * as state from '@/core/state';
 import { openTrashModal } from '@/features/trash';
 import { getDeps } from './deps.js';
 import { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL } from './constants.js';
@@ -47,7 +45,7 @@ export function registerSidebarListeners() {
   });
 
   // Trash (回收桶) row — opens the dedicated trash modal instead of switching
-  // the pseudo-folder (the grid behind it stays mounted). See src/views/trash.
+  // the pseudo-folder (the grid behind it stays mounted). See src/features/trash/behavior/.
   document.getElementById(SIDEBAR_IDS.trashFolderBtn)?.addEventListener('click', () => {
     // The modal opens on top of whatever is on screen.
     openTrashModal();

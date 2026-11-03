@@ -1,18 +1,16 @@
 /**
  * @fileoverview Sidebar tag-cloud renderer.
  *
- * Extracted from src/views/sidebar.js `renderTagCloud()` when the sidebar
- * split into src/views/sidebar/*. The markup helpers stay pure in
- * src/components/sidebar/tagPill.js; this module owns DOM creation and the
- * `data-filter-tag` dataset wiring.
+ * The markup helpers stay pure in ../components/tagPill.js;
+ * this module owns DOM creation and the `data-filter-tag` dataset wiring.
  */
 
-import { activeTag } from '../../core/state';
+import { activeTag } from '@/core/state';
 import {
   sidebarTagCloudEmptyStateHtml,
   sidebarTagPillClass,
   sidebarTagPillLabel,
-} from '../../components/sidebar/tagPill.js';
+} from '../components';
 import { SIDEBAR_IDS } from './constants.js';
 import { collectTagCounts } from './service.js';
 

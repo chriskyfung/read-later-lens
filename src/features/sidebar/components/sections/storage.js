@@ -1,9 +1,9 @@
 /**
  * @fileoverview Sidebar IndexedDB storage-usage section markup.
  *
- * Static monolith parity: extracted byte-for-byte from the original
- * src/components/sidebar.js sidebarHtml() template (index.html "Left Sidebar").
- * The values are refreshed by src/views/sidebar/storage.js (updateStorageUsageUI).
+ * The storage-usage section markup is preserved from the monolith;
+ * Tailwind classes and DOM hooks match the original byte-for-byte. The values
+ * are refreshed by ../behavior/storage.js (updateStorageUsageUI).
  */
 
 /** @returns {string} The storage usage section markup. */

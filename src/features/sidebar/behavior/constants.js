@@ -2,17 +2,14 @@
  * @fileoverview Sidebar view constants — element ids, pseudo-folder ids and
  * the dataset attributes the generated rows carry.
  *
- * Extracted from src/views/sidebar.js and src/views/sidebarActions.js when the
- * sidebar view split into src/views/sidebar/*. Mirrors
- * src/views/trash/constants.js and src/components/header/constants.js: one
- * source of truth for the ids the sidebar markup (src/components/sidebar/)
- * renders and the sidebar view reads.
+ * The ids are the single source of truth for the sidebar markup
+ * (../components/) and the sidebar view reads.
  */
 
 /**
  * Ids of the sidebar elements the view reads and the actions listen on.
  * Keys are the roles, values are the markup ids — the markup side lives in
- * src/components/sidebar/sections/*.js.
+ * ../components/sections/*.js.
  */
 export const SIDEBAR_IDS = {
   folderList: 'folderList',
@@ -36,7 +33,7 @@ export const FOLDER_TRASH = 'TRASH';
 /**
  * Attribute names carried by the generated sidebar rows.
  *
- * The markup side writes them as attributes (src/components/sidebar/
+ * The markup side writes them as attributes (../components/
  * folderRow.js) and the listeners select on them. The DOM dataset key of an
  * attribute is its camelCase form (`data-select-folder` → `selectFolder`),
  * which is what the view side assigns.

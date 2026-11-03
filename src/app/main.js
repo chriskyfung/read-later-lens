@@ -19,14 +19,14 @@ import {
   initHeader as initHeaderBehavior,
   registerHeaderListeners,
 } from '@/features/header';
-import { mountSidebar } from '../components/sidebar/panel.js';
-import { mountWorkspace } from '../components/workspace';
-import { mountModals } from '../components/modals.js';
 import {
+  mountSidebar,
   initSidebarActions,
   registerSidebarListeners,
   updateStorageUsageUI,
-} from '../views/sidebar';
+} from '@/features/sidebar';
+import { mountWorkspace } from '../components/workspace';
+import { mountModals } from '../components/modals.js';
 import { initWorkspaceActions, registerWorkspaceListeners } from '../views/workspace';
 import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';

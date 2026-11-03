@@ -1,9 +1,9 @@
 /**
  * @fileoverview Sidebar language-filter pills section markup.
  *
- * Static monolith parity: extracted byte-for-byte from the original
- * src/components/sidebar.js sidebarHtml() template (index.html "Left Sidebar").
- * The click handling lives in src/views/sidebar/listeners.js.
+ * The language-filter pills section markup is preserved from the monolith;
+ * Tailwind classes and DOM hooks match the original byte-for-byte. The click
+ * handling lives in ../behavior/listeners.js.
  */
 
 /** @returns {string} The language filters section markup. */

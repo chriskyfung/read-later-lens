@@ -1,12 +1,10 @@
 /**
  * @fileoverview Sidebar storage-usage indicator.
  *
- * Extracted from src/views/sidebarActions.js `updateStorageUsageUI()` when the
- * sidebar split into src/views/sidebar/*. The markup lives in
- * src/components/sidebar/sections/storage.js.
+ * The markup lives in ../components/sections/storage.js.
  */
 
-import { getStorageUsage } from '../../core/persistence';
+import { getStorageUsage } from '@/core/persistence';
 import { SIDEBAR_IDS } from './constants.js';
 
 /**

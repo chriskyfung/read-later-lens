@@ -1,15 +1,15 @@
 /**
  * @fileoverview Sidebar actions — folder select/delete.
  *
- * Extracted from src/views/sidebarActions.js when the sidebar split into
- * src/views/sidebar/*. The language-filter listeners live in
- * src/views/sidebar/listeners.js and the storage indicator in
- * src/views/sidebar/storage.js.
+ * Folder selection and deletion are handled through the sidebar facade
+ * (src/features/sidebar). The language-filter listeners live in
+ * src/features/sidebar/listeners.js and the storage indicator in
+ * src/features/sidebar/storage.js.
  */
 
-import * as state from '../../core/state';
-import { stateStillFresh } from '../../core/guard.js';
-import { showToast } from '../../utils/dom';
+import * as state from '@/core/state';
+import { stateStillFresh } from '@/core/guard.js';
+import { showToast } from '@/utils/dom';
 import { getDeps } from './deps.js';
 import { FOLDER_ALL } from './constants.js';
 

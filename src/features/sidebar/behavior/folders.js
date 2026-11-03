@@ -1,23 +1,22 @@
 /**
  * @fileoverview Sidebar folders / source-files renderer.
  *
- * Extracted from src/views/sidebar.js `renderSidebarFolders()` when the
- * sidebar split into src/views/sidebar/*. The markup helpers stay pure in
- * src/components/sidebar/folderRow.js; this module owns DOM creation, dataset
- * wiring and the trash fallback policy.
+ * The folder / source-files renderer is preserved from the monolith; Tailwind
+ * classes and DOM hooks match the original byte-for-byte. This module owns DOM
+ * creation, dataset wiring and the trash fallback policy.
  *
  * Preserves the monolith's folder counts, badges, classes and empty
  * placeholder. Missing sidebar elements are skipped; counts are explicitly
  * converted to strings to match browser innerText coercion.
  */
 
-import { activeFolder, setActiveFolder, sourceFiles } from '../../core/state';
+import { activeFolder, setActiveFolder, sourceFiles } from '@/core/state';
 import {
   sidebarAllFolderBtnClass,
   sidebarFolderItemClass,
   sidebarFolderItemHtml,
   sidebarTrashBtnClass,
-} from '../../components/sidebar/folderRow.js';
+} from '../components';
 import {
   SIDEBAR_IDS,
   SIDEBAR_DATA_ATTRS,
