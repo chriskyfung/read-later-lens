@@ -170,7 +170,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state');
     const { saveState } = await import('../src/core/persistence');
-    const { openReaderModal } = await import('../src/views/reader');
+    const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
     openReaderModal('r1');
@@ -186,7 +186,7 @@ describe('entry-point feature wiring', () => {
   it('closes the reader modal with Escape (e2e)', async () => {
     await start();
     const state = await import('../src/core/state');
-    const { openReaderModal } = await import('../src/views/reader');
+    const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
     // The stub markup does not carry the Tailwind `hidden` class, so mark the

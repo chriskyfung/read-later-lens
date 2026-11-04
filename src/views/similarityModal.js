@@ -12,7 +12,7 @@ import { bookmarks } from '../core/state';
 import { getActiveBookmarks } from '../core/filters.js';
 import { mostSimilarAuto } from '../analytics';
 import { escapeHtml, pushLayer, popLayer } from '../utils/dom';
-import { openReaderModal } from './reader';
+import { openReaderModal } from '@/features/reader';
 
 /**
  * Render the similarity drawer for a bookmark without touching the stack.

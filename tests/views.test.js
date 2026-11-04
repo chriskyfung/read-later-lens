@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { openReaderModal, closeReaderModal, getReaderBookmarkId } from '../src/views/reader';
+import { openReaderModal, closeReaderModal, getReaderBookmarkId } from '@/features/reader';
 
 import { openSimilarityModal, closeSimilarityModal } from '../src/views/similarityModal.js';
 import { setBookmarks } from '../src/core/state';

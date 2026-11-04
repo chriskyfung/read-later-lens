@@ -13,7 +13,7 @@
  */
 
 import * as d3 from 'd3';
-import { openReaderModal } from '../reader';
+import { openReaderModal } from '@/features/reader';
 
 import { linkageTooltipTagsHtml } from '../../components/linkage';
 import { graphState } from './state.js';

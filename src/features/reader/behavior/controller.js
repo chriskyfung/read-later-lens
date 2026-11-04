@@ -5,7 +5,7 @@
  * opened from a similarity drawer stacks on top of it and unwinds back to it.
  */
 
-import { pushLayer, popLayer } from '../../utils/dom';
+import { pushLayer, popLayer } from '@/utils/dom';
 import { renderReaderModal } from './view.js';
 import { retireReader } from './state.js';
 

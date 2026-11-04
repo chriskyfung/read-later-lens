@@ -7,7 +7,7 @@
  * z-index layers and (for the stackable ones) popstate/Escape semantics are
  * unchanged.
  *
- * - readerModal      -> src/views/readerModal.js
+ * - readerModal      -> src/features/reader
  * - similarityModal  -> src/views/similarityModal.js
  * - saveModal        -> src/io/export/
  * - importModal      -> src/io/import/
@@ -18,7 +18,7 @@
  * Listener registration (close buttons) lives in src/app/modalListeners.js
  * and must run AFTER mountModals().
  */
-import { readerModalHtml } from './reader';
+import { readerModalHtml } from '../features/reader';
 import { similarityModalHtml } from './similarityModal';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';

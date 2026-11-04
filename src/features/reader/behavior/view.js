@@ -7,8 +7,8 @@
  * re-renders the article it was originally opened with.
  */
 
-import { getBookmarkById } from '../../core/state';
-import { safeUrl } from '../../utils/dom';
+import { getBookmarkById } from '@/core/state';
+import { safeUrl } from '@/utils/dom';
 import { applyFavoriteVariant } from './favorite.js';
 import { setReaderBookmarkId } from './state.js';
 
