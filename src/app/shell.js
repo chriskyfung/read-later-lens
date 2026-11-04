@@ -10,7 +10,7 @@ import { activeTab } from '../core/state';
 import { renderSidebar } from '@/features/sidebar';
 import { renderBookmarkCards } from '@/features/bookmarks';
 
-import { renderWordCloud } from '../views/wordcloud.js';
+import { renderWordCloud } from '@/features/wordcloud';
 import { renderDomainChart } from '../views/domains.js';
 import { renderConceptLinkageGraph } from '@/features/linkage';
 

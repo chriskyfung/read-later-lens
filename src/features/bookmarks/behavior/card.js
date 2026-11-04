@@ -1,7 +1,7 @@
 /**
  * @fileoverview Bookmark card element factory — DOM creation + per-card listener wiring.
  *
- * Markup comes from src/components/bookmarks/card.js (bookmarkCardClass /
+ * Markup comes from src/features/bookmarks/components/card.js (bookmarkCardClass /
  * bookmarkCardHtml); this module owns element creation and wiring only.
  */
 import { selectedIds } from '@/core/state';

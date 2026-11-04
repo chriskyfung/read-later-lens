@@ -33,7 +33,7 @@ vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
 }));
-vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
+vi.mock('@/features/wordcloud', () => ({ renderWordCloud: vi.fn() }));
 vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
 vi.mock('@/features/linkage', () => ({
   renderConceptLinkageGraph: vi.fn(),
@@ -104,7 +104,7 @@ vi.mock('@/features/bookmarks', () => ({
 
 const { activateTab } = await import('../src/views/tabs.js');
 const { showToast } = await import('../src/utils/dom');
-const { renderWordCloud } = await import('../src/views/wordcloud.js');
+const { renderWordCloud } = await import('@/features/wordcloud');
 const { renderDomainChart } = await import('../src/views/domains.js');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
   await import('@/features/linkage');

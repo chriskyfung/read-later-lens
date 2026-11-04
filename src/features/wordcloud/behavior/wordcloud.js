@@ -8,26 +8,22 @@
  * in src/app/shell.js (set by src/main.js).
  *
  * The dynamic markup (empty-state span and item spans) has been moved to
- * src/components/wordcloud/item.js to keep components pure; this file now
+ * ../components/item.js to keep components pure; this file now
  * handles only DOM creation, the click flow, and delegates markup via
  * helpers from ./item.js.
  */
 
-import { getFilteredBookmarks } from '../core/filters.js';
+import { getFilteredBookmarks } from 'src/core/filters.js';
 import {
   wordCloudFrequencies,
   wordCloudItems,
   needsKeywordEngine,
   loadKeywordsEngine,
-} from '../analytics';
-import { setSearchQuery } from '../core/state';
+} from '@/analytics';
+import { setSearchQuery } from '@/core/state';
 import { setSearchInputValue } from '@/features/header';
-import { activateTab } from './tabs.js';
-import {
-  wordCloudEmptyStateHtml,
-  wordCloudItemClass,
-  wordCloudItemLabel,
-} from '../components/wordcloud';
+import { activateTab } from '@/views/tabs.js';
+import { wordCloudEmptyStateHtml, wordCloudItemClass, wordCloudItemLabel } from '../components';
 
 let deps = { render: () => {} };
 

@@ -2,7 +2,7 @@
  * @fileoverview Word-cloud panel — presentational markup only.
  *
  * Extracted byte-for-byte from the original monolith (index.html
- * "Panel 2: Word Cloud View"). Rendering lives in src/views/wordcloud.js.
+ * "Panel 2: Word Cloud View"). Rendering lives in ../behavior/wordcloud.js.
  */
 
 /** @returns {string} The word-cloud panel markup. */

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Bookmarks markup barrel — stable public surface for the split.
  *
- * Importers reach through this facade (src/components/bookmarks/index.js), not
+ * Importers reach through this facade (src/features/bookmarks/components/index.js), not
  * into the individual modules, so the internal file layout can evolve without
  * touching callers.
  */
