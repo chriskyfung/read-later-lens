@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { setSQL, SQL } from '../src/services/sqlEngine.js';
+import { setSQL, SQL, initSql } from '../src/services/sqlEngine.js';
 
 const fakeEngine = { Database: class {} };
 const initSqlJs = vi.hoisted(() => vi.fn());
@@ -7,8 +7,6 @@ const wasmUrl = vi.hoisted(() => '/node_modules/sql.js/dist/sql-wasm.wasm');
 
 vi.mock('sql.js', () => ({ default: initSqlJs }));
 vi.mock('sql.js/dist/sql-wasm.wasm?url', () => ({ default: wasmUrl }));
-
-import { initSql } from '../src/services/sqlEngine.js';
 
 beforeEach(() => {
   setSQL(null);
