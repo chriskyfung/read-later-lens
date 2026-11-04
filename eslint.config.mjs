@@ -1,7 +1,10 @@
 /** @type {import('eslint').Linter.Config[]} */
+import path from 'node:path';
 import js from '@eslint/js';
 import importplugin from 'eslint-plugin-import';
 import prettier from 'eslint-config-prettier/flat';
+
+const SRC = path.resolve(import.meta.dirname, 'src');
 
 export default [
   {
@@ -47,6 +50,18 @@ export default [
     plugins: {
       import: importplugin,
     },
+    settings: {
+      // Resolve the `src/` alias used by Vite and jsconfig so
+      // eslint-plugin-import can lint `import ... from 'src/...'` without
+      // unresolved-module warnings. Kept in sync with vite.config.js and
+      // jsconfig.json.
+      'import/resolver': {
+        alias: {
+          map: [['src', SRC]],
+          extensions: ['.js', '.mjs', '.json'],
+        },
+      },
+    },
     rules: {
       'no-unused-vars': [
         'warn',
@@ -83,9 +98,11 @@ export default [
         },
       ],
       // === Import path checking rules (eslint-plugin-import) ===
-      // 'error' will be set once resolver alias mapping is confirmed working;
-      // currently 'warn' to avoid blocking on resolution failures.
-      'import/no-unresolved': 'warn',
+      // Resolver alias mapping for `src/` is confirmed working (see
+      // tests/paths-alias.test.js), so unresolved imports are now errors.
+      // Node built-ins (imported with the `node:` prefix in tests) always
+      // resolve in Node and are intentionally ignored here.
+      'import/no-unresolved': ['error', { ignore: ['^node:'] }],
       // Blocks absolute-path imports (e.g. /foo/bar) — no resolver needed.
       'import/no-absolute-path': 'error',
       // Fails when the same module is imported more than once.

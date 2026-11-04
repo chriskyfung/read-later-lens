@@ -197,6 +197,9 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@10.13.0(jiti@2.7.0))
+      eslint-import-resolver-alias:
+        specifier: ^1.1.2
+        version: 1.1.2(eslint-plugin-import@2.32.0(eslint@10.13.0(jiti@2.7.0)))
       eslint-plugin-import:
         specifier: ^2.32.0
         version: 2.32.0(eslint@10.13.0(jiti@2.7.0))
@@ -990,6 +993,12 @@ packages:
     hasBin: true
     peerDependencies:
       eslint: '>=7.0.0'
+
+  eslint-import-resolver-alias@1.1.2:
+    resolution: {integrity: sha512-WdviM1Eu834zsfjHtcGHtGfcu+F30Od3V7I9Fi57uhBEwPkjDcii7/yW8jAT+gOhn4P/vOxxNAXbFAKsrrc15w==}
+    engines: {node: '>= 4'}
+    peerDependencies:
+      eslint-plugin-import: '>=1.4.0'
 
   eslint-import-resolver-node@0.3.10:
     resolution: {integrity: sha512-tRrKqFyCaKict5hOd244sL6EQFNycnMQnBe+j8uqGNXYzsImGbGUU4ibtoaBmv5FLwJwcFJNeg1GeVjQfbMrDQ==}
@@ -2790,6 +2799,10 @@ snapshots:
   eslint-config-prettier@10.1.8(eslint@10.13.0(jiti@2.7.0)):
     dependencies:
       eslint: 10.13.0(jiti@2.7.0)
+
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(eslint@10.13.0(jiti@2.7.0))):
+    dependencies:
+      eslint-plugin-import: 2.32.0(eslint@10.13.0(jiti@2.7.0))
 
   eslint-import-resolver-node@0.3.10:
     dependencies:
