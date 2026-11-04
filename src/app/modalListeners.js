@@ -23,7 +23,7 @@
 import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from '@/features/reader';
 
 import { closeTrashModal } from '../views/trash';
-import { openSimilarityModal, closeSimilarityModal } from '../views/similarityModal.js';
+import { openSimilarityModal, closeSimilarityModal } from '@/features/similarityModal';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from '../views/workspace';
 import { closeSaveModal } from '../io/export';
 import { closeImportModal } from '../io/import';

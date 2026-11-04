@@ -9,7 +9,7 @@ import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks'
 import { getBookmarkDomain } from '../../utils/url.js';
 import { openReaderModal } from '@/features/reader';
 
-import { openSimilarityModal } from '../similarityModal.js';
+import { openSimilarityModal } from '@/features/similarityModal';
 import { openLinkageForBookmark } from '../linkage';
 import { toggleSelectBookmark } from './selection.js';
 

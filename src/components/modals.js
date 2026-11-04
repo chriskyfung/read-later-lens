@@ -8,7 +8,7 @@
  * unchanged.
  *
  * - readerModal      -> src/features/reader
- * - similarityModal  -> src/views/similarityModal.js
+ * - similarityModal  -> src/features/similarityModal/behavior/
  * - saveModal        -> src/io/export/
  * - importModal      -> src/io/import/
  * - duplicateModal   -> src/io/import/
@@ -18,8 +18,8 @@
  * Listener registration (close buttons) lives in src/app/modalListeners.js
  * and must run AFTER mountModals().
  */
-import { readerModalHtml } from '../features/reader';
-import { similarityModalHtml } from './similarityModal';
+import { readerModalHtml } from '@/features/reader';
+import { similarityModalHtml } from '@/features/similarityModal';
 import { saveModalHtml } from './io/saveModal.js';
 import { importModalHtml } from './io/importModal.js';
 import { duplicateModalHtml } from './io/duplicateModal.js';

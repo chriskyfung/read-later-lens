@@ -9,7 +9,7 @@ import { registerModalListeners } from '../src/app/modalListeners.js';
 import { openLinkageForBookmark } from '../src/views/linkage';
 import { openReaderModal, getReaderBookmarkId } from '@/features/reader';
 
-import { openSimilarityModal } from '../src/views/similarityModal.js';
+import { openSimilarityModal } from '@/features/similarityModal';
 import { openSaveModal } from '../src/io/export';
 import { openImportModal } from '../src/io/import';
 import { resetLayers, stackDepth } from '../src/utils/dom';

@@ -1,8 +1,9 @@
 /**
  * @fileoverview Similarity matrix modal — presentational markup only.
  *
- * Extracted byte-for-byte from the original monolith (index.html "MODAL 2").
- * Behavior lives in src/views/similarityModal.js.
+ * The core markup structure is preserved from the monolith; Tailwind classes
+ * and DOM hooks match the original byte-for-byte. Behavior lives in
+ * .../behavior/similarityModal.js.
  */
 
 /** @returns {string} The similarity modal markup. */

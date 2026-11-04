@@ -79,7 +79,7 @@ export default [
       // Escape it with escapeHtml() (src/utils/dom/) or build nodes with
       // textContent. An already-escaped template suppresses this rule with a
       // one-line lint directive that states the reason — see
-      // src/views/similarityModal.js for the working pattern.
+      // src/features/similarityModal/behavior/ for the working pattern.
       'no-restricted-syntax': [
         'error',
         {
