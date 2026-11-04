@@ -1,10 +1,8 @@
 /** @type {import('eslint').Linter.Config[]} */
-import path from 'node:path';
+import viteConfig from './vite.config.js';
 import js from '@eslint/js';
 import importplugin from 'eslint-plugin-import';
 import prettier from 'eslint-config-prettier/flat';
-
-const SRC = path.resolve(import.meta.dirname, 'src');
 
 export default [
   {
@@ -51,14 +49,14 @@ export default [
       import: importplugin,
     },
     settings: {
-      // Resolve the `src/` alias used by Vite and jsconfig so
-      // eslint-plugin-import can lint `import ... from 'src/...'` without
-      // unresolved-module warnings. Kept in sync with vite.config.js and
-      // jsconfig.json.
+      // Resolve Vite aliases (`src/` and `@/`) directly from vite.config.js
+      // via eslint-import-resolver-vite, so eslint-plugin-import can lint
+      // `import ... from 'src/...'` and `import ... from '@/...'` without
+      // unresolved-module warnings. Single source of truth: vite.config.js
+      // resolve.alias; jsconfig.json mirrors it for VS Code IntelliSense.
       'import/resolver': {
-        alias: {
-          map: [['src', SRC]],
-          extensions: ['.js', '.mjs', '.json'],
+        vite: {
+          viteConfig,
         },
       },
     },
@@ -102,7 +100,9 @@ export default [
       // tests/paths-alias.test.js), so unresolved imports are now errors.
       // Node built-ins (imported with the `node:` prefix in tests) always
       // resolve in Node and are intentionally ignored here.
-      'import/no-unresolved': ['error', { ignore: ['^node:'] }],
+      // `?url` suffixes are a Vite build-time feature (wasm URL for sql.js);
+      // the file exists on disk and is resolved by Vite, not by ESLint.
+      'import/no-unresolved': ['error', { ignore: ['^node:', '\\?url$'] }],
       // Blocks absolute-path imports (e.g. /foo/bar) — no resolver needed.
       'import/no-absolute-path': 'error',
       // Fails when the same module is imported more than once.

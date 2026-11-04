@@ -6,7 +6,7 @@ const SRC = `${import.meta.dirname}/src`;
 export default defineConfig({
   plugins: [tailwindcss()],
   resolve: {
-    alias: { src: SRC },
+    alias: { src: SRC, '@': SRC },
   },
   build: {
     target: 'es2022',
