@@ -1,15 +1,13 @@
 /**
  * @fileoverview Bookmark card component — presentational markup only.
  *
- * Extracted from src/views/bookmarks/ renderBookmarkCards() (originally the
- * monolith's per-card template). The structure, DOM hooks and dataset
- * assignments are preserved; the utility classes use Tailwind v4 idioms. Only
- * the host view (src/views/bookmarks/) is responsible for DOM element
+ * The card's structure, DOM hooks and dataset assignments are preserved from
+ * the monolith; Tailwind v4 idioms are used. The host view owns DOM element
  * creation, listener wiring and the `data-delete-bookmark` dataset assignment
  * (see `createBookmarkCard`).
  */
 
-import { escapeHtml, safeUrl } from '../../utils/dom';
+import { escapeHtml, safeUrl } from '@/utils/dom';
 
 /**
  * Card wrapper class list, driven by selection state (monolith parity).

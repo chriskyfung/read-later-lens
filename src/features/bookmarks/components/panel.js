@@ -1,9 +1,8 @@
 /**
  * @fileoverview Bookmarks grid panel — presentational markup only.
  *
- * Extracted from the original monolith (index.html "Panel 1: Bookmarks Grid
- * View"). The layout, ids and DOM hooks are preserved; the utility classes use
- * Tailwind v4 idioms. Card rendering lives in src/views/bookmarks/.
+ * The layout, ids and DOM hooks are preserved from the monolith; Tailwind v4
+ * idioms are used. Card rendering lives in ../behavior/.
  */
 
 /** @returns {string} The bookmarks panel markup. */

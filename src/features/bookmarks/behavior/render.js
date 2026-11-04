@@ -4,7 +4,7 @@
  * Always leaves the trash panel hidden: the grid is the non-trash view, and
  * src/views/trash/ is a dedicated modal; the grid stays mounted behind it.
  */
-import { getFilteredBookmarks } from '../../core/filters.js';
+import { getFilteredBookmarks } from '@/core/filters.js';
 import { updateBookmarksHeader } from './header.js';
 import { createBookmarkCard } from './card.js';
 

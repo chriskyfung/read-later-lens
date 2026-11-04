@@ -5,8 +5,8 @@
  * the folder/source-file name resolution. Uses WORKSPACE_IDS for the shell
  * control-bar id that belongs to the workspace shell.
  */
-import { selectedIds, activeFolder, activeLang, sourceFiles } from '../../core/state';
-import { WORKSPACE_IDS } from '../../components/workspace/constants.js';
+import { selectedIds, activeFolder, activeLang, sourceFiles } from '@/core/state';
+import { WORKSPACE_IDS } from '@/components/workspace/constants.js';
 
 /**
  * Resolve the human-readable folder / source-file name (monolith parity):

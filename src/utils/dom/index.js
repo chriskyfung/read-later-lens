@@ -3,7 +3,7 @@
  *
  * Importers reach through this barrel (src/utils/dom/index.js), not into the
  * individual modules, so the internal file layout can evolve without touching
- * callers. Mirrors src/views/sidebar/index.js and src/views/trash/index.js.
+ * callers.
  */
 
 export {

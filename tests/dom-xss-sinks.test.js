@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { bookmarkCardHtml } from '../src/components/bookmarks/card.js';
+import { bookmarkCardHtml } from '@/features/bookmarks';
 import { trashItemHtml } from '../src/components/bookmarks/trash/item.js';
 import { domainBarHtml } from '../src/components/domains/bar.js';
 import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';

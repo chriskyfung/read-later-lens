@@ -4,8 +4,8 @@
  * Mutates the live selectedIds Set without re-rendering the grid (monolith
  * parity). Consumed by the grid cards and by src/views/workspace/actions.js.
  */
-import { selectedIds } from '../../core/state';
-import { WORKSPACE_IDS } from '../../components/workspace/constants.js';
+import { selectedIds } from '@/core/state';
+import { WORKSPACE_IDS } from '@/components/workspace/constants.js';
 
 /**
  * Toggle bookmark selection (mutates the live Set; no card re-render —

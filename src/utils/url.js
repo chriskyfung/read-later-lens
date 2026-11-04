@@ -4,7 +4,7 @@
  * Extraction policy (leading `www.` strip) is applied in one place:
  * * `src/analytics/domains.js` — top-domains, skip-on-invalid
  * * `src/analytics/linkage.js` — graph node domains, 'unknown' fallback
- * * `src/views/bookmarks/` — card domain badge, 'web' fallback (via getBookmarkDomain)
+ * * `src/features/bookmarks/behavior/` — card domain badge, 'web' fallback (via getBookmarkDomain)
  */
 
 /**

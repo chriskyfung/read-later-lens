@@ -4,9 +4,9 @@
  * Markup comes from src/components/bookmarks/card.js (bookmarkCardClass /
  * bookmarkCardHtml); this module owns element creation and wiring only.
  */
-import { selectedIds } from '../../core/state';
-import { bookmarkCardClass, bookmarkCardHtml } from '../../components/bookmarks';
-import { getBookmarkDomain } from '../../utils/url.js';
+import { selectedIds } from '@/core/state';
+import { bookmarkCardClass, bookmarkCardHtml } from '../components';
+import { getBookmarkDomain } from '@/utils/url.js';
 import { openReaderModal } from '@/features/reader';
 
 import { openSimilarityModal } from '@/features/similarityModal';
