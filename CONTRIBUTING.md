@@ -68,6 +68,12 @@ Then open the URL the dev server prints (usually `http://localhost:5173`).
   - `semi: true`, `singleQuote: true`, `trailingComma: all`, `printWidth: 100`, `tabWidth: 2`, `endOfLine: lf`
 - **ESLint** lints `src/` and `tests/` with the flat config in [`eslint.config.mjs`](eslint.config.mjs).
   - `eslint-config-prettier` is applied last to disable all formatting rules that would conflict with Prettier.
+- **Import paths** — Use the `src/` path alias for imports that cross directory boundaries, e.g.
+  `import { x } from 'src/core/state'` instead of a deep `../../core/state` relative path.
+  The alias is declared in [`vite.config.js`](vite.config.js) (`resolve.alias.src`), [`jsconfig.json`](jsconfig.json)
+  (VS Code IntelliSense), and [`eslint.config.mjs`](eslint.config.mjs) (`import/resolver.alias`).
+  `import/no-unresolved` is set to `error`, so broken imports fail lint — keep the three
+  declarations in sync if `src/` ever moves.
 - **Line endings** — `.gitattributes` enforces LF (`* text=lf`). Do not commit CRLF files.
 - **Editor setup** — `.vscode/settings.json` enables `formatOnSave` with Prettier as the default formatter and `prettier.requireConfig: true`. If you use another editor, configure it to respect `.prettierrc`.
 
