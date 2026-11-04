@@ -4,7 +4,7 @@
  * The core markup structure (zoom controls, D3 tooltip, tab-panel wrapper)
  * is preserved from the monolith; Tailwind classes and DOM hooks match the
  * original byte-for-byte. Graph rendering + zoom state live in ../behavior/;
- * the zoom buttons are wired by src/views/workspaceActions.js.
+ * the zoom buttons are wired by src/features/workspace/.
  */
 
 /** @returns {string} The linkage panel markup. */

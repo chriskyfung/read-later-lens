@@ -6,7 +6,7 @@
  * control-bar id that belongs to the workspace shell.
  */
 import { selectedIds, activeFolder, activeLang, sourceFiles } from '@/core/state';
-import { WORKSPACE_IDS } from '@/components/workspace/constants.js';
+import { WORKSPACE_IDS } from '@/features/workspace/components/constants.js';
 
 /**
  * Resolve the human-readable folder / source-file name (monolith parity):

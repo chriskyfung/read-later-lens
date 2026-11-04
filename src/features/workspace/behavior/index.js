@@ -1,8 +1,5 @@
 /**
  * @fileoverview Facade for the workspace view modules.
- *
- * Re-exports the public surface of src/views/workspace/* so existing import
- * paths (src/views/workspaceActions.js) keep working.
  */
 export { initWorkspaceActions, getDeps } from './deps.js';
 export { switchTab } from './tabActions.js';

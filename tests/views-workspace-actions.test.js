@@ -8,7 +8,7 @@ import {
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
   toggleFavoriteBookmark,
-} from '../src/views/workspace';
+} from '@/features/workspace/behavior';
 import {
   setBookmarks,
   setSortBy,
@@ -16,20 +16,20 @@ import {
   selectedIds,
   setSourceFiles,
   trashBookmarks,
-} from '../src/core/state';
-import { getFilteredBookmarks } from '../src/core/filters.js';
+} from '@/core/state';
+import { getFilteredBookmarks } from '@/core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '@/features/bookmarks';
 
 // Isolate the pure view collaborators.
 // The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
 // must be transparent everywhere else, so it defaults to "fresh".
 const gate = vi.hoisted(() => ({ fresh: true }));
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => gate.fresh,
 }));
 vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
-vi.mock('../src/utils/dom', async (importOriginal) => ({
+vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
 }));

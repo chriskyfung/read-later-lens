@@ -8,10 +8,10 @@
  * before that write settles let the view show a state the cache did not
  * have yet.
  */
-import * as state from '../../core/state';
-import { stateStillFresh } from '../../core/guard.js';
+import * as state from '@/core/state';
+import { stateStillFresh } from '@/core/guard.js';
 import { updateBatchActionBar } from '@/features/bookmarks';
-import { showToast } from '../../utils/dom';
+import { showToast } from '@/utils/dom';
 import { getDeps } from './deps.js';
 import {
   TRASHED_TOAST,
@@ -41,7 +41,7 @@ function writeLanded(saved) {
  *
  * Soft delete: the record keeps living in `state.bookmarks` with a `deleted_at`
  * stamp, so the trash view can restore it. Only the trash's own permanent
- * actions (src/views/trash/) and folder deletion remove records for real.
+ * actions (src/features/trash/behavior/) and folder deletion remove records for real.
  *
  * @param {string} id
  * @returns {Promise<boolean>} True when a live bookmark was trashed; false when

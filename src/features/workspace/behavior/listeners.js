@@ -2,13 +2,12 @@
  * @fileoverview Workspace DOM listeners — sort, tabs, select-all, batch and
  * graph controls.
  *
- * Extracted from the monolith's DOMContentLoaded block in index.html.
- * Must be registered AFTER mountWorkspace() (src/components/workspace.js).
+ * Must be registered AFTER mountWorkspace() (src/features/workspace).
  */
-import * as state from '../../core/state';
-import { getFilteredBookmarks } from '../../core/filters.js';
+import * as state from '@/core/state';
+import { getFilteredBookmarks } from '@/core/filters.js';
 import { renderBookmarkCards, updateBatchActionBar } from '@/features/bookmarks';
-import { WORKSPACE_IDS } from '../../components/workspace/constants.js';
+import { WORKSPACE_IDS } from '../components/constants.js';
 import { getDeps } from './deps.js';
 import { switchTab } from './tabActions.js';
 import { zoomIn, zoomOut, resetZoom, applyWeighting } from './graphActions.js';
@@ -63,7 +62,7 @@ export function registerWorkspaceListeners() {
     if (btn) await confirmDeleteBookmark(btn.dataset.deleteBookmark);
   });
 
-  // D3 Zoom Controls (zoom/pan state lives in src/views/linkage.js)
+  // D3 Zoom Controls (zoom/pan state lives in src/features/linkage/behavior.js)
   document.getElementById('zoomInBtn')?.addEventListener('click', zoomIn);
   document.getElementById('zoomOutBtn')?.addEventListener('click', zoomOut);
   document.getElementById('resetGraphBtn')?.addEventListener('click', resetZoom);

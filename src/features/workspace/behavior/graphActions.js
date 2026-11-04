@@ -1,8 +1,8 @@
 /**
  * @fileoverview Workspace graph actions — D3 zoom controls and the TF ⇄ TF-IDF
- * weighting toggle. The zoom/pan state lives in src/views/linkage.js.
+ * weighting toggle. The zoom/pan state lives in src/features/linkage/behavior/.
  */
-import { zoomGraphBy, resetGraphZoom, setLinkageWeighting } from '../../features/linkage';
+import { zoomGraphBy, resetGraphZoom, setLinkageWeighting } from '@/features/linkage';
 
 /** Zoom multiplier applied per zoom-in step. */
 export const ZOOM_IN_FACTOR = 1.3;

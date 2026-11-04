@@ -15,7 +15,7 @@ import { toggleSelectBookmark } from './selection.js';
 
 // Descendants that own their own click behaviour; clicking them must NOT
 // trigger the card's "open reader" handler. Delete is delegated at the grid
-// level (see src/views/workspace/actions.js), so it bails here as well.
+// level (see src/features/workspace/actions/behavior/), so it bails here as well.
 const CARD_INTERACTIVE = 'a, button, input, label, [data-delete-bookmark]';
 
 /**

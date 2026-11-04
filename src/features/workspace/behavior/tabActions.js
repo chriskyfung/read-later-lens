@@ -2,9 +2,9 @@
  * @fileoverview Workspace tab switching — activate a tab and lazily render
  * its heavy panel content.
  */
-import { activateTab } from '../tabs.js';
-import { renderWordCloud } from '../wordcloud.js';
-import { renderDomainChart } from '../domains.js';
+import { activateTab } from '@/views/tabs.js';
+import { renderWordCloud } from '@/views/wordcloud.js';
+import { renderDomainChart } from '@/views/domains.js';
 import { renderConceptLinkageGraph } from '@/features/linkage';
 
 /**

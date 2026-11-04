@@ -3,10 +3,10 @@
  *
  * Extracted byte-for-byte from the original monolith (index.html
  * "Control Bar: Sort, View Tabs & Batch Actions"). Behavior mapping:
- *  - .main-tab buttons → src/views/workspaceActions.js (registerWorkspaceListeners)
- *  - sortSelect        → src/views/workspaceActions.js
- *  - batch actions     → src/views/workspaceActions.js
- *  - filteredCount     → src/views/bookmarks/ / tabs.js (renderers)
+ *  - .main-tab buttons → src/features/workspace/behavior/ (registerWorkspaceListeners)
+ *  - sortSelect        → src/features/workspace/behavior/
+ *  - batch actions     → src/features/workspace/behavior/
+ *  - filteredCount     → src/features/bookmarks/behavior/ / tabs.js (renderers)
  */
 import { WORKSPACE_IDS } from './constants.js';
 

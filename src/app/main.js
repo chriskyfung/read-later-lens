@@ -25,9 +25,12 @@ import {
   registerSidebarListeners,
   updateStorageUsageUI,
 } from '@/features/sidebar';
-import { mountWorkspace } from '../components/workspace';
+import {
+  mountWorkspace,
+  initWorkspaceActions,
+  registerWorkspaceListeners,
+} from '@/features/workspace';
 import { mountModals } from '../components/modals.js';
-import { initWorkspaceActions, registerWorkspaceListeners } from '../views/workspace';
 import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';
 import { persistAndRender, persistAfterAction } from './persist.js';

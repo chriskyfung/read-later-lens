@@ -2,8 +2,8 @@
  * @fileoverview DOM ids of the workspace shell.
  *
  * Single source of truth for the ids the workspace markup renders and the
- * workspace listeners look up. The markup lives in src/components/workspace/*
- * and the listeners in src/views/workspace/listeners.js, so a shared table
+ * workspace listeners look up. The markup lives in src/features/workspace/components/*
+ * and the listeners in src/features/workspace/behavior/listeners.js, so a shared table
  * keeps a rename from silently breaking the wiring.
  *
  * Ids owned by the individual panels (bookmarks, linkage) stay with their
