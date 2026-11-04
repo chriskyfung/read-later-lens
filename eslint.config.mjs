@@ -1,5 +1,6 @@
 /** @type {import('eslint').Linter.Config[]} */
 import js from '@eslint/js';
+import importplugin from 'eslint-plugin-import';
 import prettier from 'eslint-config-prettier/flat';
 
 export default [
@@ -43,6 +44,9 @@ export default [
         Buffer: 'readonly',
       },
     },
+    plugins: {
+      import: importplugin,
+    },
     rules: {
       'no-unused-vars': [
         'warn',
@@ -78,6 +82,16 @@ export default [
             'insertAdjacentHTML with interpolated data: escape with escapeHtml() or build nodes with textContent.',
         },
       ],
+      // === Import path checking rules (eslint-plugin-import) ===
+      // 'error' will be set once resolver alias mapping is confirmed working;
+      // currently 'warn' to avoid blocking on resolution failures.
+      'import/no-unresolved': 'warn',
+      // Blocks absolute-path imports (e.g. /foo/bar) — no resolver needed.
+      'import/no-absolute-path': 'error',
+      // Fails when the same module is imported more than once.
+      'import/no-duplicates': 'warn',
+      // Fails when circular imports are detected.
+      'import/no-cycle': 'warn',
     },
   },
   prettier,
