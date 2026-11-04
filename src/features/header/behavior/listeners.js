@@ -1,16 +1,15 @@
-/** @fileoverview Header listener wiring — search input, quick-reset, clear cache.
+/**
+ * @fileoverview Header listener wiring — search input, quick-reset, clear cache.
  *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Mirrors src/views/trash/listeners.js: each call binds
- * once, missing markup is tolerated (optional chaining), and the returned
- * disposer removes exactly the handlers this call added.
+ * Each call binds once, missing markup is tolerated (optional chaining), and the
+ * returned disposer removes exactly the handlers this call added.
  *
- * Register AFTER mountHeader() (src/components/header.js) so the header
- * elements exist. Listeners for #fileInput and #saveBackBtn remain owned by
- * src/io/import/ and src/io/export/ respectively.
+ * Register AFTER mountHeader() (../components/shell.js)
+ * so the header elements exist. Listeners for #fileInput and #saveBackBtn
+ * remain owned by src/io/import/ and src/io/export/ respectively.
  */
 
-import { HEADER_IDS } from '../../components/header/constants.js';
+import { HEADER_IDS } from '../components/constants.js';
 import { applySearch, scheduleSearch } from './search.js';
 import { clearSearch, clearCache } from './actions.js';
 import { syncClearButton } from './view.js';

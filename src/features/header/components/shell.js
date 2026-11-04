@@ -1,9 +1,8 @@
-/** @fileoverview Header shell — assembles the presentational blocks into the full header.
+/**
+ * @fileoverview Header shell — assembles the presentational blocks into the full header.
  *
- * Extracted verbatim from src/components/header.js when the header markup
- * split into src/components/header/*. mountHeader() still inserts the header
- * as the FIRST child of <body> (insertAdjacentHTML 'afterbegin'), preserving
- * the monolith's DOM order.
+ * mountHeader() still inserts the header as the FIRST child of <body>
+ * (insertAdjacentHTML 'afterbegin'), preserving the monolith's DOM order.
  *
  * The shell changes rarely (layout / a11y) while the blocks churn with copy
  * and styling, so they live apart — same rationale as

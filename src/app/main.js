@@ -14,11 +14,14 @@ import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
 import { registerExporterListeners } from '../io/export';
-import { mountHeader } from '../components/header';
+import {
+  mountHeader,
+  initHeader as initHeaderBehavior,
+  registerHeaderListeners,
+} from '@/features/header';
 import { mountSidebar } from '../components/sidebar/panel.js';
 import { mountWorkspace } from '../components/workspace';
 import { mountModals } from '../components/modals.js';
-import { initHeader, registerHeaderListeners } from '../views/header';
 import {
   initSidebarActions,
   registerSidebarListeners,
@@ -35,7 +38,7 @@ async function boot() {
   mountSidebar();
   mountWorkspace();
   mountModals();
-  initHeader({ render: renderAll, persistAndRender });
+  initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,
     render: renderAll,

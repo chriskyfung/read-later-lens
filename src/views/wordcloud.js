@@ -21,7 +21,7 @@ import {
   loadKeywordsEngine,
 } from '../analytics';
 import { setSearchQuery } from '../core/state';
-import { setSearchInputValue } from './header';
+import { setSearchInputValue } from '@/features/header';
 import { activateTab } from './tabs.js';
 import {
   wordCloudEmptyStateHtml,

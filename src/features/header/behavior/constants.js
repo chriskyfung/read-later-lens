@@ -1,7 +1,5 @@
-/** @fileoverview Header view constants — debounce timing and user-facing copy.
- *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Mirrors src/views/trash/constants.js.
+/**
+ * @fileoverview Header view constants — debounce timing and user-facing copy.
  */
 
 /** Delay (ms) between the last keystroke and applying the search. */

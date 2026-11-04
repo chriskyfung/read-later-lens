@@ -1,21 +1,18 @@
-/** @fileoverview Header actions — guard → mutate → persist/render → toast.
- *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Mirrors src/views/trash/actions.js (same order:
- * gate before mutation, then persist + render + toast).
+/**
+ * @fileoverview Header actions — guard → mutate → persist/render → toast.
  *
  * clearSearch() is shared by the domain-chart and word-cloud click-throughs
  * via setSearchInputValue(), so the reset button never gets out of step with
  * the rendered query.
  */
 
-import * as state from '../../core/state';
-import { stateStillFresh, STALE_STATE_MESSAGE } from '../../core/guard.js';
-import { showToast } from '../../utils/dom';
+import * as state from '@/core/state';
+import { stateStillFresh, STALE_STATE_MESSAGE } from '@/core/guard.js';
+import { showToast } from '@/utils/dom';
 import { getDeps } from './deps.js';
 import { cancelPendingSearch } from './search.js';
 import { syncClearButton, setClearCacheSpinning } from './view.js';
-import { HEADER_IDS } from '../../components/header/constants.js';
+import { HEADER_IDS } from '../components/constants.js';
 import { CLEAR_CACHE_CONFIRM, CACHE_CLEARED_TOAST } from './constants.js';
 
 /**

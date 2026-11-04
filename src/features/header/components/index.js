@@ -3,7 +3,7 @@
  *
  * Importers reach through this facade (src/main.js, tests), not into the
  * individual modules, so the internal file layout can evolve without
- * touching callers. Mirrors src/components/bookmarks/trash/index.js.
+ * touching callers.
  */
 
 export { headerHtml, mountHeader } from './shell.js';

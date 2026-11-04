@@ -1,8 +1,8 @@
-/** @fileoverview Header brand block — logo, title, and tagline markup.
+/**
+ * @fileoverview Header brand block — logo, title, and tagline markup.
  *
- * Extracted verbatim from src/components/header.js when the header markup
- * split into src/components/header/*. Pure string builder: no imports, no
- * state, no user data interpolated — nothing here is an XSS surface.
+ * Pure string builder: no imports, no state, no user data interpolated
+ * — nothing here is an XSS surface.
  */
 
 /** Brand block: app icon, page title, and zh-TW tagline. */

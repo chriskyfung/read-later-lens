@@ -1,7 +1,5 @@
-/** @fileoverview Header dependency injection — same pattern as initTrashDeps.
- *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Mirrors src/views/trash/deps.js.
+/**
+ * @fileoverview Header dependency injection — same pattern as initTrashDeps.
  */
 
 /** @typedef {object} HeaderDeps

@@ -1,9 +1,8 @@
-/** @fileoverview Header search lifecycle — debounce timer and apply.
+/**
+ * @fileoverview Header search lifecycle — debounce timer and apply.
  *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Owns the single searchDebounceTimer so the timer can
- * never have two owners (the drift class that patchTrashRow() guards against
- * in src/views/trash/view.js).
+ * Owns the single searchDebounceTimer so the timer can never have two owners (the
+ * drift class that patchTrashRow() guards against in src/views/trash/view.js).
  *
  * Search execution model: full re-renders are too expensive to run on every
  * keystroke (visible input lag on large datasets), so non-empty queries are
@@ -12,10 +11,10 @@
  * reset never feels laggy.
  */
 
-import * as state from '../../core/state';
+import * as state from '@/core/state';
 import { getDeps } from './deps.js';
 import { syncClearButton } from './view.js';
-import { HEADER_IDS } from '../../components/header/constants.js';
+import { HEADER_IDS } from '../components/constants.js';
 import { SEARCH_DEBOUNCE_MS } from './constants.js';
 
 /** @type {ReturnType<typeof setTimeout> | null} */

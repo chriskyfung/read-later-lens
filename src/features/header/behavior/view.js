@@ -1,12 +1,12 @@
-/** @fileoverview Header view layer — pure DOM echoes, zero state.
+/**
+ * @fileoverview Header view layer — pure DOM echoes, zero state.
  *
- * Extracted from src/views/header.js when the header view split into
- * src/views/header/*. Never touches `state` or renders views — that is the
- * province of src/views/header/search.js and src/views/header/actions.js.
+ * Never touches `state` or renders views — that is the province of
+ * ./search.js and ./actions.js.
  * The classList guards keep stub DOMs safe in unit tests.
  */
 
-import { HEADER_IDS } from '../../components/header/constants.js';
+import { HEADER_IDS } from '../components/constants.js';
 
 /**
  * Show/hide the quick-reset button depending on whether the input has text.

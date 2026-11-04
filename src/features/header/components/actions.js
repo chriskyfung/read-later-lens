@@ -1,13 +1,12 @@
-/** @fileoverview Header action buttons — import, file input, export, and clear-cache markup.
+/**
+ * @fileoverview Header action buttons — import, file input, export, and clear-cache markup.
  *
- * Extracted verbatim from src/components/header.js when the header markup
- * split into src/components/header/*. Pure string builder: no imports, no
- * state, no user data interpolated.
+ * Pure string builder: no imports, no state, no user data interpolated.
  *
  * Listener ownership (unchanged by the split):
  *  - #importBtn / #fileInput  → src/io/import/  (source picker modal)
  *  - #saveBackBtn             → src/io/export/  (save-back / export)
- *  - #clearCacheBtn           → src/views/header.js  (clear-cache flow)
+ *  - #clearCacheBtn           → ../behavior/listeners.js  (clear-cache flow)
  */
 
 /** Import / export / clear-cache button row (#fileInput stays hidden). */

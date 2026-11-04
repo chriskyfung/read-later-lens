@@ -1,12 +1,10 @@
 /**
  * @fileoverview Header search bar — input, magnifier icon, and quick-reset button markup.
  *
- * Extracted verbatim from src/components/header.js when the header markup
- * split into src/components/header/*. Pure string builder: no imports, no
- * state, no user data interpolated.
+ * Pure string builder: no imports, no state, no user data interpolated.
  *
  * The quick-reset button ships `hidden`; registerHeaderListeners() (in
- * src/views/header/) toggles it once the input has text.
+ * ../behavior/listeners.js) toggles it once the input has text.
  */
 
 /** Search input + magnifier icon + hidden-by-default clear-reset button. */
