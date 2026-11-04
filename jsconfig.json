@@ -1,0 +1,14 @@
+/** @type {import('jsconfig.json').Config} */
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
+    "allowJs": true,
+    "noEmit": true,
+    "strict": false
+  },
+  "include": ["src/", "tests/", "vite.config.js", "eslint.config.mjs"],
+  "exclude": ["node_modules", "dist", "coverage", "*.min.js"]
+}
