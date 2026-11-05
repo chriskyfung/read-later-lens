@@ -8,17 +8,17 @@
  * (set by src/main.js).
  *
  * The dynamic markup (empty-state span and bar markup) has been moved to
- * src/components/domains/bar.js to keep components pure; this file now
+ * src/features/domains/components/bar.js to keep components pure; this file now
  * handles only DOM creation, the click flow, and delegates markup via
- * helpers from ../components/domains/bar.js.
+ * helpers from ../components/bar.js.
  */
 
-import { getFilteredBookmarks } from '../core/filters.js';
-import { topDomains } from '../analytics';
-import { setSearchQuery } from '../core/state';
+import { getFilteredBookmarks } from '@/core/filters.js';
+import { topDomains } from '@/analytics';
+import { setSearchQuery } from '@/core/state';
 import { setSearchInputValue } from '@/features/header';
-import { activateTab } from './tabs.js';
-import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '../components/domains';
+import { activateTab } from '@/views/tabs.js';
+import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '../components';
 
 let deps = { render: () => {} };
 

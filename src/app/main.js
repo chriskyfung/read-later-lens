@@ -8,7 +8,7 @@ import '../styles/main.css';
 import * as state from '../core/state';
 import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
-import { initDomains } from '../views/domains.js';
+import { initDomains } from '@/features/domains';
 import { initWordCloud } from '@/features/wordcloud';
 import { renderAll } from './shell.js';
 

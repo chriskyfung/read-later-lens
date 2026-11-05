@@ -1,12 +1,8 @@
-import {
-  domainChartEmptyStateHtml,
-  domainBarClass,
-  domainBarHtml,
-} from '../src/components/domains';
+import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '@/features/domains';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Tests for the pure markup helpers extracted from src/views/domains.js.
+ * Tests for the pure markup helpers extracted from src/features/domains/behavior.js.
  * They mirror the parity guards that the original monolith asserted in
  * tests/views-domains.test.js (exact empty-state span, bar classes and the
  * `${count} 篇文章 (${pct}%)` caption).

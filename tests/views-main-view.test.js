@@ -5,14 +5,14 @@ import { renderSidebar } from '@/features/sidebar';
 import { renderBookmarkCards } from '@/features/bookmarks';
 import { renderTrashView } from '@/features/trash';
 import { renderWordCloud } from '@/features/wordcloud';
-import { renderDomainChart } from '../src/views/domains.js';
+import { renderDomainChart } from '@/features/domains';
 import { renderConceptLinkageGraph } from '@/features/linkage';
 
 vi.mock('@/features/sidebar', () => ({ renderSidebar: vi.fn() }));
 vi.mock('@/features/bookmarks', () => ({ renderBookmarkCards: vi.fn() }));
 vi.mock('@/features/trash', () => ({ renderTrashView: vi.fn() }));
 vi.mock('@/features/wordcloud', () => ({ renderWordCloud: vi.fn() }));
-vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
+vi.mock('@/features/domains', () => ({ renderDomainChart: vi.fn() }));
 vi.mock('@/features/linkage', () => ({ renderConceptLinkageGraph: vi.fn() }));
 
 const analytics = {

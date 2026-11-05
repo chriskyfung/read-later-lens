@@ -4,7 +4,7 @@
  */
 import { activateTab } from '@/views/tabs.js';
 import { renderWordCloud } from '@/features/wordcloud';
-import { renderDomainChart } from '@/views/domains.js';
+import { renderDomainChart } from '@/features/domains';
 import { renderConceptLinkageGraph } from '@/features/linkage';
 
 /**

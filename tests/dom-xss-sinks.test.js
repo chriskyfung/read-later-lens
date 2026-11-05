@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { bookmarkCardHtml } from '@/features/bookmarks';
 import { trashItemHtml } from '@/features/trash';
-import { domainBarHtml } from '../src/components/domains/bar.js';
+import { domainBarHtml } from '@/features/domains/components/bar.js';
 import { sidebarFolderItemHtml } from '@/features/sidebar';
 import { linkageTooltipTagsHtml } from '@/features/linkage';
 import { saveSourceFileRowHtml } from '../src/components/io/saveModal.js';

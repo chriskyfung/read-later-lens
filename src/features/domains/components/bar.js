@@ -1,13 +1,13 @@
 /**
  * @fileoverview Domain analytics presentational helpers.
  *
- * Extracted from src/views/domains.js `renderDomainChart()` — markup that is
+ * Extracted from ../behavior/domains.js `renderDomainChart()` — markup that is
  * generated as a pure string builder. The helpers preserve the monolith’s
  * byte‑for‑byte HTML and class names; the host view (renderDomainChart) still
  * owns DOM element creation, event wiring and the click flow.
  */
 
-import { escapeHtml } from '../../utils/dom';
+import { escapeHtml } from '@/utils/dom';
 
 /**
  * Returns the exact empty‑state markup that the monolith uses.

@@ -3,7 +3,7 @@
  */
 import { panelBookmarksHtml } from '@/features/bookmarks';
 import { panelWordcloudHtml } from '@/features/wordcloud';
-import { panelDomainsHtml } from '@/components/domains/panel.js';
+import { panelDomainsHtml } from '@/features/domains';
 import { panelLinkageHtml } from '@/features/linkage';
 
 /** @returns {string} The composed panels markup. */

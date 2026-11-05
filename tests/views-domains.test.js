@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { renderDomainChart, initDomains } from '../src/views/domains.js';
+import { renderDomainChart, initDomains } from '@/features/domains';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state';
 
 function makeEl() {
