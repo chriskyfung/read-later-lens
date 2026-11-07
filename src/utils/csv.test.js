@@ -6,7 +6,7 @@ import {
   hardenRecordsForCsv,
   captureCsvDialect,
   csvUnparseConfig,
-} from '../src/utils/csv';
+} from './csv';
 
 describe('hardenCsvValue', () => {
   it('prefixes every character a spreadsheet would evaluate', () => {
