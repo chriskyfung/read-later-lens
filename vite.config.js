@@ -26,11 +26,11 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ['tests/**/*.test.js'],
+    include: ['src/**/*.test.js', 'tests/**/*.test.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      exclude: ['src/app/main.js', 'src/app/shell.js', 'src/app/modalListeners.js'],
+      exclude: ['src/app/main.js', 'src/app/shell.js', 'src/app/modalListeners.js', '**/*.test.js'],
       all: true,
       thresholds: {
         lines: 80,
