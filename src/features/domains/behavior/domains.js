@@ -17,7 +17,7 @@ import { getFilteredBookmarks } from '@/core/filters.js';
 import { topDomains } from '@/analytics';
 import { setSearchQuery } from '@/core/state';
 import { setSearchInputValue } from '@/features/header';
-import { activateTab } from '@/views/tabs.js';
+import { activateTab } from '@/behavior/tabs.js';
 import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '../components';
 
 let deps = { render: () => {} };

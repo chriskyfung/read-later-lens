@@ -22,7 +22,7 @@ import {
 } from '@/analytics';
 import { setSearchQuery } from '@/core/state';
 import { setSearchInputValue } from '@/features/header';
-import { activateTab } from '@/views/tabs.js';
+import { activateTab } from '@/behavior/tabs.js';
 import { wordCloudEmptyStateHtml, wordCloudItemClass, wordCloudItemLabel } from '../components';
 
 let deps = { render: () => {} };

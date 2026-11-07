@@ -28,7 +28,7 @@ vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => gate.fresh,
 }));
-vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
+vi.mock('@/behavior/tabs.js', () => ({ activateTab: vi.fn() }));
 vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
@@ -102,8 +102,8 @@ vi.mock('@/features/bookmarks', () => ({
   updateBatchActionBar: vi.fn(),
 }));
 
-const { activateTab } = await import('../src/views/tabs.js');
-const { showToast } = await import('../src/utils/dom');
+const { activateTab } = await import('@/behavior/tabs.js');
+const { showToast } = await import('@/utils/dom');
 const { renderWordCloud } = await import('@/features/wordcloud');
 const { renderDomainChart } = await import('@/features/domains');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =

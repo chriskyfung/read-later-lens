@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { activateTab } from '../src/views/tabs.js';
-import { activeTab } from '../src/core/state';
+import { activateTab } from '@/behavior/tabs.js';
+import { activeTab } from '@/core/state';
 
 const ACTIVE_CLASS =
   'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm';
