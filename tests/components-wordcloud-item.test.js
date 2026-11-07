@@ -2,11 +2,11 @@ import {
   wordCloudEmptyStateHtml,
   wordCloudItemClass,
   wordCloudItemLabel,
-} from '../src/components/wordcloud';
+} from '@/features/wordcloud/components';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Tests for the pure markup helpers extracted from src/views/wordcloud.js.
+ * Tests for the pure markup helpers extracted from src/features/wordcloud/behavior.js.
  * They mirror the parity guards that the original monolith asserted in
  * tests/views-wordcloud.test.js (W3–W5).
  */

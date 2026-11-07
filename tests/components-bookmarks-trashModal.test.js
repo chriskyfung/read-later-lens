@@ -1,14 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import {
-  formatDeletedAt,
-  trashItemClass,
-  trashItemHtml,
-  trashModalHtml,
-} from '../src/components/bookmarks/trash';
+import { formatDeletedAt, trashItemClass, trashItemHtml, trashModalHtml } from '@/features/trash';
 
 /**
  * Tests for the pure trash-modal markup helpers. They are the parity guards for
- * the trash view (src/views/trash/), which only does DOM orchestration.
+ * the trash view (src/features/trash/), which only does DOM orchestration.
  */
 describe('trash modal helpers', () => {
   it('exposes the modal shell anchors and the empty state', () => {

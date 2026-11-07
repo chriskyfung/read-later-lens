@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setActiveFolder, setActiveTab } from '../src/core/state';
 import { renderAll } from '../src/app/shell.js';
-import { renderSidebar } from '../src/views/sidebar';
-import { renderBookmarkCards } from '../src/views/bookmarks';
-import { renderTrashView } from '../src/views/trash';
-import { renderWordCloud } from '../src/views/wordcloud.js';
-import { renderDomainChart } from '../src/views/domains.js';
-import { renderConceptLinkageGraph } from '../src/views/linkage';
+import { renderSidebar } from '@/features/sidebar';
+import { renderBookmarkCards } from '@/features/bookmarks';
+import { renderTrashView } from '@/features/trash';
+import { renderWordCloud } from '@/features/wordcloud';
+import { renderDomainChart } from '@/features/domains';
+import { renderConceptLinkageGraph } from '@/features/linkage';
 
-vi.mock('../src/views/sidebar', () => ({ renderSidebar: vi.fn() }));
-vi.mock('../src/views/bookmarks', () => ({ renderBookmarkCards: vi.fn() }));
-vi.mock('../src/views/trash', () => ({ renderTrashView: vi.fn() }));
-vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
-vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
-vi.mock('../src/views/linkage', () => ({ renderConceptLinkageGraph: vi.fn() }));
+vi.mock('@/features/sidebar', () => ({ renderSidebar: vi.fn() }));
+vi.mock('@/features/bookmarks', () => ({ renderBookmarkCards: vi.fn() }));
+vi.mock('@/features/trash', () => ({ renderTrashView: vi.fn() }));
+vi.mock('@/features/wordcloud', () => ({ renderWordCloud: vi.fn() }));
+vi.mock('@/features/domains', () => ({ renderDomainChart: vi.fn() }));
+vi.mock('@/features/linkage', () => ({ renderConceptLinkageGraph: vi.fn() }));
 
 const analytics = {
   wordcloud: renderWordCloud,

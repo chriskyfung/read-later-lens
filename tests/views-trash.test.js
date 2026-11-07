@@ -8,9 +8,9 @@ import {
   confirmPurgeBookmark,
   emptyTrash,
   confirmEmptyTrash,
-} from '../src/views/trash';
-import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '../src/core/state';
-import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
+} from '@/features/trash';
+import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '@/core/state';
+import { STALE_STATE_MESSAGE } from '@/core/guard.js';
 
 const OLDER = '2026-01-01T00:00:00.000Z';
 const NEWER = '2026-02-01T00:00:00.000Z';
@@ -18,7 +18,7 @@ const NEWER = '2026-02-01T00:00:00.000Z';
 // The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
 // must be transparent everywhere else, so it defaults to "fresh".
 const gate = vi.hoisted(() => ({ fresh: true }));
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => gate.fresh,
 }));

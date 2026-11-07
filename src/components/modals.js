@@ -7,23 +7,23 @@
  * z-index layers and (for the stackable ones) popstate/Escape semantics are
  * unchanged.
  *
- * - readerModal      -> src/views/readerModal.js
- * - similarityModal  -> src/views/similarityModal.js
+ * - readerModal      -> src/features/reader
+ * - similarityModal  -> src/features/similarityModal/behavior/
  * - saveModal        -> src/io/export/
  * - importModal      -> src/io/import/
  * - duplicateModal   -> src/io/import/
- * - trashModal       -> src/components/bookmarks/trash/modal.js
+ * - trashModal       -> src/features/trash
  * - toast            -> src/utils/dom
  *
  * Listener registration (close buttons) lives in src/app/modalListeners.js
  * and must run AFTER mountModals().
  */
-import { readerModalHtml } from './reader';
-import { similarityModalHtml } from './similarityModal';
-import { saveModalHtml } from './io/saveModal.js';
-import { importModalHtml } from './io/importModal.js';
-import { duplicateModalHtml } from './io/duplicateModal.js';
-import { trashModalHtml } from './bookmarks/trash';
+import { readerModalHtml } from '@/features/reader';
+import { similarityModalHtml } from '@/features/similarityModal';
+import { saveModalHtml } from '@/io/components/saveModal.js';
+import { importModalHtml } from '@/io/components/importModal.js';
+import { duplicateModalHtml } from '@/io/components/duplicateModal.js';
+import { trashModalHtml } from '@/features/trash';
 import { toastHtml } from './toast';
 
 /**

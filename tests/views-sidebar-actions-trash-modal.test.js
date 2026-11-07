@@ -7,7 +7,7 @@
  * anymore) and the layer stack behind it is the real implementation.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initSidebarActions, registerSidebarListeners } from '../src/views/sidebar';
+import { initSidebarActions, registerSidebarListeners } from '@/features/sidebar';
 import { setBookmarks, setSelectedIds } from '../src/core/state';
 import { MODAL_Z_BASE } from '../src/utils/dom';
 

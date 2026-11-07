@@ -17,9 +17,8 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import * as d3 from 'd3';
-import { renderConceptLinkageGraph, openLinkageForBookmark } from '../src/views/linkage';
-import { graphState } from '../src/views/linkage/state.js';
-import { setBookmarks } from '../src/core/state';
+import { renderConceptLinkageGraph, openLinkageForBookmark, graphState } from '@/features/linkage';
+import { setBookmarks } from '@/core/state';
 import {
   BM,
   createCanvas,

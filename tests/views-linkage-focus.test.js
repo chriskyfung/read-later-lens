@@ -23,9 +23,9 @@ import {
   renderConceptLinkageGraph,
   setLinkageWeighting,
   FOCUS_ZOOM,
-} from '../src/views/linkage';
-import { setBookmarks } from '../src/core/state';
-import { graphState } from '../src/views/linkage/state.js';
+  graphState,
+} from '@/features/linkage';
+import { setBookmarks } from '@/core/state';
 import {
   BM,
   createCanvas,

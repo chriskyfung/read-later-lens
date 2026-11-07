@@ -5,10 +5,10 @@ import {
   sidebarFolderBadgeColorClass,
   sidebarFolderItemHtml,
   sidebarTrashBtnClass,
-} from '../src/components/sidebar/folderRow.js';
+} from '@/features/sidebar/components';
 
 /**
- * Tests for the pure folder-row helpers extracted from src/views/sidebar/folders.js.
+ * Tests for the pure folder-row helpers extracted from src/features/sidebar/behavior/folders.js.
  * They mirror the parity guards the monolith asserted in
  * tests/views-sidebar.test.js (exact button classes, badge colours and row
  * markup).

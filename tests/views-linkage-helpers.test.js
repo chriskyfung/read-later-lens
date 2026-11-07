@@ -15,18 +15,18 @@ import {
   nodeLabelOffsetX,
   truncateNodeLabel,
   NODE_RADIUS_MIN,
-} from '../src/views/linkage/nodes.js';
-import { afterPaint } from '../src/views/linkage/scene.js';
-import { graphState, cancelPendingTopology } from '../src/views/linkage/state.js';
-import { linkStrokeWidth } from '../src/views/linkage/simulation.js';
-import {
+  afterPaint,
+  graphState,
+  cancelPendingTopology,
+  linkStrokeWidth,
   resolveFocusTarget,
   prepareFocusedTopology,
   pinNodeAt,
   unpinNode,
   INITIAL_SPREAD,
-} from '../src/views/linkage/topology.js';
-import { FOCUS_ZOOM, focusCameraTransform } from '../src/views/linkage/focus.js';
+  FOCUS_ZOOM,
+  focusCameraTransform,
+} from '@/features/linkage';
 
 describe('node sizing', () => {
   it('collapses degree 0 to the radius floor', () => {

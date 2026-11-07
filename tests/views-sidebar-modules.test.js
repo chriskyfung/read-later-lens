@@ -13,15 +13,14 @@ import {
   SIDEBAR_DATA_ATTRS,
   FOLDER_ALL,
   FOLDER_TRASH,
-} from '../src/views/sidebar/constants.js';
-import {
   partitionBookmarks,
   countActiveByFolder,
   collectTagCounts,
   getActiveSidebarBookmarks,
-} from '../src/views/sidebar/service.js';
-import { renderSidebarFolders, applyTrashFallback } from '../src/views/sidebar/folders.js';
-import * as state from '../src/core/state';
+  renderSidebarFolders,
+  applyTrashFallback,
+} from '@/features/sidebar/behavior';
+import * as state from '@/core/state';
 
 function makeEl() {
   const el = {
@@ -128,10 +127,10 @@ describe('SIDEBAR_IDS', () => {
 
   it('agrees with the ids rendered by the sidebar markup sections', async () => {
     const sections = await Promise.all([
-      import('../src/components/sidebar/sections/folders.js'),
-      import('../src/components/sidebar/sections/languageFilters.js'),
-      import('../src/components/sidebar/sections/tags.js'),
-      import('../src/components/sidebar/sections/storage.js'),
+      import('@/features/sidebar/components/sections/folders.js'),
+      import('@/features/sidebar/components/sections/languageFilters.js'),
+      import('@/features/sidebar/components/sections/tags.js'),
+      import('@/features/sidebar/components/sections/storage.js'),
     ]);
     const markup = sections.map((m) => Object.values(m)[0]()).join('\n');
     Object.values(SIDEBAR_IDS).forEach((id) => {

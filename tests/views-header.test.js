@@ -4,7 +4,7 @@ import {
   registerHeaderListeners,
   setSearchInputValue,
   SEARCH_DEBOUNCE_MS,
-} from '../src/views/header';
+} from '@/features/header';
 import {
   setSearchQuery,
   setBookmarks,

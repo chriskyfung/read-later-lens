@@ -170,7 +170,7 @@ describe('entry-point feature wiring', () => {
     await start();
     const state = await import('../src/core/state');
     const { saveState } = await import('../src/core/persistence');
-    const { openReaderModal } = await import('../src/views/reader');
+    const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
     openReaderModal('r1');
@@ -186,7 +186,7 @@ describe('entry-point feature wiring', () => {
   it('closes the reader modal with Escape (e2e)', async () => {
     await start();
     const state = await import('../src/core/state');
-    const { openReaderModal } = await import('../src/views/reader');
+    const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
     // The stub markup does not carry the Tailwind `hidden` class, so mark the
@@ -311,13 +311,13 @@ it('loads one module entry without a global bridge or inline action handlers', (
 it('bundles D3 from the dependency instead of a runtime CDN', () => {
   const root = new URL('../', import.meta.url);
   const html = readFileSync(new URL('index.html', root), 'utf8');
-  // d3 is imported by src/views/linkage/render.js from node_modules; the cdnjs
+  // d3 is imported by src/features/linkage/behavior/render.js from node_modules; the cdnjs
   // copy would be dead weight (and shipped 7.8.5 while the bundle runs
   // 7.9.0), so no remote script may remain in the shell.
   expect(html).not.toMatch(/<script[^>]+src="https?:/);
   // The module-level import is what replaces the tag; it must be present
   // and never removed.
-  const linkage = readFileSync(new URL('src/views/linkage/render.js', root), 'utf8');
+  const linkage = readFileSync(new URL('src/features/linkage/behavior/render.js', root), 'utf8');
   expect(linkage).toMatch(/import \* as d3 from 'd3'/);
 });
 

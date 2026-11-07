@@ -8,25 +8,31 @@ import '../styles/main.css';
 import * as state from '../core/state';
 import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
-import { initDomains } from '../views/domains.js';
-import { initWordCloud } from '../views/wordcloud.js';
+import { initDomains } from '@/features/domains';
+import { initWordCloud } from '@/features/wordcloud';
 import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
 import { registerExporterListeners } from '../io/export';
-import { mountHeader } from '../components/header';
-import { mountSidebar } from '../components/sidebar/panel.js';
-import { mountWorkspace } from '../components/workspace';
-import { mountModals } from '../components/modals.js';
-import { initHeader, registerHeaderListeners } from '../views/header';
 import {
+  mountHeader,
+  initHeader as initHeaderBehavior,
+  registerHeaderListeners,
+} from '@/features/header';
+import {
+  mountSidebar,
   initSidebarActions,
   registerSidebarListeners,
   updateStorageUsageUI,
-} from '../views/sidebar';
-import { initWorkspaceActions, registerWorkspaceListeners } from '../views/workspace';
+} from '@/features/sidebar';
+import {
+  mountWorkspace,
+  initWorkspaceActions,
+  registerWorkspaceListeners,
+} from '@/features/workspace';
+import { mountModals } from '../components/modals.js';
 import { registerModalListeners } from './modalListeners.js';
-import { initTrash, registerTrashListeners } from '../views/trash';
+import { initTrash, registerTrashListeners } from '@/features/trash';
 import { persistAndRender, persistAfterAction } from './persist.js';
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
@@ -35,7 +41,7 @@ async function boot() {
   mountSidebar();
   mountWorkspace();
   mountModals();
-  initHeader({ render: renderAll, persistAndRender });
+  initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,
     render: renderAll,

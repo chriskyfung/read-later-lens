@@ -20,10 +20,10 @@ import {
   zoomGraphBy,
   resetGraphZoom,
   focusLinkageNode,
-} from '../src/views/linkage';
-import { setBookmarks } from '../src/core/state';
+  graphState,
+} from '@/features/linkage';
+import { setBookmarks } from '@/core/state';
 import { BM, createCanvas, resetModuleState, nodesByLabel } from './helpers/linkage.js';
-import { graphState } from '../src/views/linkage/state.js';
 
 afterEach(() => {
   resetModuleState();

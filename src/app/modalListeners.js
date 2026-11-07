@@ -20,13 +20,13 @@
  * the two never overlap.
  */
 
-import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from '../views/reader';
+import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from '@/features/reader';
 
-import { closeTrashModal } from '../views/trash';
-import { openSimilarityModal, closeSimilarityModal } from '../views/similarityModal.js';
-import { confirmDeleteBookmark, toggleFavoriteBookmark } from '../views/workspace';
-import { closeSaveModal } from '../io/export';
-import { closeImportModal } from '../io/import';
+import { closeTrashModal } from '@/features/trash';
+import { openSimilarityModal, closeSimilarityModal } from '@/features/similarityModal';
+import { confirmDeleteBookmark, toggleFavoriteBookmark } from '@/features/workspace';
+import { closeSaveModal } from '@/io/export';
+import { closeImportModal } from '@/io/import';
 import {
   closeLayer,
   registerModalLayer,
@@ -34,8 +34,8 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
-} from '../utils/dom';
-import { openLinkageForBookmark } from '../views/linkage';
+} from '@/utils/dom';
+import { openLinkageForBookmark } from '@/features/linkage';
 
 /**
  * Close the topmost layer on Escape and keep Tab focus inside it. No-ops when

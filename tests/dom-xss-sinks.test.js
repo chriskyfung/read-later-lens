@@ -13,14 +13,14 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { bookmarkCardHtml } from '../src/components/bookmarks/card.js';
-import { trashItemHtml } from '../src/components/bookmarks/trash/item.js';
-import { domainBarHtml } from '../src/components/domains/bar.js';
-import { sidebarFolderItemHtml } from '../src/components/sidebar/folderRow.js';
-import { linkageTooltipTagsHtml } from '../src/components/linkage/graph.js';
-import { saveSourceFileRowHtml } from '../src/components/io/saveModal.js';
-import { renderSaveModal } from '../src/io/export';
-import { setSourceFiles } from '../src/core/state';
+import { bookmarkCardHtml } from '@/features/bookmarks';
+import { trashItemHtml } from '@/features/trash';
+import { domainBarHtml } from '@/features/domains/components/bar.js';
+import { sidebarFolderItemHtml } from '@/features/sidebar';
+import { linkageTooltipTagsHtml } from '@/features/linkage';
+import { saveSourceFileRowHtml } from '@/io/components/saveModal.js';
+import { renderSaveModal } from '@/io/export';
+import { setSourceFiles } from '@/core/state';
 
 const HOSTILE = '<img src=x onerror=alert(1)>';
 const HOSTILE_NAME = `">${HOSTILE}.csv`;

@@ -1,7 +1,7 @@
 /** @fileoverview Importer dependency injection — same pattern as initTrashDeps.
  *
  * Extracted from src/io/importer.js when the importer split into
- * src/io/import/*. Mirrors src/views/header/deps.js and src/views/trash/deps.js.
+ * src/io/import/*.
  */
 
 /** Dependencies injected from the main application orchestrator.

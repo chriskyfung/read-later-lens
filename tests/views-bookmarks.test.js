@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 // The card footer's linkage button navigates to the graph; the navigation
 // itself is covered by tests/views-linkage.test.js. Mock it here so this file
 // stays a wiring test and does not pull d3 into the node environment.
-vi.mock('../src/views/linkage', () => ({
+vi.mock('@/features/linkage', () => ({
   openLinkageForBookmark: vi.fn(() => true),
 }));
 import {
@@ -13,8 +13,8 @@ import {
   resolveFolderName,
   updateBookmarksHeader,
   createBookmarkCard,
-} from '../src/views/bookmarks';
-import { openLinkageForBookmark } from '../src/views/linkage';
+} from '@/features/bookmarks';
+import { openLinkageForBookmark } from '@/features/linkage';
 import {
   setBookmarks,
   setActiveFolder,

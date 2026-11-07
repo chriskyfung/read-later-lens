@@ -3,7 +3,7 @@
  *
  * Pure aggregation: `wordCloudFrequencies` builds the term frequency list; the
  * DOM side (creating `<span>` nodes) lives in `renderWordCloud`
- * (`src/views/wordcloud.js`), so this module stays testable without a DOM.
+ * (`src/features/wordcloud/behavior`), so this module stays testable without a DOM.
  * Matches the original monolith behaviour (top 60 terms, size ratio
  * 0.75 + (count/max)*1.5).
  *

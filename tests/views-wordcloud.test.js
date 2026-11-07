@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { renderWordCloud, initWordCloud } from '../src/views/wordcloud.js';
+import { renderWordCloud, initWordCloud } from '@/features/wordcloud';
 import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state';
 import { loadKeywordsEngine } from '../src/analytics/keywords.js';
 
@@ -149,7 +149,7 @@ describe('renderWordCloud — lazy engine load', () => {
   it('renders a loading state first, then the terms once the engine arrives', async () => {
     vi.resetModules();
     const keywords = await import('../src/analytics/keywords.js');
-    const view = await import('../src/views/wordcloud.js');
+    const view = await import('@/features/wordcloud');
     const state = await import('../src/core/state');
 
     state.setSearchQuery('');
@@ -187,7 +187,7 @@ describe('renderWordCloud — lazy engine load', () => {
       throw new Error('chunk load failed');
     });
     const keywords = await import('../src/analytics/keywords.js');
-    const view = await import('../src/views/wordcloud.js');
+    const view = await import('@/features/wordcloud');
     const state = await import('../src/core/state');
 
     state.setSearchQuery('');

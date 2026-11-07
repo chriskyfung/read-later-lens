@@ -8,7 +8,7 @@ import {
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
   toggleFavoriteBookmark,
-} from '../src/views/workspace';
+} from '@/features/workspace/behavior';
 import {
   setBookmarks,
   setSortBy,
@@ -16,26 +16,26 @@ import {
   selectedIds,
   setSourceFiles,
   trashBookmarks,
-} from '../src/core/state';
-import { getFilteredBookmarks } from '../src/core/filters.js';
-import { renderBookmarkCards, updateBatchActionBar } from '../src/views/bookmarks';
+} from '@/core/state';
+import { getFilteredBookmarks } from '@/core/filters.js';
+import { renderBookmarkCards, updateBatchActionBar } from '@/features/bookmarks';
 
 // Isolate the pure view collaborators.
 // The cross-tab gate is driven explicitly in `cross-tab stale gate` below; it
 // must be transparent everywhere else, so it defaults to "fresh".
 const gate = vi.hoisted(() => ({ fresh: true }));
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => gate.fresh,
 }));
-vi.mock('../src/views/tabs.js', () => ({ activateTab: vi.fn() }));
-vi.mock('../src/utils/dom', async (importOriginal) => ({
+vi.mock('@/behavior/tabs.js', () => ({ activateTab: vi.fn() }));
+vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
 }));
-vi.mock('../src/views/wordcloud.js', () => ({ renderWordCloud: vi.fn() }));
-vi.mock('../src/views/domains.js', () => ({ renderDomainChart: vi.fn() }));
-vi.mock('../src/views/linkage', () => ({
+vi.mock('@/features/wordcloud', () => ({ renderWordCloud: vi.fn() }));
+vi.mock('@/features/domains', () => ({ renderDomainChart: vi.fn() }));
+vi.mock('@/features/linkage', () => ({
   renderConceptLinkageGraph: vi.fn(),
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
@@ -90,20 +90,24 @@ vi.mock('../src/core/state', () => {
     setSourceFiles: vi.fn(),
   };
 });
-vi.mock('../src/core/filters.js', () => ({
-  getFilteredBookmarks: vi.fn(),
-}));
-vi.mock('../src/views/bookmarks', () => ({
+vi.mock('../src/core/filters.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    getFilteredBookmarks: vi.fn(),
+  };
+});
+vi.mock('@/features/bookmarks', () => ({
   renderBookmarkCards: vi.fn(),
   updateBatchActionBar: vi.fn(),
 }));
 
-const { activateTab } = await import('../src/views/tabs.js');
-const { showToast } = await import('../src/utils/dom');
-const { renderWordCloud } = await import('../src/views/wordcloud.js');
-const { renderDomainChart } = await import('../src/views/domains.js');
+const { activateTab } = await import('@/behavior/tabs.js');
+const { showToast } = await import('@/utils/dom');
+const { renderWordCloud } = await import('@/features/wordcloud');
+const { renderDomainChart } = await import('@/features/domains');
 const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
-  await import('../src/views/linkage');
+  await import('@/features/linkage');
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
