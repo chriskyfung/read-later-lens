@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newFileId } from '../src/utils/id.js';
+import { newFileId } from './id.js';
 
 const UUID_RE = /^file_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
