@@ -20,9 +20,9 @@
  */
 import { readerModalHtml } from '@/features/reader';
 import { similarityModalHtml } from '@/features/similarityModal';
-import { saveModalHtml } from './io/saveModal.js';
-import { importModalHtml } from './io/importModal.js';
-import { duplicateModalHtml } from './io/duplicateModal.js';
+import { saveModalHtml } from '@/io/components/saveModal.js';
+import { importModalHtml } from '@/io/components/importModal.js';
+import { duplicateModalHtml } from '@/io/components/duplicateModal.js';
 import { trashModalHtml } from '@/features/trash';
 import { toastHtml } from './toast';
 

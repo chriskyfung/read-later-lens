@@ -18,9 +18,9 @@ import { trashItemHtml } from '@/features/trash';
 import { domainBarHtml } from '@/features/domains/components/bar.js';
 import { sidebarFolderItemHtml } from '@/features/sidebar';
 import { linkageTooltipTagsHtml } from '@/features/linkage';
-import { saveSourceFileRowHtml } from '../src/components/io/saveModal.js';
-import { renderSaveModal } from '../src/io/export';
-import { setSourceFiles } from '../src/core/state';
+import { saveSourceFileRowHtml } from '@/io/components/saveModal.js';
+import { renderSaveModal } from '@/io/export';
+import { setSourceFiles } from '@/core/state';
 
 const HOSTILE = '<img src=x onerror=alert(1)>';
 const HOSTILE_NAME = `">${HOSTILE}.csv`;

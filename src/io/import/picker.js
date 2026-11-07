@@ -2,17 +2,13 @@
  * @fileoverview Import source picker modal — session selection + layer stack.
  *
  * Extracted from src/io/importer.js. Presentational markup stays in
- * src/components/io/importModal.js; open/close and radio-card keyboard
+ * src/io/components/importModal.js; open/close and radio-card keyboard
  * behaviour live here. The layer registration lives in src/app/modalListeners.js.
  */
 
-import {
-  defaultProfileId,
-  normalizeProfileId,
-  selectableProfiles,
-} from '../../providers/profiles.js';
-import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '../../components/io';
-import { pushLayer, popLayer, topLayerId } from '../../utils/dom';
+import { defaultProfileId, normalizeProfileId, selectableProfiles } from '@/providers/profiles.js';
+import { SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '@/io/components';
+import { pushLayer, popLayer, topLayerId } from '@/utils/dom';
 
 /** Currently selected source profile id (session-only; defaults to InstapaperScraper). */
 export let selectedProfileId = defaultProfileId();

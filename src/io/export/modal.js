@@ -2,13 +2,13 @@
  * @fileoverview Save/export modal behavior — render + layer-stack open/close.
  *
  * Extracted from src/io/exporter.js when the exporter split into src/io/export/*.
- * Markup lives in src/components/io/saveModal.js; the layer registration lives
+ * Markup lives in src/io/components/saveModal.js; the layer registration lives
  * in src/app/modalListeners.js.
  */
 
-import * as state from '../../core/state';
-import { saveSourceFileRowHtml } from '../../components/io';
-import { pushLayer, popLayer } from '../../utils/dom';
+import * as state from '@/core/state';
+import { saveSourceFileRowHtml } from '@/io/components';
+import { pushLayer, popLayer } from '@/utils/dom';
 
 /**
  * Populate the source-file list of the save/export modal without touching

@@ -25,8 +25,8 @@ import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from 
 import { closeTrashModal } from '@/features/trash';
 import { openSimilarityModal, closeSimilarityModal } from '@/features/similarityModal';
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from '@/features/workspace';
-import { closeSaveModal } from '../io/export';
-import { closeImportModal } from '../io/import';
+import { closeSaveModal } from '@/io/export';
+import { closeImportModal } from '@/io/import';
 import {
   closeLayer,
   registerModalLayer,
@@ -34,7 +34,7 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
-} from '../utils/dom';
+} from '@/utils/dom';
 import { openLinkageForBookmark } from '@/features/linkage';
 
 /**

@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  importModalHtml,
-  SELECTED_CARD_CLASSES,
-  UNSELECTED_CARD_CLASSES,
-} from '../src/components/io';
+import { importModalHtml, SELECTED_CARD_CLASSES, UNSELECTED_CARD_CLASSES } from '@/io/components';
 
 const html = () => importModalHtml();
 

@@ -10,8 +10,8 @@ import { openLinkageForBookmark } from '@/features/linkage';
 import { openReaderModal, getReaderBookmarkId } from '@/features/reader';
 
 import { openSimilarityModal } from '@/features/similarityModal';
-import { openSaveModal } from '../src/io/export';
-import { openImportModal } from '../src/io/import';
+import { openSaveModal } from '@/io/export';
+import { openImportModal } from '@/io/import';
 import { resetLayers, stackDepth } from '../src/utils/dom';
 import { setBookmarks, bookmarks } from '../src/core/state';
 

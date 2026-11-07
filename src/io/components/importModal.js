@@ -9,7 +9,7 @@
  * the layer registration lives in src/app/modalListeners.js.
  */
 
-import { IMPORT_PROFILES, selectableProfiles } from '../../providers/profiles.js';
+import { IMPORT_PROFILES, selectableProfiles } from '@/providers/profiles.js';
 
 /** Radio-card classes for the selected state (toggled at runtime by src/io/import/). */
 export const SELECTED_CARD_CLASSES = ['border-indigo-500', 'bg-indigo-600/20'];
