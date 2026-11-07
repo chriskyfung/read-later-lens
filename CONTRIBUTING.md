@@ -163,11 +163,24 @@ Dependabot opens weekly PRs for dependency updates (grouped by type) — review 
 ├── src/
 │   ├── main.js             # Thin bootstrap that composes extracted modules
 │   ├── components/         # Markup helpers (pure DOM element builders)
-│   ├── views/              # View behavior (listener wiring, render logic)
+│   ├── behavior/           # View behavior (listener wiring, orchestrators, state)
+│   ├── features/
+│   │   ├── bookmarks/      # Bookmarks feature (presentation + behavior)
+│   │   ├── domains/        # Domains feature
+│   │   ├── header/         # Header feature
+│   │   ├── linkage/        # Linkage/graph feature
+│   │   ├── reader/         # Reader/annotation feature
+│   │   ├── sidebar/        # Sidebar navigation
+│   │   ├── similarityModal/  # Similarity-drawer modal
+│   │   ├── trash/          # Trash / deleted bookmarks
+│   │   ├── wordcloud/      # Wordcloud analytics
+│   │   └── workspace/      # Bulk-action workspace
 │   ├── core/               # State, filters, search parser, store
 │   ├── analytics/          # NLP, tokenization, language detection, similarity
 │   ├── io/                 # Import/export (CSV, JSON, SQLite)
-│   └── i18n/               # Locale files (zh-TW)
+│   ├── providers/          # Source integrations (Instapaper, etc.)
+│   ├── services/           # SQL engine, storage, persistence
+│   └── styles/             # CSS / Tailwind config
 ├── tests/                  # Vitest test suite
 ├── .husky/                 # Git hooks (Husky)
 ├── eslint.config.mjs       # ESLint flat config
