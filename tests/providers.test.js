@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs from 'sql.js';
-import { importJsonOrCsv, importSqlite, resolveImportAdapter } from '../src/providers/index.js';
+import { importJsonOrCsv, importSqlite, resolveImportAdapter } from '@/providers/index.js';
 
 const SQL_DIST = join(
   dirname(fileURLToPath(import.meta.url)),

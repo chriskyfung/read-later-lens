@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { handleFileUploads, initImporter, applyProfileSelection } from '../src/io/import';
-import { saveSingleFile } from '../src/io/export';
-import { defaultProfileId } from '../src/providers/profiles.js';
-import { saveFileWithFallback } from '../src/utils/download.js';
-import { setBookmarks, setSourceFiles, sourceFiles } from '../src/core/state';
-import { setSQL } from '../src/services/sqlEngine.js';
-import { resetLayers } from '../src/utils/dom';
+import { handleFileUploads, initImporter, applyProfileSelection } from '@/io/import';
+import { saveSingleFile } from '@/io/export';
+import { defaultProfileId } from '@/providers/profiles.js';
+import { saveFileWithFallback } from '@/utils/download.js';
+import { setBookmarks, setSourceFiles, sourceFiles } from '@/core/state';
+import { setSQL } from '@/services/sqlEngine.js';
+import { resetLayers } from '@/utils/dom';
 
-vi.mock('../src/utils/download.js', () => ({
+vi.mock('@/utils/download.js', () => ({
   downloadBlob: vi.fn(),
   saveFileWithFallback: vi.fn(async () => {}),
 }));

@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { openReaderModal, closeReaderModal, getReaderBookmarkId } from '@/features/reader';
 
 import { openSimilarityModal, closeSimilarityModal } from '@/features/similarityModal';
-import { setBookmarks } from '../src/core/state';
-import { resetLayers } from '../src/utils/dom';
+import { setBookmarks } from '@/core/state';
+import { resetLayers } from '@/utils/dom';
 
 // ---- DOM stubs ----------------------------------------------------------
 function makeEl() {

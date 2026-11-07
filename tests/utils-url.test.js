@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractDomain } from '../src/utils/url.js';
+import { extractDomain } from '@/utils/url.js';
 
 describe('extractDomain', () => {
   it('uses the default fallback when given an invalid URL', () => {

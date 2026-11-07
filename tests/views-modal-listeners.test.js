@@ -5,15 +5,15 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 vi.mock('@/features/linkage', () => ({
   openLinkageForBookmark: vi.fn(() => true),
 }));
-import { registerModalListeners } from '../src/app/modalListeners.js';
+import { registerModalListeners } from '@/app/modalListeners.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 import { openReaderModal, getReaderBookmarkId } from '@/features/reader';
 
 import { openSimilarityModal } from '@/features/similarityModal';
 import { openSaveModal } from '@/io/export';
 import { openImportModal } from '@/io/import';
-import { resetLayers, stackDepth } from '../src/utils/dom';
-import { setBookmarks, bookmarks } from '../src/core/state';
+import { resetLayers, stackDepth } from '@/utils/dom';
+import { setBookmarks, bookmarks } from '@/core/state';
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};

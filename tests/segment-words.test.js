@@ -10,8 +10,8 @@ import {
   segmentationAvailable,
   zhSegmentationAvailable,
   segmentCjkWords,
-} from '../src/analytics/core/segmentZh.js';
-import { tokenizeText } from '../src/analytics/core/tokenize.js';
+} from '@/analytics/core/segmentZh.js';
+import { tokenizeText } from '@/analytics/core/tokenize.js';
 
 beforeEach(() => {
   vi.resetModules();
@@ -81,8 +81,8 @@ describe('word cloud English plain path (engine never loaded)', () => {
     // With the splitter present this is the observable behaviour change:
     // ICU keeps the contraction whole, the stopword policy drops it —
     // where the legacy tokenizer split it and kept a phantom 'don'.
-    const { wordCloudFrequencies } = await import('../src/analytics/wordcloud.js');
-    const keywords = await import('../src/analytics/keywords.js');
+    const { wordCloudFrequencies } = await import('@/analytics/wordcloud.js');
+    const keywords = await import('@/analytics/keywords.js');
     expect(keywords.keywordsReady()).toBe(false); // no chunk requested
     const map = new Map(wordCloudFrequencies([EN_DOC]));
     expect(map.get('don')).toBeUndefined();
@@ -108,9 +108,8 @@ describe('word cloud English plain path (engine never loaded)', () => {
         writable: true,
         configurable: true,
       });
-      const { segmentationAvailable: available } =
-        await import('../src/analytics/core/segmentZh.js');
-      const { wordCloudFrequencies } = await import('../src/analytics/wordcloud.js');
+      const { segmentationAvailable: available } = await import('@/analytics/core/segmentZh.js');
+      const { wordCloudFrequencies } = await import('@/analytics/wordcloud.js');
       expect(available('en')).toBe(false);
 
       const map = new Map(wordCloudFrequencies([EN_DOC]));

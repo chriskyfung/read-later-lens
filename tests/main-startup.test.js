@@ -2,7 +2,7 @@
 describe('entry-point feature wiring', () => {
   it('persists and renders uploads through the registered input listener', async () => {
     await start();
-    const { saveState } = await import('../src/core/persistence');
+    const { saveState } = await import('@/core/persistence');
     els.fileInput.dispatch('change', {
       target: {
         files: [
@@ -20,9 +20,9 @@ describe('entry-point feature wiring', () => {
   });
 
   it('rolls the import back when the cache write fails (e2e)', async () => {
-    const store = await import('../src/core/persistence');
+    const store = await import('@/core/persistence');
     const { saveState } = store;
-    const { showToast } = await import('../src/utils/dom');
+    const { showToast } = await import('@/utils/dom');
     // A write can fail outright (rejected promise): the import must be undone
     // rather than announced as a success that a reload would not reproduce.
     store.saveState.mockRejectedValueOnce(new Error('QuotaExceededError'));
@@ -47,7 +47,7 @@ describe('entry-point feature wiring', () => {
     // session can never disagree with what the next reload will show. This must
     // hold for both module state and the rendered view — persistAndRender()
     // renders the merged state before it discovers the write failure.
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
     expect(state.bookmarks).toHaveLength(0);
     expect(state.sourceFiles.size).toBe(0);
     expect(els.filteredCount.innerText).toBe(0);
@@ -55,8 +55,8 @@ describe('entry-point feature wiring', () => {
   });
 
   it('keeps the write-failure toast when a delete cannot be cached (e2e)', async () => {
-    const store = await import('../src/core/persistence');
-    const { showToast } = await import('../src/utils/dom');
+    const store = await import('@/core/persistence');
+    const { showToast } = await import('@/utils/dom');
     // The cache write fails, so the session is no longer cached. The action
     // must not replace that warning with its own "moved to trash" success
     // message — the toast area shows one message at a time, and the last
@@ -64,9 +64,9 @@ describe('entry-point feature wiring', () => {
     store.saveState.mockResolvedValueOnce({ persisted: false, conflict: false });
 
     await start();
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
     state.setBookmarks([bookmark('d1', 'Apple', 'https://apple.com')]);
-    const { renderAll } = await import('../src/app/shell.js');
+    const { renderAll } = await import('@/app/shell.js');
     renderAll();
 
     const card = els.bookmarkCardsGrid.children[0];
@@ -83,7 +83,7 @@ describe('entry-point feature wiring', () => {
 
   it('imports through the source picker modal opened from the header (e2e)', async () => {
     await start();
-    const { stackDepth } = await import('../src/utils/dom');
+    const { stackDepth } = await import('@/utils/dom');
 
     els.importBtn.dispatch('click');
     expect(stackDepth()).toBe(1);
@@ -107,16 +107,16 @@ describe('entry-point feature wiring', () => {
     expect(stackDepth()).toBe(0);
     expect(els.importModal.classList.contains('hidden')).toBe(true);
 
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
     const [source] = [...state.sourceFiles.values()];
     expect(source.profile).toBe('rll-unified');
   });
 
   it('deletes bookmarks through nested clicks after repeated renders', async () => {
     await start();
-    const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/app/shell.js');
-    const { saveState } = await import('../src/core/persistence');
+    const state = await import('@/core/state');
+    const { renderAll } = await import('@/app/shell.js');
+    const { saveState } = await import('@/core/persistence');
     const id = `bookmark'"id`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
     state.selectedIds.add(id);
@@ -141,9 +141,9 @@ describe('entry-point feature wiring', () => {
 
   it('keeps a trashed bookmark recoverable and ignores a repeated delete click', async () => {
     await start();
-    const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/app/shell.js');
-    const { saveState } = await import('../src/core/persistence');
+    const state = await import('@/core/state');
+    const { renderAll } = await import('@/app/shell.js');
+    const { saveState } = await import('@/core/persistence');
     const id = `keep"bookmark`;
     state.setBookmarks([bookmark(id, 'Apple', 'https://apple.com')]);
     renderAll();
@@ -168,8 +168,8 @@ describe('entry-point feature wiring', () => {
 
   it('trashes the open bookmark from the reader modal (e2e)', async () => {
     await start();
-    const state = await import('../src/core/state');
-    const { saveState } = await import('../src/core/persistence');
+    const state = await import('@/core/state');
+    const { saveState } = await import('@/core/persistence');
     const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
@@ -185,7 +185,7 @@ describe('entry-point feature wiring', () => {
 
   it('closes the reader modal with Escape (e2e)', async () => {
     await start();
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
     const { openReaderModal } = await import('@/features/reader');
     state.setBookmarks([bookmark('r1', 'Apple', 'https://apple.com')]);
 
@@ -206,9 +206,9 @@ describe('entry-point feature wiring', () => {
 
   it('keeps folder deletion separate from selection and handles nested clicks', async () => {
     await start();
-    const state = await import('../src/core/state');
-    const { renderAll } = await import('../src/app/shell.js');
-    const { saveState } = await import('../src/core/persistence');
+    const state = await import('@/core/state');
+    const { renderAll } = await import('@/app/shell.js');
+    const { saveState } = await import('@/core/persistence');
     const id = `folder'"id`;
     state.setSourceFiles(new Map([[id, { id, name: 'test.json', type: 'json' }]]));
     state.setBookmarks([{ ...bookmark('1', 'Apple', 'https://apple.com'), source_file_id: id }]);
@@ -243,8 +243,8 @@ describe('entry-point feature wiring', () => {
 
   it('exports a source through a nested click after reopening the save modal', async () => {
     await start();
-    const state = await import('../src/core/state');
-    const { saveFileWithFallback } = await import('../src/utils/download.js');
+    const state = await import('@/core/state');
+    const { saveFileWithFallback } = await import('@/utils/download.js');
     const id = `source'"id`;
     state.setSourceFiles(new Map([[id, { id, name: 'test.json', type: 'json' }]]));
     state.setBookmarks([{ ...bookmark('1', 'Apple', 'https://apple.com'), source_file_id: id }]);
@@ -269,10 +269,10 @@ describe('entry-point feature wiring', () => {
     ['domains', 'domainChartContainer'],
   ])('wires %s clicks opened through tab navigation', async (tab, container) => {
     await start();
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
     // The word-cloud view loads its keyword engine lazily; the click-to-search
     // assertion needs the rendered terms, so warm the engine first.
-    const keywords = await import('../src/analytics/keywords.js');
+    const keywords = await import('@/analytics/keywords.js');
     await keywords.loadKeywordsEngine();
     state.setBookmarks([
       bookmark('1', 'Apple orchard', 'https://apple.com'),
@@ -335,17 +335,17 @@ it('compiles Tailwind at build time instead of loading a runtime CDN', () => {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 
-vi.mock('../src/utils/download.js', () => ({
+vi.mock('@/utils/download.js', () => ({
   downloadBlob: vi.fn(),
   saveFileWithFallback: vi.fn(async () => {}),
 }));
 
-vi.mock('../src/core/persistence', () => ({
+vi.mock('@/core/persistence', () => ({
   loadState: vi.fn(async () => false),
   saveState: vi.fn(async () => {}),
   getStorageUsage: vi.fn(async () => ({ usageKB: 2, limitMB: 50 })),
 }));
-vi.mock('../src/utils/dom', async (importOriginal) => ({
+vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: vi.fn(),
 }));
@@ -460,7 +460,7 @@ beforeEach(async () => {
         )
         .map(([, el]) => el),
   });
-  const store = await import('../src/core/persistence');
+  const store = await import('@/core/persistence');
   store.loadState.mockReset().mockResolvedValue(false);
   store.getStorageUsage.mockReset().mockResolvedValue({ usageKB: 2, limitMB: 50 });
 });
@@ -470,7 +470,7 @@ afterEach(() => {
 });
 
 async function start() {
-  const entry = await import('../src/main.js');
+  const entry = await import('@/main.js');
   await entry.ready;
   return entry;
 }
@@ -510,7 +510,7 @@ describe('module-owned startup', () => {
 
   it('mounts every element the export wiring contract expects', async () => {
     await start();
-    const { EXPORT_LISTENERS } = await import('../src/io/export');
+    const { EXPORT_LISTENERS } = await import('@/io/export');
     const mountedIds = new Set(
       mounts.flatMap((html) => [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1])),
     );
@@ -527,9 +527,9 @@ describe('module-owned startup', () => {
   });
 
   it('restores bookmarks before the first render and reports restoration', async () => {
-    const state = await import('../src/core/state');
-    const { loadState } = await import('../src/core/persistence');
-    const { showToast } = await import('../src/utils/dom');
+    const state = await import('@/core/state');
+    const { loadState } = await import('@/core/persistence');
+    const { showToast } = await import('@/utils/dom');
     loadState.mockImplementation(async () => {
       state.setBookmarks([bookmark('1', 'Apple', 'https://apple.com')]);
       return true;
@@ -540,7 +540,7 @@ describe('module-owned startup', () => {
   });
 
   it.each(['loadState', 'getStorageUsage'])('still renders when %s fails', async (method) => {
-    const store = await import('../src/core/persistence');
+    const store = await import('@/core/persistence');
     store[method].mockRejectedValue(new Error('unavailable'));
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     await start();

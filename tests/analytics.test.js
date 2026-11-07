@@ -4,17 +4,17 @@ import {
   tokenizeText,
   tokenizeFrequency,
   bookmarkText,
-} from '../src/analytics/core/tokenize.js';
+} from '@/analytics/core/tokenize.js';
 import {
   BASE_EN,
   CLOUD_EN,
   CJK_STOPWORDS,
   JA_STOPWORDS,
   cjkStopsetFor,
-} from '../src/analytics/core/stopwords.js';
-import { cosineSimilarity, mostSimilar, bookmarkTokenFreq } from '../src/analytics/similarity.js';
-import { wordCloudFrequencies, wordCloudItems } from '../src/analytics/wordcloud.js';
-import { topDomains } from '../src/analytics/domains.js';
+} from '@/analytics/core/stopwords.js';
+import { cosineSimilarity, mostSimilar, bookmarkTokenFreq } from '@/analytics/similarity.js';
+import { wordCloudFrequencies, wordCloudItems } from '@/analytics/wordcloud.js';
+import { topDomains } from '@/analytics/domains.js';
 
 // Regression guards: the stopword lists must not drift, or word-cloud and
 // similarity output changes silently.

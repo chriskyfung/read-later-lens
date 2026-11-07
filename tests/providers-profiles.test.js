@@ -6,7 +6,7 @@ import {
   profileLabel,
   selectableProfiles,
   OFFICIAL_CSV_UNSUPPORTED_MESSAGE,
-} from '../src/providers/profiles.js';
+} from '@/providers/profiles.js';
 
 describe('profile descriptors', () => {
   it('preselects InstapaperScraper and keeps roadmap cards out of the selectable list', () => {

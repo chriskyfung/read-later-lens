@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectLanguage } from '../src/analytics/core/detectLanguage.js';
+import { detectLanguage } from '@/analytics/core/detectLanguage.js';
 
 describe('detectLanguage', () => {
   it('defaults to en for empty input', () => {

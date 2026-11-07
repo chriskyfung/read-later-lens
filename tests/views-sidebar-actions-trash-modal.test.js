@@ -8,10 +8,10 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { initSidebarActions, registerSidebarListeners } from '@/features/sidebar';
-import { setBookmarks, setSelectedIds } from '../src/core/state';
-import { MODAL_Z_BASE } from '../src/utils/dom';
+import { setBookmarks, setSelectedIds } from '@/core/state';
+import { MODAL_Z_BASE } from '@/utils/dom';
 
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

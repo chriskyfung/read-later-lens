@@ -16,8 +16,8 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
-} from '../src/utils/dom';
-import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
+} from '@/utils/dom';
+import { downloadBlob, saveFileWithFallback } from '@/utils/download.js';
 
 // Submodule references, used only by the facade-surface contract: the facade
 // must hand back the *same* function objects (a single shared stack), not
@@ -33,17 +33,17 @@ import {
   closeLayer as closeLayerFromStack,
   closeTopLayer as closeTopLayerFromStack,
   resetLayers as resetLayersFromStack,
-} from '../src/utils/dom/layerStack.js';
+} from '@/utils/dom/layerStack.js';
 import {
   focusableWithin as focusableWithinFromFocus,
   trapFocus as trapFocusFromFocus,
-} from '../src/utils/dom/focus.js';
+} from '@/utils/dom/focus.js';
 import {
   escapeHtml as escapeHtmlFromEscape,
   safeUrl as safeUrlFromEscape,
-} from '../src/utils/dom/escape.js';
-import { on as onFromBind } from '../src/utils/dom/bind.js';
-import { showToast as showToastFromToast } from '../src/utils/dom/toast.js';
+} from '@/utils/dom/escape.js';
+import { on as onFromBind } from '@/utils/dom/bind.js';
+import { showToast as showToastFromToast } from '@/utils/dom/toast.js';
 
 function setupDom({ onClick } = {}) {
   const classes = new Set(['translate-y-20', 'opacity-0']);

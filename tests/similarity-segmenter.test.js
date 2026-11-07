@@ -3,7 +3,7 @@
 // defects (fail-first: both diverging pins fail on the legacy path).
 // Scoring math (`cosineScore`) is untouched — only the tokens change.
 import { describe, it, expect } from 'vitest';
-import { cosineSimilarity, bookmarkTokenFreq } from '../src/analytics/similarity.js';
+import { cosineSimilarity, bookmarkTokenFreq } from '@/analytics/similarity.js';
 
 const mk = (title, preview = '') => ({ id: 'x', title, article_preview: preview });
 

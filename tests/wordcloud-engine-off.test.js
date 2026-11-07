@@ -10,8 +10,8 @@ beforeEach(() => {
 });
 
 async function freshModules() {
-  const keywords = await import('../src/analytics/keywords.js');
-  const { wordCloudFrequencies } = await import('../src/analytics/wordcloud.js');
+  const keywords = await import('@/analytics/keywords.js');
+  const { wordCloudFrequencies } = await import('@/analytics/wordcloud.js');
   return { keywords, wordCloudFrequencies };
 }
 

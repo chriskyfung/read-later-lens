@@ -5,13 +5,13 @@ import {
   createUniqueSourceName,
   registerImporterListeners,
   applyProfileSelection,
-} from '../src/io/import';
-import { defaultProfileId } from '../src/providers/profiles.js';
-import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
-import { bookmarks, setBookmarks, setSourceFiles, sourceFiles } from '../src/core/state';
-import { setSQL } from '../src/services/sqlEngine.js';
-import { resetLayers, stackDepth } from '../src/utils/dom';
-import { STALE_STATE_REASON } from '../src/core/guard.js';
+} from '@/io/import';
+import { defaultProfileId } from '@/providers/profiles.js';
+import { importJsonOrCsv, importSqlite } from '@/providers/index.js';
+import { bookmarks, setBookmarks, setSourceFiles, sourceFiles } from '@/core/state';
+import { setSQL } from '@/services/sqlEngine.js';
+import { resetLayers, stackDepth } from '@/utils/dom';
+import { STALE_STATE_REASON } from '@/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
@@ -23,7 +23,7 @@ const Papa = vi.hoisted(() => ({
 }));
 
 vi.mock('papaparse', () => ({ default: Papa }));
-vi.mock('../src/services/sqlEngine.js', async (importOriginal) => {
+vi.mock('@/services/sqlEngine.js', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -37,7 +37,7 @@ vi.mock('../src/services/sqlEngine.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../src/providers/index.js', () => {
+vi.mock('@/providers/index.js', () => {
   const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) => ({
     records: rows.map((r, i) => ({
       id: r.id ?? 'n' + i,
@@ -250,7 +250,7 @@ describe('handleFileUploads — format dispatch', () => {
   });
 
   it('routes .db files through importSqlite with a Uint8Array and the SQL engine', async () => {
-    const { SQL: engine } = await import('../src/services/sqlEngine.js');
+    const { SQL: engine } = await import('@/services/sqlEngine.js');
     await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
 
     expect(initSql).toHaveBeenCalledTimes(1);
@@ -366,7 +366,7 @@ describe('handleFileUploads — format dispatch', () => {
     await pending;
 
     expect(persist).toHaveBeenCalled();
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     const dup = bookmarks.filter((b) => b.id === 'dup');
     expect(dup).toHaveLength(1);
     expect(dup[0].title).toBe('new');
@@ -389,7 +389,7 @@ describe('handleFileUploads — format dispatch', () => {
     expect(el('toastMsg').innerText).toBe(
       '已成功載入檔案: a.csv（1 筆已存在於回收桶的書籤已被新匯入資料取代）',
     );
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     expect(bookmarks).toHaveLength(1);
     expect(bookmarks[0].title).toBe('fresh');
     expect(bookmarks[0].deleted_at).toBeUndefined();
@@ -404,7 +404,7 @@ describe('handleFileUploads — format dispatch', () => {
     await handleFileUploads([fakeFile('a.csv', 'id,title\n1,hello')]);
 
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     expect(bookmarks).toHaveLength(2);
   });
 });
@@ -538,7 +538,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     expect(bookmarks.map((b) => b.title)).toEqual(['x']);
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: a.csv');
@@ -555,7 +555,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     // Neither half survives: no imported records and no ghost folder.
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
@@ -572,7 +572,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     // Same rollback as any failed write: the overtaken tab keeps what it had.
     expect(bookmarks.map((b) => b.title)).toEqual(['kept']);
     expect(sourceFiles.size).toBe(0);
@@ -594,7 +594,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     // Without the rollback the merge stayed in memory while the catch deleted
     // the source record — a bookmark pointing at a source_file_id that no
     // longer exists, invisible in the folder list.
@@ -609,7 +609,7 @@ describe('processSingleFile — transaction boundary', () => {
 
     await handleFileUploads([csvFile()]);
 
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     expect(bookmarks.map((b) => b.title)).toEqual(['x']);
     expect(sourceFiles.size).toBe(1);
   });

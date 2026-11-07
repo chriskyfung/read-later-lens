@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { setSQL, SQL, initSql } from '../src/services/sqlEngine.js';
+import { setSQL, SQL, initSql } from '@/services/sqlEngine.js';
 
 const fakeEngine = { Database: class {} };
 const initSqlJs = vi.hoisted(() => vi.fn());

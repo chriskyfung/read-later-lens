@@ -6,10 +6,10 @@ import {
   keywordsReady,
   needsKeywordEngine,
   documentLanguage,
-} from '../src/analytics/keywords.js';
-import * as keywordsModule from '../src/analytics/keywords.js';
-import { wordCloudFrequencies } from '../src/analytics/wordcloud.js';
-import { tokenizeText, tokenizeFrequency } from '../src/analytics/core/tokenize.js';
+} from '@/analytics/keywords.js';
+import * as keywordsModule from '@/analytics/keywords.js';
+import { wordCloudFrequencies } from '@/analytics/wordcloud.js';
+import { tokenizeText, tokenizeFrequency } from '@/analytics/core/tokenize.js';
 
 // The engine is lazy: every test in this file needs it loaded first, which is
 // exactly the contract the word-cloud view relies on. The un-loaded fallback

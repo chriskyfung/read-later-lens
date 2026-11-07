@@ -6,13 +6,13 @@ import {
   exportAllUnifiedJson,
   exportAllUnifiedCsv,
   registerExporterListeners,
-} from '../src/io/export';
-import { captureCsvDialect } from '../src/utils/csv';
-import { downloadBlob, saveFileWithFallback } from '../src/utils/download.js';
-import { checkImport } from '../src/providers/profiles.js';
-import { bookmarks, setBookmarks, setSourceFiles } from '../src/core/state';
-import { setSQL } from '../src/services/sqlEngine.js';
-import { resetLayers } from '../src/utils/dom';
+} from '@/io/export';
+import { captureCsvDialect } from '@/utils/csv';
+import { downloadBlob, saveFileWithFallback } from '@/utils/download.js';
+import { checkImport } from '@/providers/profiles.js';
+import { bookmarks, setBookmarks, setSourceFiles } from '@/core/state';
+import { setSQL } from '@/services/sqlEngine.js';
+import { resetLayers } from '@/utils/dom';
 
 // Stands in for the `papaparse` dependency that `src/io/export/` imports,
 // so these tests can assert on the arguments. The real library is still needed
@@ -27,7 +27,7 @@ vi.mock('papaparse', () => ({ default: Papa }));
 const PapaActual = await vi.importActual('papaparse');
 const PapaReal = PapaActual.default ?? PapaActual;
 
-vi.mock('../src/utils/download.js', () => ({
+vi.mock('@/utils/download.js', () => ({
   downloadBlob: vi.fn(),
   saveFileWithFallback: vi.fn(async () => {}),
 }));

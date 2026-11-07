@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { renderWordCloud, initWordCloud } from '@/features/wordcloud';
-import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '../src/core/state';
-import { loadKeywordsEngine } from '../src/analytics/keywords.js';
+import { setBookmarks, setSearchQuery, searchQuery, activeTab } from '@/core/state';
+import { loadKeywordsEngine } from '@/analytics/keywords.js';
 
 function makeEl() {
   return {
@@ -148,9 +148,9 @@ describe('renderWordCloud', () => {
 describe('renderWordCloud — lazy engine load', () => {
   it('renders a loading state first, then the terms once the engine arrives', async () => {
     vi.resetModules();
-    const keywords = await import('../src/analytics/keywords.js');
+    const keywords = await import('@/analytics/keywords.js');
     const view = await import('@/features/wordcloud');
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
 
     state.setSearchQuery('');
     state.setBookmarks([
@@ -186,9 +186,9 @@ describe('renderWordCloud — lazy engine load', () => {
     vi.doMock('compromise', () => {
       throw new Error('chunk load failed');
     });
-    const keywords = await import('../src/analytics/keywords.js');
+    const keywords = await import('@/analytics/keywords.js');
     const view = await import('@/features/wordcloud');
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
 
     state.setSearchQuery('');
     state.setBookmarks([

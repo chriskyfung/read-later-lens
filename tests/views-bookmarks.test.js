@@ -15,13 +15,7 @@ import {
   createBookmarkCard,
 } from '@/features/bookmarks';
 import { openLinkageForBookmark } from '@/features/linkage';
-import {
-  setBookmarks,
-  setActiveFolder,
-  selectedIds,
-  sourceFiles,
-  bookmarks,
-} from '../src/core/state';
+import { setBookmarks, setActiveFolder, selectedIds, sourceFiles, bookmarks } from '@/core/state';
 
 function makeEl() {
   return {

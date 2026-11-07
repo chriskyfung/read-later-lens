@@ -11,17 +11,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({ probe: vi.fn(), showToast: vi.fn() }));
 
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: () => h.probe(),
 }));
 
-vi.mock('../src/utils/dom', async (importOriginal) => ({
+vi.mock('@/utils/dom', async (importOriginal) => ({
   ...(await importOriginal()),
   showToast: h.showToast,
 }));
 
-const { stateStillFresh, STALE_STATE_MESSAGE } = await import('../src/core/guard.js');
+const { stateStillFresh, STALE_STATE_MESSAGE } = await import('@/core/guard.js');
 
 describe('stateStillFresh', () => {
   beforeEach(() => {
