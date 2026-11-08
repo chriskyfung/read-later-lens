@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { activateTab } from '@/behavior/tabs.js';
+import { activateTab } from './tabs.js';
 import { activeTab } from '@/core/state';
 
 const ACTIVE_CLASS =
