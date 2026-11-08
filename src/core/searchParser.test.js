@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect } from 'vitest';
-import { parseSearchQuery } from '../src/core/searchParser.js';
+import { parseSearchQuery } from './searchParser.js';
 
 describe('parseSearchQuery', () => {
   it('returns an empty list for blank input', () => {

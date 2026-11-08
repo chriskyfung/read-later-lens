@@ -200,6 +200,42 @@ Dependabot opens weekly PRs for dependency updates (grouped by type) — review 
 - **End-user-facing copy** is currently **Traditional Chinese (zh-TW)**; preserve that unless intentionally changing the localization approach.
 - The app is **fully client-side** — do not introduce server-side calls or transmit user data anywhere.
 
+## Test colocation
+
+This project uses a **hybrid** test arrangement pattern:
+
+- **1:1 source↔test modules** — tests that map to a single source module get colocated beside that module.  
+  Example: `src/core/guard.test.js` alongside `src/core/guard.js`; `src/features/bookmarks/components/card.test.js` alongside `src/features/bookmarks/components/card.js`; `src/utils/id.test.js` alongside `src/utils/id.js`.
+
+- **Cross-module integration suites** — tests that exercise multiple modules, a whole view, or app startup remain in the flat `tests/` directory.  
+  Example: `tests/views-linkage.test.js`, `tests/io-importer.test.js`, `tests/views.test.js`, `tests/main-startup.test.js`, `tests/paths-alias.test.js`.
+
+### Migration pattern (one slice at a time)
+
+Each migration is a revertible commit slice:
+
+1. `cp tests/X.test.js src/.../X.test.js`
+2. Rewrite relative imports from `../src/...` → `./...` (leveraging the already-configured `@/` and `src/` Vite/ESLint aliases)
+3. `npx vitest run src/.../X.test.js` → verify passing
+4. `npx eslint src/.../X.test.js` → verify clean
+5. `git add src/.../X.test.js && git rm tests/X.test.js && git commit -m "✅ test: colocate X test beside source"`
+
+The vitest config in `vite.config.js` includes both `src/**/*.test.js` and `tests/**/*.test.js`; test files are excluded from coverage percentages so colocation doesn't distort source coverage thresholds.
+
+### Why hybrid?
+
+- **Problem**: 65 flat test files with no mechanical `source ↔ test` mapping; finding a test for a given source file requires grep. Problem worsens as the tree grows.
+- **Choice**: Hybrid colocation — 1:1 source↔test modules get colocated beside source; cross-module integration suites stay in flat `tests/`. This matches the project's just-completed feature-based source layout and the incremental, revertible commit pattern already in the git history.
+- **Why not full colocation**: Some suites (views, io, main-startup, linkage) exercise multiple modules with no single source owner — they rightfully remain in `tests/`.
+- **Why not move everything**: Would create excessive path depth in `src/`, duplicate the integration surface, and risk moving tests that genuinely span module boundaries.
+
+### Verification already performed
+
+- All 9 migrated suites: `vitest run` passes (121 tests total)
+- ESLint clean on every staged file (lint-staged ran automatically per pre-commit hook)
+- `git diff --check`: no whitespace errors
+- Full suite + build deferred to CI per AGENTS.md (config change only affects test discovery, not build logic)
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [GNU AGPL-3.0](LICENSE).

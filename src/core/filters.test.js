@@ -6,14 +6,14 @@ import {
   setActiveTag,
   setSearchQuery,
   setSortBy,
-} from '../src/core/state';
+} from './state';
 import {
   applyFilters,
   getFilteredBookmarks,
   getFilteredBookmarksTop,
   getActiveBookmarks,
   getTrashedBookmarks,
-} from '../src/core/filters.js';
+} from './filters.js';
 
 const mk = (id, over = {}) => ({
   id: String(id),
