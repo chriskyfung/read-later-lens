@@ -1,57 +1,44 @@
-/* global MouseEvent */
 // @vitest-environment jsdom
+/* global MouseEvent */
 
-/**
- * End-to-end coverage for the trash modal's row actions.
- *
- * The stub suite in views-trash.test.js fakes `closest()` + dataset, so it
- * proves the handlers but not the wiring between markup and delegation: a
- * markup regression (the bare, valueless `data-restore-bookmark` attribute
- * that made both row actions no-ops after the modal migration) slips straight
- * through it. This file renders the REAL row markup into a REAL DOM and
- * clicks the REAL buttons.
- */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { registerTrashListeners, renderTrashView, initTrash } from '@/features/trash';
-import { setBookmarks, bookmarks, selectedIds, setSelectedIds } from '@/core/state';
+import { registerTrashListeners } from './listeners.js';
+import { renderTrashView } from './view.js';
+import { initTrash } from '../index.js';
+import { setBookmarks, bookmarks, setSelectedIds, selectedIds } from '@/core/state';
 
-// Only the row wiring is under test; the cross-tab gate must stay transparent.
-vi.mock('@/core/persistence', async (importOriginal) => ({
-  ...(await importOriginal()),
-  isStateFresh: async () => true,
-}));
+const OLDER_TS = '2026-01-01T00:00:00.000Z';
 
-const OLDER = '2026-01-01T00:00:00.000Z';
+// Module-level persistFn (like original flat test file)
+let persistFn;
 
-const trashed = (id, title) => ({
+const trashed = (id, title, deletedAt = OLDER_TS) => ({
   id,
   title,
   article_preview: `${title} preview`,
   source_file_name: 'instapaper.csv',
-  deleted_at: OLDER,
-});
-
-let persistFn;
-
-beforeEach(() => {
-  // Fresh nodes per test so each listener binds exactly once.
-  document.body.innerHTML =
-    '<div id="trashList" class="space-y-3"></div>' +
-    '<div id="trashEmptyState" class="hidden"></div>' +
-    '<div id="trashSummary"></div>';
-  setBookmarks([trashed('1', 'Apple'), trashed('2', 'Banana')]);
-  setSelectedIds(new Set(['2']));
-  persistFn = vi.fn(async () => {});
-  initTrash({ persist: persistFn, render: vi.fn() });
-  vi.stubGlobal(
-    'confirm',
-    vi.fn(() => true),
-  );
-  renderTrashView();
-  registerTrashListeners();
+  deleted_at: deletedAt,
 });
 
 describe('trash row actions (real markup, real click)', () => {
+  // Fresh nodes per test so each listener binds exactly once.
+  beforeEach(() => {
+    document.body.innerHTML =
+      '<div id="trashList" class="space-y-3"></div>' +
+      '<div id="trashEmptyState" class="hidden"></div>' +
+      '<div id="trashSummary"></div>';
+    setBookmarks([trashed('1', 'Apple'), trashed('2', 'Banana')]);
+    setSelectedIds(new Set(['2']));
+    persistFn = vi.fn(async () => {}); // assigned in beforeEach
+    initTrash({ persist: persistFn, render: vi.fn() });
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    );
+    registerTrashListeners();
+    renderTrashView();
+  });
+
   it('還原 restores exactly the clicked bookmark', async () => {
     const btn = document.querySelector('[data-restore-bookmark="1"]');
     expect(btn).not.toBeNull();
@@ -61,7 +48,7 @@ describe('trash row actions (real markup, real click)', () => {
     await vi.waitFor(() => expect(bookmarks.find((b) => b.id === '1').deleted_at).toBeNull());
     // The other trashed row is untouched, the record persists and the
     // restored id leaves the selection.
-    expect(bookmarks.find((b) => b.id === '2').deleted_at).toBe(OLDER);
+    expect(bookmarks.find((b) => b.id === '2').deleted_at).toBe(OLDER_TS);
     expect(persistFn).toHaveBeenCalledTimes(1);
     expect(selectedIds.has('1')).toBe(false);
   });
