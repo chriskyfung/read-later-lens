@@ -2,11 +2,16 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 
 const SRC = `${import.meta.dirname}/src`;
+const TESTS = `${import.meta.dirname}/tests`;
 
 export default defineConfig({
   plugins: [tailwindcss()],
   resolve: {
-    alias: { src: SRC, '@': SRC },
+    alias: {
+      '@': SRC,
+      src: SRC,
+      tests: TESTS,
+    },
   },
   build: {
     target: 'es2022',
