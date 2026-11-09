@@ -1,6 +1,6 @@
 /**
  * @fileoverview Tests for the pure linkage-graph helpers extracted from
- * src/views/linkage.js.
+ * src/features/linkage/behavior.js.
  *
  * The view's DOM-facing guards and D3 render path are covered by
  * tests/views-linkage.test.js; this file covers only the pure rules — node
