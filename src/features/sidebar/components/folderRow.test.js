@@ -5,7 +5,7 @@ import {
   sidebarFolderBadgeColorClass,
   sidebarFolderItemHtml,
   sidebarTrashBtnClass,
-} from '@/features/sidebar/components';
+} from './folderRow.js';
 
 /**
  * Tests for the pure folder-row helpers extracted from src/features/sidebar/behavior/folders.js.

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { sidebarHtml } from '@/features/sidebar/components';
-import { sidebarFoldersSectionHtml } from '@/features/sidebar/components/sections/folders.js';
-import { sidebarLanguageFiltersSectionHtml } from '@/features/sidebar/components/sections/languageFilters.js';
-import { sidebarTagCloudSectionHtml } from '@/features/sidebar/components/sections/tags.js';
-import { sidebarStorageSectionHtml } from '@/features/sidebar/components/sections/storage.js';
+import { sidebarHtml } from '../panel.js';
+import { sidebarFoldersSectionHtml } from './folders.js';
+import { sidebarLanguageFiltersSectionHtml } from './languageFilters.js';
+import { sidebarTagCloudSectionHtml } from './tags.js';
+import { sidebarStorageSectionHtml } from './storage.js';
 
 /**
  * Tests for the static sidebar section modules: each owns exactly one monolith

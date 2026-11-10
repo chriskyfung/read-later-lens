@@ -1,4 +1,4 @@
-import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from '@/features/linkage';
+import { linkageEmptyStateHtml, linkageTooltipTagsHtml } from './graph.js';
 import { describe, it, expect } from 'vitest';
 
 /**

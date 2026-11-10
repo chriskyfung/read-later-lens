@@ -1,8 +1,4 @@
-import {
-  wordCloudEmptyStateHtml,
-  wordCloudItemClass,
-  wordCloudItemLabel,
-} from '@/features/wordcloud/components';
+import { wordCloudEmptyStateHtml, wordCloudItemClass, wordCloudItemLabel } from './item.js';
 import { describe, it, expect } from 'vitest';
 
 /**
