@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { saveModalHtml, saveSourceFileRowHtml } from '@/io/components';
+import { saveModalHtml, saveSourceFileRowHtml } from './saveModal.js';
 
 /**
  * The save/export modal's source rows are assigned to innerHTML by
