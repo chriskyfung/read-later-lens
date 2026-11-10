@@ -17,8 +17,8 @@ import {
   isFavorite,
   setFavorite,
   toggleFavorite,
-} from '../src/core/state';
-import { SQL, setSQL } from '../src/services/sqlEngine.js';
+} from './';
+import { SQL, setSQL } from '@/services/sqlEngine.js';
 
 const mk = (id, sourceId = 'f1') => ({ id: String(id), source_file_id: sourceId });
 
