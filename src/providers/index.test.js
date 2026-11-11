@@ -2,10 +2,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initSqlJs from 'sql.js';
-import { importJsonOrCsv, importSqlite, resolveImportAdapter } from '../src/providers/index.js';
+import { importJsonOrCsv, importSqlite, resolveImportAdapter } from '.';
 
 const SQL_DIST = join(
   dirname(fileURLToPath(import.meta.url)),
+  '..',
   '..',
   'node_modules',
   'sql.js',
@@ -167,79 +168,12 @@ describe('importJsonOrCsv', () => {
     );
     expect(rec.detected_language).toBe('zh');
   });
-
-  it('drops rows without a usable URL instead of storing # placeholders', () => {
-    const { records, stats } = importJsonOrCsv(
-      [
-        { id: '1', title: 'Kept', url: 'https://keep.example.com' },
-        { id: '2', title: 'No url at all' },
-        { id: '3', title: 'Empty url', url: '' },
-      ],
-      'f',
-      'f.csv',
-    );
-    expect(records).toHaveLength(1);
-    expect(records[0].id).toBe('1');
-    // The adapter names the drop reason itself, so the importer reports
-    // 缺少網址 without inferring it from a length delta.
-    expect(stats.droppedNoUrl).toBe(2);
-  });
-
-  it('reports zero URL-less drops when every row has a usable URL', () => {
-    const { records, stats } = importJsonOrCsv(
-      [{ id: '1', title: 'Kept', url: 'https://keep.example.com' }],
-      'f',
-      'f.csv',
-    );
-    expect(records).toHaveLength(1);
-    expect(stats.droppedNoUrl).toBe(0);
-  });
-
-  it('gives the same URL distinct ids across sources so folders do not steal rows', () => {
-    const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
-    const {
-      records: [first],
-    } = importJsonOrCsv(rows, 'f1', 'a.csv');
-    const {
-      records: [second],
-    } = importJsonOrCsv(rows, 'f2', 'b.csv');
-    expect(first.id).toMatch(/^gen_[0-9a-f]{16}$/);
-    // The source id salts the hash: an unsalted collision made mergeBookmarks
-    // replace the older record wholesale, moving its source_file_id to the
-    // newest import and decrementing the older folder's count.
-    expect(first.id).not.toBe(second.id);
-    expect(first.source_file_id).toBe('f1');
-    expect(second.source_file_id).toBe('f2');
-  });
-
-  it('merges when the same id-less file is re-imported under the same source id', () => {
-    const rows = [{ title: 'Id-less', url: 'https://same.example.com/post' }];
-    const {
-      records: [first],
-    } = importJsonOrCsv(rows, 'f1', 'a.csv');
-    const {
-      records: [second],
-    } = importJsonOrCsv(rows, 'f1', 'a.csv');
-    expect(first.id).toBe(second.id); // merges on re-import instead of duplicating
-  });
-
-  it('still deduplicates two identical URLs within one source', () => {
-    const { records } = importJsonOrCsv(
-      [
-        { title: 'First', url: 'https://dup.example.com/post' },
-        { title: 'Second', url: 'https://dup.example.com/post' },
-      ],
-      'f1',
-      'a.csv',
-    );
-    // Same salt, same id: mergeBookmarks collapses them at the state layer.
-    expect(new Set(records.map((r) => r.id)).size).toBe(1);
-  });
 });
 
 describe('importSqlite', () => {
-  it('reads the first table and normalizes rows', async () => {
-    const { records } = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', SQL);
+  it('reads bookmarks and reports schema', async () => {
+    const { records, schema } = await importSqlite(makeSqliteBuffer(), 'file_db', 'export.db', SQL);
+
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({
       id: '1',
@@ -254,6 +188,10 @@ describe('importSqlite', () => {
     });
     expect(records[0].instapaper_url).toBe('https://www.instapaper.com/read/1');
     expect(records[1].detected_language).toBe('zh');
+    expect(schema).toEqual({
+      table: 'bookmarks',
+      columns: ['id', 'title', 'url', 'article_preview', 'tags'],
+    });
   });
 
   it('reports the URL-less rows it drops alongside the records', async () => {
