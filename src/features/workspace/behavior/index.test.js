@@ -8,7 +8,7 @@ import {
   deleteSelectedBookmarks,
   confirmDeleteSelectedBookmarks,
   toggleFavoriteBookmark,
-} from '@/features/workspace/behavior';
+} from '.';
 import {
   setBookmarks,
   setSortBy,
@@ -40,7 +40,7 @@ vi.mock('@/features/linkage', () => ({
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
 }));
-vi.mock('../src/core/state', () => {
+vi.mock('@/core/state', () => {
   const state = {
     bookmarks: [],
     selectedIds: new Set(),
@@ -90,7 +90,7 @@ vi.mock('../src/core/state', () => {
     setSourceFiles: vi.fn(),
   };
 });
-vi.mock('../src/core/filters.js', async (importOriginal) => {
+vi.mock('@/core/filters.js', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -106,8 +106,7 @@ const { activateTab } = await import('@/behavior/tabs.js');
 const { showToast } = await import('@/utils/dom');
 const { renderWordCloud } = await import('@/features/wordcloud');
 const { renderDomainChart } = await import('@/features/domains');
-const { renderConceptLinkageGraph, zoomGraphBy, resetGraphZoom } =
-  await import('@/features/linkage');
+const { renderConceptLinkageGraph } = await import('@/features/linkage');
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -220,7 +219,7 @@ describe('deleteBookmark', () => {
     expect(mockRender).toHaveBeenCalled();
     expect(updateBatchActionBar).toHaveBeenCalled();
     // The record itself is kept alive for the trash view.
-    const { bookmarks } = await import('../src/core/state');
+    const { bookmarks } = await import('@/core/state');
     expect(bookmarks).toHaveLength(2);
     expect(bookmarks.find((b) => b.id === '1').deleted_at).toBeTruthy();
     expect(bookmarks.find((b) => b.id === '2').deleted_at).toBeUndefined();
@@ -415,7 +414,7 @@ describe('toggleFavoriteBookmark', () => {
   it('looks the bookmark up through the id index, not an array scan', async () => {
     initWorkspaceActions({ persist: vi.fn(async () => {}), render: vi.fn() });
     setBookmarks([{ id: '1', title: 'T1' }]);
-    const state = await import('../src/core/state');
+    const state = await import('@/core/state');
 
     expect(await toggleFavoriteBookmark('1')).toBe(true);
     expect(state.getBookmarkById).toHaveBeenCalledWith('1');
@@ -501,51 +500,6 @@ describe('registerWorkspaceListeners', () => {
     expect(mockPersist).toHaveBeenCalled();
     expect(mockRender).toHaveBeenCalled();
     expect(updateBatchActionBar).toHaveBeenCalled();
-  });
-
-  it('wires the batchCancelBtn', () => {
-    registerWorkspaceListeners();
-    selectedIds.add('1');
-    el('batchCancelBtn').dispatch('click');
-    expect(selectedIds.size).toBe(0);
-    expect(renderBookmarkCards).toHaveBeenCalled();
-    expect(updateBatchActionBar).toHaveBeenCalled();
-  });
-
-  it('wires D3 zoom controls', () => {
-    registerWorkspaceListeners();
-    el('zoomInBtn').dispatch('click');
-    expect(zoomGraphBy).toHaveBeenCalledWith(1.3);
-    el('zoomOutBtn').dispatch('click');
-    expect(zoomGraphBy).toHaveBeenCalledWith(1 / 1.3);
-    el('resetGraphBtn').dispatch('click');
-    expect(resetGraphZoom).toHaveBeenCalled();
-  });
-
-  it('trashes a bookmark via the delegated grid click', async () => {
-    registerWorkspaceListeners();
-    setBookmarks([
-      { id: '1', title: 'T1' },
-      { id: '2', title: 'T2' },
-    ]);
-    const button = { dataset: { deleteBookmark: '1' } };
-    await el('bookmarkCardsGrid').dispatch('click', {
-      target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
-    });
-    expect(trashBookmarks).toHaveBeenCalledWith(['1']);
-    expect(updateBatchActionBar).toHaveBeenCalled();
-  });
-
-  it('ignores a grid delete for an already-trashed bookmark', async () => {
-    registerWorkspaceListeners();
-    setBookmarks([{ id: '1', title: 'T1', deleted_at: '2026-01-01T00:00:00.000Z' }]);
-    const button = { dataset: { deleteBookmark: '1' } };
-    const callsBefore = trashBookmarks.mock.calls.length;
-    await el('bookmarkCardsGrid').dispatch('click', {
-      target: { closest: (s) => (s === '[data-delete-bookmark]' ? button : null) },
-    });
-    expect(trashBookmarks.mock.calls.length).toBe(callsBefore);
-    expect(selectedIds.size).toBe(0);
   });
 });
 

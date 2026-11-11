@@ -1,12 +1,11 @@
 /**
- * @fileoverview Tests for the split sidebar modules (src/views/sidebar/*).
+ * @fileoverview Tests for the split sidebar modules.
  *
- * The pre-split behavior is pinned by tests/views-sidebar.test.js, which
- * imports the facades and is left unchanged — it is the no-regression proof.
- * These tests cover the modules the split introduced: the pure projections,
- * the id constants and the render path's single-pass folder counting.
+ * `src/features/sidebar/sidebar.test.js` covers the persistence behaviour end
+ * to end; this file covers the seams the split created — the pure
+ * projections, the id constants and the render path's single-pass folder
+ * counting.
  */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SIDEBAR_IDS,
@@ -19,7 +18,7 @@ import {
   getActiveSidebarBookmarks,
   renderSidebarFolders,
   applyTrashFallback,
-} from '@/features/sidebar/behavior';
+} from './index.js';
 import * as state from '@/core/state';
 
 function makeEl() {
@@ -127,10 +126,10 @@ describe('SIDEBAR_IDS', () => {
 
   it('agrees with the ids rendered by the sidebar markup sections', async () => {
     const sections = await Promise.all([
-      import('@/features/sidebar/components/sections/folders.js'),
-      import('@/features/sidebar/components/sections/languageFilters.js'),
-      import('@/features/sidebar/components/sections/tags.js'),
-      import('@/features/sidebar/components/sections/storage.js'),
+      import('../components/sections/folders.js'),
+      import('../components/sections/languageFilters.js'),
+      import('../components/sections/tags.js'),
+      import('../components/sections/storage.js'),
     ]);
     const markup = sections.map((m) => Object.values(m)[0]()).join('\n');
     Object.values(SIDEBAR_IDS).forEach((id) => {

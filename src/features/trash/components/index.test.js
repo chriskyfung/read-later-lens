@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDeletedAt, trashItemClass, trashItemHtml, trashModalHtml } from '@/features/trash';
+import { formatDeletedAt, trashItemClass, trashItemHtml, trashModalHtml } from '.';
 
 /**
  * Tests for the pure trash-modal markup helpers. They are the parity guards for
