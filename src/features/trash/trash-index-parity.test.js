@@ -11,7 +11,7 @@ import {
   bookmarks,
   isTrashed,
 } from '@/core/state';
-import { findTrashedBookmark } from '@/features/trash';
+import { findTrashedBookmark } from './';
 
 const mk = (id, extras = {}) => ({ id: String(id), title: `t${id}`, ...extras });
 

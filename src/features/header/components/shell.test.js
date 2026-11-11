@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { mountHeader } from '@/features/header';
+import { mountHeader } from './shell.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 // mountHeader appends header markup to document.body via insertAdjacentHTML

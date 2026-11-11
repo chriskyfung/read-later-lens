@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { mountModals } from '../src/components/modals.js';
+import { mountModals } from './modals.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 // mountModals appends overlay markup to document.body via insertAdjacentHTML.

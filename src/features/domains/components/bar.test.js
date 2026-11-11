@@ -1,4 +1,4 @@
-import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from '@/features/domains';
+import { domainChartEmptyStateHtml, domainBarClass, domainBarHtml } from './bar.js';
 import { describe, it, expect } from 'vitest';
 
 /**

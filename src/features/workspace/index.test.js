@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { mountWorkspace, workspaceHtml, WORKSPACE_IDS } from '@/features/workspace';
-import * as workspace from '@/features/workspace';
+import { mountWorkspace, workspaceHtml, WORKSPACE_IDS } from './index.js';
+import * as workspace from './index.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 // mountWorkspace appends the composed <main> to #appBody via
