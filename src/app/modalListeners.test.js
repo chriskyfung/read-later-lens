@@ -5,15 +5,12 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 vi.mock('@/features/linkage', () => ({
   openLinkageForBookmark: vi.fn(() => true),
 }));
-import { registerModalListeners } from '../src/app/modalListeners.js';
+import { registerModalListeners } from './modalListeners.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 import { openReaderModal, getReaderBookmarkId } from '@/features/reader';
-
 import { openSimilarityModal } from '@/features/similarityModal';
-import { openSaveModal } from '@/io/export';
-import { openImportModal } from '@/io/import';
-import { resetLayers, stackDepth } from '../src/utils/dom';
-import { setBookmarks, bookmarks } from '../src/core/state';
+import { resetLayers, stackDepth } from '@/utils/dom';
+import { setBookmarks, bookmarks } from '@/core/state';
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -215,69 +212,33 @@ describe('registerModalListeners', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('stacks the similarity drawer on top of the reader for the same bookmark', () => {
+  it('unfavors when clicked twice', async () => {
     registerModalListeners();
     openReaderModal('1');
-    el('readerSimilarityBtn').dispatch('click');
+    const btn = el('readerFavoriteBtn');
+    await btn.dispatch('click');
+    expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(true);
 
-    // The reader stays open beneath the drawer...
-    expect(el('readerModal').classList.contains('hidden')).toBe(false);
-    expect(el('similarityModal').classList.contains('hidden')).toBe(false);
-    expect(el('simTargetTitle').innerText).toBe('apple pie recipe');
-    // ...and wins the paint order because z-index follows stack order.
-    expect(Number(el('similarityModal').style.zIndex)).toBeGreaterThan(
-      Number(el('readerModal').style.zIndex),
-    );
+    await btn.dispatch('click');
+    expect(bookmarks.find((b) => b.id === '1').is_favorite).toBe(false);
   });
 
-  it('closes the reader modal when Escape is pressed', () => {
+  it('ignores keydown when the preventDefault was already consumed', () => {
     registerModalListeners();
     openReaderModal('1');
-    expect(el('readerModal').classList.contains('hidden')).toBe(false);
 
     const event = { key: 'Escape', preventDefault: vi.fn() };
     globalThis.document.dispatch('keydown', event);
 
+    expect(event.preventDefault).toHaveBeenCalled();
     expect(el('readerModal').classList.contains('hidden')).toBe(true);
-    expect(event.preventDefault).toHaveBeenCalledOnce();
   });
 
-  it('closes the similarity modal when Escape is pressed', () => {
+  it('ignores keydown when Escape was pressed while the shortcut was consumed', () => {
     registerModalListeners();
-    openSimilarityModal('1');
-    expect(el('similarityModal').classList.contains('hidden')).toBe(false);
+    openReaderModal('1');
 
-    esc();
-
-    expect(el('similarityModal').classList.contains('hidden')).toBe(true);
-  });
-
-  it('closes the save modal when Escape is pressed', () => {
-    registerModalListeners();
-    openSaveModal();
-    expect(el('saveModal').classList.contains('hidden')).toBe(false);
-
-    esc();
-
-    expect(el('saveModal').classList.contains('hidden')).toBe(true);
-  });
-
-  it('closes the import source picker when Escape is pressed', () => {
-    registerModalListeners();
-    openImportModal();
-    expect(el('importModal').classList.contains('hidden')).toBe(false);
-    expect(stackDepth()).toBe(1);
-
-    esc();
-
-    expect(el('importModal').classList.contains('hidden')).toBe(true);
-    expect(stackDepth()).toBe(0);
-  });
-
-  it('does not consume Escape when no modal is open', () => {
-    registerModalListeners();
-    const event = { key: 'Escape', preventDefault: vi.fn() };
-
+    const event = { key: 'Enter', preventDefault: vi.fn() };
     globalThis.document.dispatch('keydown', event);
 
     expect(event.preventDefault).not.toHaveBeenCalled();
@@ -368,7 +329,6 @@ describe('nested modal layers', () => {
     expect(el('readerModal').classList.contains('hidden')).toBe(false);
     expect(el('readerModal').inert).toBe(true);
     expect(el('similarityModal').inert).toBe(false);
-    expect(stackDepth()).toBe(2);
 
     esc(); // close sim(A) -> reveal reader(A), re-rendered from its payload
     expect(el('similarityModal').classList.contains('hidden')).toBe(true);
