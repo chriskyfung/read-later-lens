@@ -1,14 +1,14 @@
+/**
+ * @fileoverview Unit tests for the split IndexedDB store modules.
+ *
+ * The covers the persistence behaviour end to end;
+ */
+
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { openDB, deleteDB } from 'idb';
-import {
-  saveState,
-  loadState,
-  isStateFresh,
-  getStorageUsage,
-  closeDb,
-} from '../src/core/persistence';
-import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '../src/core/state';
+import { saveState, loadState, isStateFresh, getStorageUsage, closeDb } from '@/core/persistence';
+import { bookmarks, sourceFiles, setBookmarks, setSourceFiles } from '@/core/state';
 
 const DB_NAME = 'ReadLaterLensDB';
 
