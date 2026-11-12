@@ -18,7 +18,7 @@ import {
   getActiveSidebarBookmarks,
   renderSidebarFolders,
   applyTrashFallback,
-} from './index.js';
+} from '.';
 import * as state from '@/core/state';
 
 function makeEl() {
