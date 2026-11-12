@@ -5,8 +5,8 @@ import {
   renderSidebar,
   initSidebarActions,
   registerSidebarListeners,
-} from '@/features/sidebar/behavior';
-import { sidebarTrashBtnClass } from '@/features/sidebar/components';
+} from './behavior';
+import { sidebarTrashBtnClass } from './components';
 import * as state from '@/core/state';
 
 // Model only the DOM operations used by the sidebar, including replacement

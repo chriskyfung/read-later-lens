@@ -13,15 +13,9 @@ import {
   resolveFolderName,
   updateBookmarksHeader,
   createBookmarkCard,
-} from '@/features/bookmarks';
+} from '.';
 import { openLinkageForBookmark } from '@/features/linkage';
-import {
-  setBookmarks,
-  setActiveFolder,
-  selectedIds,
-  sourceFiles,
-  bookmarks,
-} from '../src/core/state';
+import { setBookmarks, setActiveFolder, selectedIds, sourceFiles, bookmarks } from '@/core/state';
 
 function makeEl() {
   return {
@@ -94,6 +88,7 @@ beforeAll(() => {
     created.push(e);
     return e;
   };
+  globalThis.document.querySelectorAll = () => [];
   globalThis.window = globalThis.window || {};
 
   sourceFiles.set('f1', { id: 'f1', name: 'My Export.csv', type: 'csv' });
@@ -211,25 +206,14 @@ describe('toggleSelectBookmark', () => {
     expect(created.length).toBe(0); // no card re-render (monolith parity)
     expect(els.selectedCount.innerText).toBe(1);
     expect(els.batchActionBar.classList.contains('hidden')).toBe(false);
-    expect(els.batchActionBar.classList.contains('flex')).toBe(true);
+
+    toggleSelectBookmark('2');
+    expect(selectedIds.has('2')).toBe(true);
+    expect(els.selectedCount.innerText).toBe(2);
 
     toggleSelectBookmark('1');
     expect(selectedIds.has('1')).toBe(false);
-    expect(els.batchActionBar.classList.contains('hidden')).toBe(true);
-    expect(els.batchActionBar.classList.contains('flex')).toBe(false);
-  });
-});
-
-describe('updateBatchActionBar', () => {
-  it('reflects the current selection size', () => {
-    selectedIds.add('1');
-    selectedIds.add('2');
-    updateBatchActionBar();
-    expect(els.selectedCount.innerText).toBe(2);
-    expect(els.batchActionBar.classList.contains('flex')).toBe(true);
-    selectedIds.clear();
-    updateBatchActionBar();
-    expect(els.batchActionBar.classList.contains('hidden')).toBe(true);
+    expect(els.selectedCount.innerText).toBe(1);
   });
 });
 

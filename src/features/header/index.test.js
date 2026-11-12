@@ -1,18 +1,13 @@
-﻿import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
-import {
-  initHeader,
-  registerHeaderListeners,
-  setSearchInputValue,
-  SEARCH_DEBOUNCE_MS,
-} from '@/features/header';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { initHeader, registerHeaderListeners, setSearchInputValue, SEARCH_DEBOUNCE_MS } from './';
 import {
   setSearchQuery,
   setBookmarks,
   setSourceFiles,
   searchQuery,
   sourceFiles,
-} from '../src/core/state';
-import { STALE_STATE_MESSAGE } from '../src/core/guard.js';
+} from '@/core/state';
+import { STALE_STATE_MESSAGE } from '@/core/guard.js';
 
 // ---- DOM stubs -----------------------------------------------------------
 const els = {};
@@ -326,7 +321,7 @@ describe('registerHeaderListeners — clear cache', () => {
 
     // Force the gate closed: the production isStateFresh() would see another
     // tab's revision here. The mock lives on the store module the guard reads.
-    const store = await import('../src/core/persistence');
+    const store = await import('@/core/persistence/index.js');
     const probe = vi.spyOn(store, 'isStateFresh').mockResolvedValue(false);
     try {
       await armClearCache();
@@ -335,7 +330,7 @@ describe('registerHeaderListeners — clear cache', () => {
       // Nothing was wiped and nothing was persisted: the in-memory session
       // still matches what the next reload will show.
       expect(sourceFiles.size).toBe(1);
-      const { bookmarks } = await import('../src/core/state');
+      const { bookmarks } = await import('@/core/state/index.js');
       expect(bookmarks).toHaveLength(1);
       expect(persistFn).not.toHaveBeenCalled();
     } finally {

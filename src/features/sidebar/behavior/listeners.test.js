@@ -2,16 +2,17 @@
 // @vitest-environment jsdom
 
 /**
- * Real-DOM proxy for the stubbed `views-sidebar-actions.test.js` trash-row
- * test: the row now opens the dedicated trash modal (no pseudo-folder flip
- * anymore) and the layer stack behind it is the real implementation.
+ * Real-DOM proxy for the trash-row test: the row now opens the dedicated
+ * trash modal (no pseudo-folder flip anymore) and the layer stack behind it
+ * is the real implementation.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initSidebarActions, registerSidebarListeners } from '@/features/sidebar';
-import { setBookmarks, setSelectedIds } from '../src/core/state';
-import { MODAL_Z_BASE } from '../src/utils/dom';
+import { initSidebarActions } from './deps.js';
+import { registerSidebarListeners } from './listeners.js';
+import { setBookmarks, setSelectedIds } from '@/core/state';
+import { MODAL_Z_BASE } from '@/utils/dom';
 
-vi.mock('../src/core/persistence', async (importOriginal) => ({
+vi.mock('@/core/persistence', async (importOriginal) => ({
   ...(await importOriginal()),
   isStateFresh: async () => true,
 }));

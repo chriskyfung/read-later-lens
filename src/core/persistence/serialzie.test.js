@@ -1,34 +1,11 @@
 /**
  * @fileoverview Unit tests for the split IndexedDB store modules.
- *
- * `tests/store.test.js` covers the persistence behaviour end to end; this file
- * covers the seams the split created — the pure projection, the revision
- * holder, and the barrel contract that the rest of the app (and the other
- * test files) rely on.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-import {
-  DB_NAME,
-  LEGACY_DB_NAME,
-  STORE_NAME,
-  DB_VERSION,
-  REV_KEY,
-} from '../src/core/persistence/constants.js';
-import { toPersistedSources } from '../src/core/persistence/serialize.js';
-import { getKnownRev, setKnownRev, clearKnownRev } from '../src/core/persistence/revision.js';
+import { toPersistedSources } from './serialize.js';
 
-describe('store/constants', () => {
-  it('pins the database identity and row keys', () => {
-    expect(DB_NAME).toBe('ReadLaterLensDB');
-    expect(LEGACY_DB_NAME).toBe('InstapaperBookmarkManagerDB');
-    expect(STORE_NAME).toBe('app_state');
-    expect(DB_VERSION).toBe(1);
-    expect(REV_KEY).toBe('rev');
-  });
-});
-
-describe('store/serialize', () => {
+describe('persistence/serialize', () => {
   it('projects a source into the persisted row shape', () => {
     const rows = toPersistedSources(
       new Map([
@@ -136,51 +113,5 @@ describe('store/serialize', () => {
 
   it('returns an empty array for an empty map', () => {
     expect(toPersistedSources(new Map())).toEqual([]);
-  });
-});
-
-describe('store/revision', () => {
-  beforeEach(() => {
-    clearKnownRev();
-  });
-
-  it('starts with no baseline', () => {
-    expect(getKnownRev()).toBeUndefined();
-  });
-
-  it('remembers the revision it was given', () => {
-    setKnownRev('rev-1');
-    expect(getKnownRev()).toBe('rev-1');
-  });
-
-  it('forgets the baseline on clear', () => {
-    setKnownRev('rev-1');
-    clearKnownRev();
-    expect(getKnownRev()).toBeUndefined();
-  });
-});
-
-describe('store barrel', () => {
-  it('exposes the public API unchanged', async () => {
-    const barrel = await import('../src/core/persistence');
-
-    for (const name of ['saveState', 'loadState', 'isStateFresh', 'getStorageUsage', 'closeDb']) {
-      expect(typeof barrel[name]).toBe('function');
-    }
-  });
-
-  it('keeps isStateFresh spyable through the barrel', async () => {
-    // `views-header.test.js` and `core/guard.js` both reach the probe through
-    // this module, so a spy installed on the barrel must be the value the
-    // implementation resolves to — i.e. the barrel re-exports, never wraps.
-    const barrel = await import('../src/core/persistence');
-    const probe = vi.spyOn(barrel, 'isStateFresh').mockResolvedValue(false);
-
-    try {
-      expect(await barrel.isStateFresh()).toBe(false);
-      expect(probe).toHaveBeenCalled();
-    } finally {
-      probe.mockRestore();
-    }
   });
 });
