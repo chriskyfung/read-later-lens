@@ -6,8 +6,8 @@
  * src/app/modalListeners.js; only the import-specific listeners live here.
  */
 
-import { selectableProfiles } from '../../providers/profiles.js';
-import { showToast } from '../../utils/dom';
+import { selectableProfiles } from '@/providers/profiles.js';
+import { showToast } from '@/utils/dom';
 import {
   applyProfileSelection,
   cardEl,

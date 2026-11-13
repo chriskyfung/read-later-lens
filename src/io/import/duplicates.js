@@ -7,7 +7,7 @@
  * never arrive.
  */
 
-import * as state from '../../core/state';
+import * as state from '@/core/state';
 
 /** Marker property read by handleFileUploads to distinguish a
  * duplicate-prompt-unavailable failure from other import errors. */

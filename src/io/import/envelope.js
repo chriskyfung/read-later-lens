@@ -7,8 +7,8 @@
  * (reads `state.sourceFiles` only to detect an already-loaded source).
  */
 
-import * as state from '../../core/state';
-import { normalizeProfileId } from '../../providers/profiles.js';
+import * as state from '@/core/state';
+import { normalizeProfileId } from '@/providers/profiles.js';
 
 /** Source types a source record may declare; mirrors the union documented in `state`. */
 export const SOURCE_FILE_TYPES = new Set(['csv', 'json', 'sqlite', 'db']);

@@ -5,16 +5,17 @@ import {
   createUniqueSourceName,
   registerImporterListeners,
   applyProfileSelection,
-} from '../src/io/import';
-import { defaultProfileId } from '../src/providers/profiles.js';
-import { importJsonOrCsv, importSqlite } from '../src/providers/index.js';
-import { bookmarks, setBookmarks, setSourceFiles, sourceFiles } from '../src/core/state';
+} from '@/io/import';
+import { defaultProfileId } from '@/providers/profiles.js';
+import { importJsonOrCsv, importSqlite } from '@/providers';
+import { bookmarks, setBookmarks, setSourceFiles, sourceFiles } from '@/core/state';
 import { setSQL } from '../src/services/sqlEngine.js';
 import { resetLayers, stackDepth } from '../src/utils/dom';
 import { STALE_STATE_REASON } from '../src/core/guard.js';
 
 const initSql = vi.hoisted(() => vi.fn());
 const mockEngine = vi.hoisted(() => ({ Database: class {} }));
+
 // Stands in for the `papaparse` dependency that `src/io/import/` imports.
 // These tests assert on the call, so the call is mocked rather than executed.
 const Papa = vi.hoisted(() => ({
@@ -23,7 +24,7 @@ const Papa = vi.hoisted(() => ({
 }));
 
 vi.mock('papaparse', () => ({ default: Papa }));
-vi.mock('../src/services/sqlEngine.js', async (importOriginal) => {
+vi.mock('@/services/sqlEngine.js', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -37,7 +38,7 @@ vi.mock('../src/services/sqlEngine.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../src/providers/index.js', () => {
+vi.mock('@/providers/index.js', () => {
   const importJsonOrCsv = vi.fn((rows, sourceFileId, sourceFileName) => ({
     records: rows.map((r, i) => ({
       id: r.id ?? 'n' + i,
@@ -124,6 +125,7 @@ function makeEl() {
     click: vi.fn(),
   };
 }
+
 function el(id) {
   if (!els[id]) els[id] = makeEl();
   return els[id];
@@ -176,7 +178,7 @@ async function uploadResolving(files, action) {
   return pending;
 }
 
-// ---- format dispatch ------------------------------------------------------
+// ---- handleFileUploads — format dispatch ------------------------------------
 describe('handleFileUploads — format dispatch', () => {
   it('parses CSV via Papa with monolith options and registers the source file', async () => {
     Papa.parse.mockImplementationOnce((text, config) => {
@@ -250,7 +252,7 @@ describe('handleFileUploads — format dispatch', () => {
   });
 
   it('routes .db files through importSqlite with a Uint8Array and the SQL engine', async () => {
-    const { SQL: engine } = await import('../src/services/sqlEngine.js');
+    const { SQL: engine } = await import('@/services/sqlEngine.js');
     await handleFileUploads([fakeFile('instapaper.db', 'binary')]);
 
     expect(initSql).toHaveBeenCalledTimes(1);
@@ -336,6 +338,7 @@ describe('handleFileUploads — format dispatch', () => {
     const [file] = [...sourceFiles.values()];
     expect(file.csvDialect).toBeNull();
   });
+
   it('records no header row for non-CSV sources', async () => {
     await handleFileUploads([fakeFile('a.json', '[]')]);
 
@@ -1010,7 +1013,9 @@ describe('handleFileUploads — row validation reporting', () => {
       stats: { droppedNoUrl: 2 },
     }));
 
-    await handleFileUploads([fakeFile('mixed.csv', 'id,title,url\n…')]);
+    await handleFileUploads([
+      fakeFile('mixed.csv', 'id,title,url\n1,x,https://a.example.com\n2,y\n3,z'),
+    ]);
 
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe('已載入檔案: mixed.csv（1 筆書籤，2 筆缺少網址已略過）');
@@ -1031,7 +1036,7 @@ describe('handleFileUploads — row validation reporting', () => {
       stats: { droppedNoUrl: 1 },
     }));
 
-    await handleFileUploads([fakeFile('both.csv', 'id,title,url\n…')]);
+    await handleFileUploads([fakeFile('both.csv', 'id,title,url\n1,x,https://a.example.com\n2,y')]);
 
     expect(el('toastMsg').innerText).toBe(
       '已載入檔案: both.csv（1 筆書籤，1 列解析失敗、1 筆缺少網址已略過）',
@@ -1055,7 +1060,7 @@ describe('handleFileUploads — row validation reporting', () => {
       stats: { droppedNoUrl: 2 },
     }));
 
-    await handleFileUploads([fakeFile('nourl.csv', 'id,title\n…')]);
+    await handleFileUploads([fakeFile('nourl.csv', 'id,title\n1,a\n2,b')]);
 
     expect(sourceFiles.size).toBe(1);
     expect(el('toastMsg').innerText).toBe('已載入檔案: nourl.csv（0 筆書籤，2 筆缺少網址已略過）');
@@ -1080,7 +1085,9 @@ describe('handleFileUploads — row validation reporting', () => {
       stats: { droppedNoUrl: 0 },
     }));
 
-    await handleFileUploads([fakeFile('dedup.csv', 'id,title,url\n…')]);
+    await handleFileUploads([
+      fakeFile('dedup.csv', 'id,title,url\n1,x,https://a.example.com\n2,y\n3,z'),
+    ]);
 
     expect(el('toastMsg').innerText).toBe('已成功載入檔案: dedup.csv');
   });
@@ -1140,6 +1147,7 @@ describe('handleFileUploads — batch resilience', () => {
       '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
     );
   });
+
   it('refuses instead of hanging when a duplicate-modal control is missing', async () => {
     seedDuplicate();
     const prompt = hideNodes(['dupBtnOverwrite']);
@@ -1156,6 +1164,23 @@ describe('handleFileUploads — batch resilience', () => {
       '無法顯示同名檔案的處理選項，因此未匯入任何檔案（a.csv）。請重新載入頁面後再試。',
     );
   });
+});
+
+// ---- duplicate filename collision handling -------------------------------
+describe('handleFileUploads — duplicate filename collision', () => {
+  const seedDuplicate = () => {
+    setSourceFiles(new Map([['F1', { id: 'F1', name: 'a.csv', type: 'csv', originalData: '' }]]));
+    setBookmarks([{ id: '1', source_file_id: 'F1', title: 'old' }]);
+  };
+
+  /** Hide specific ids from the stub document; call restore() to put them back. */
+  const hideNodes = (ids) => {
+    const missing = new Set(ids);
+    const spy = vi
+      .spyOn(globalThis.document, 'getElementById')
+      .mockImplementation((id) => (missing.has(id) ? null : el(id)));
+    return { missing, restore: () => spy.mockRestore() };
+  };
 
   it('imports a collision-free batch even when the duplicate prompt markup is missing', async () => {
     let rows = 0;
@@ -1175,6 +1200,7 @@ describe('handleFileUploads — batch resilience', () => {
     expect([...sourceFiles.values()].map((f) => f.name)).toEqual(['b.csv', 'c.csv']);
     expect(bookmarks.map((b) => b.id)).toEqual(['1', '2']);
   });
+
   it('keeps importing the remaining files when one file fails to parse', async () => {
     Papa.parse.mockImplementationOnce((_text, config) =>
       config.complete({ data: [], errors: [{ message: 'broken row' }] }),
