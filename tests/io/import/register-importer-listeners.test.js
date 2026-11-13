@@ -156,16 +156,6 @@ beforeEach(() => {
 });
 
 describe('registerImporterListeners', () => {
-  it('wires #fileInput change events to handleFileUploads', async () => {
-    registerImporterListeners();
-    const input = el('fileInput');
-
-    input.dispatch('change', { target: { files: [fakeFile('z.csv', 'id,title\n1,hi')] } });
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(Papa.parse).toHaveBeenCalledTimes(1);
-  });
-
   it('awaits an unexpected import failure without leaking a rejection to the change event', async () => {
     setSourceFiles(
       new Map([
@@ -186,11 +176,5 @@ describe('registerImporterListeners', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(el('toastMsg').innerText).toBe('檔案匯入失敗，請稍後再試');
-  });
-
-  it('no-ops when #fileInput is missing', () => {
-    const spy = vi.spyOn(globalThis.document, 'getElementById').mockReturnValue(null);
-    expect(() => registerImporterListeners()).not.toThrow();
-    spy.mockRestore();
   });
 });

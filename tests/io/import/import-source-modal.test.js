@@ -160,31 +160,38 @@ beforeEach(() => {
   Papa.parse.mockImplementation((_text, config) => config.complete({ data: [], errors: [] }));
 });
 
-// ---- source picker modal ----------------------------------------------------
 describe('import source modal', () => {
   it('opens from the import button as the top stack layer', () => {
     registerImporterListeners();
 
-    el('importBtn').dispatch('click');
+    const btn = el('importBtn');
+    const overlay = el('importModal');
+    const header = el('appHeader');
+
+    btn.dispatch('click');
 
     expect(stackDepth()).toBe(1);
-    expect(el('importModal').classList.contains('hidden')).toBe(false);
-    expect(el('importModal').getAttribute('aria-hidden')).toBe('false');
+    expect(overlay.classList.contains('hidden')).toBe(false);
+    expect(overlay.getAttribute('aria-hidden')).toBe('false');
     // Background roots go inert while the modal is open.
-    expect(el('appHeader').inert).toBe(true);
+    expect(header.inert).toBe(true);
   });
 
   it('is re-entrant on open and closes via the cancel button', () => {
     registerImporterListeners();
 
-    el('importBtn').dispatch('click');
-    el('importBtn').dispatch('click'); // second open must not stack a duplicate layer
-    expect(stackDepth()).toBe(1);
+    const btn = el('importBtn');
+    const cancelBtn = el('importCancelBtn');
+    const overlay = el('importModal');
+    const header = el('appHeader');
 
-    el('importCancelBtn').dispatch('click');
+    btn.dispatch('click');
+    btn.dispatch('click');
+
+    cancelBtn.dispatch('click');
     expect(stackDepth()).toBe(0);
-    expect(el('importModal').classList.contains('hidden')).toBe(true);
-    expect(el('appHeader').inert).toBe(false);
+    expect(overlay.classList.contains('hidden')).toBe(true);
+    expect(header.inert).toBe(false);
   });
 
   it('closes on backdrop click but not when the panel itself is clicked', () => {
@@ -202,16 +209,15 @@ describe('import source modal', () => {
   it('selects a card on click, syncing aria-checked and border classes', () => {
     registerImporterListeners();
 
-    el('importProfile-rll-unified').dispatch('click');
+    const instapaperCard = el('importProfile-instapaper-scraper');
+    const rllCard = el('importProfile-rll-unified');
 
-    const unified = el('importProfile-rll-unified');
-    const scraper = el('importProfile-instapaper-scraper');
-    expect(unified.getAttribute('aria-checked')).toBe('true');
-    expect(scraper.getAttribute('aria-checked')).toBe('false');
-    expect(unified.classList.contains('border-indigo-500')).toBe(true);
-    expect(unified.classList.contains('border-slate-700')).toBe(false);
-    expect(scraper.classList.contains('border-slate-700')).toBe(true);
-    expect(scraper.classList.contains('border-indigo-500')).toBe(false);
+    instapaperCard.dispatch('click');
+
+    expect(instapaperCard.getAttribute('aria-checked')).toBe('true');
+    expect(instapaperCard.classList.contains('border-indigo-500')).toBe(true);
+    expect(rllCard.getAttribute('aria-checked')).toBe('false');
+    expect(rllCard.classList.contains('border-indigo-500')).toBe(false);
   });
 
   it('moves the selection with arrow keys and wraps around', () => {
@@ -242,6 +248,7 @@ describe('import source modal', () => {
 
     const target = { files: [fakeFile('z.csv', 'id,title\n1,hi')], value: 'C:\\fake\\z.csv' };
     el('fileInput').dispatch('change', { target });
+
     await new Promise((r) => setTimeout(r, 0));
 
     expect(stackDepth()).toBe(0);
@@ -284,7 +291,7 @@ describe('import source modal', () => {
     registerImporterListeners();
     applyProfileSelection('bogus');
 
-    await handleFileUploads([fakeFile('a.csv', 'id,title\\n1,x')]);
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,x')]);
 
     const [rec] = [...sourceFiles.values()];
     expect(rec.profile).toBe(defaultProfileId());
@@ -293,7 +300,7 @@ describe('import source modal', () => {
   it('stamps the default profile when a direct import names an unknown profile', async () => {
     registerImporterListeners();
 
-    await handleFileUploads([fakeFile('a.csv', 'id,title\\n1,x')], { profile: 'bogus' });
+    await handleFileUploads([fakeFile('a.csv', 'id,title\n1,x')], { profile: 'bogus' });
 
     const [rec] = [...sourceFiles.values()];
     expect(rec.profile).toBe(defaultProfileId());

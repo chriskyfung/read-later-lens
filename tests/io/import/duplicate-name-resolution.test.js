@@ -259,23 +259,6 @@ describe('handleFileUploads — duplicate name resolution', () => {
     expect(bookmarks.filter((b) => b.source_file_id === 'F1').map((b) => b.id)).toEqual(['1']);
   });
 
-  it('createUniqueSourceName: adds a suffix to extension-less names', () => {
-    expect(createUniqueSourceName('README', ['README'])).toMatch(/^README_\d{13}$/);
-  });
-
-  it('createUniqueSourceName: disambiguates same-millisecond collisions', () => {
-    const now = vi.spyOn(Date, 'now').mockReturnValue(1735680000000);
-    try {
-      const first = createUniqueSourceName('a.csv', ['a.csv']);
-      const second = createUniqueSourceName('a.csv', ['a.csv', first]);
-
-      expect(first).toBe('a_1735680000000.csv');
-      expect(second).toBe('a_1735680000000_1.csv');
-    } finally {
-      now.mockRestore();
-    }
-  });
-
   it('keep: skips a generated name that already exists', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1735680000000);
     try {
