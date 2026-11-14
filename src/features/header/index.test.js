@@ -65,6 +65,8 @@ beforeAll(() => {
     // Auto-create elements like a real DOM after mountHeader() has run.
     getElementById: (id) => el(id),
     createElement: () => makeEl(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
   };
 });
 

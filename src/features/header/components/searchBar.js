@@ -5,13 +5,24 @@
  * The quick-reset button ships `hidden`; registerHeaderListeners() (in
  * ../behavior/listeners.js) toggles it once the input has text.
  *
- * A help (❔) button with accessible tooltip shows search operators and syntax tips.
+ * A help (?) button with accessible tooltip shows search operators and syntax tips.
  */
 /** Search input + magnifier icon + help button + hidden-by-default clear-reset button. */
+import { createIcons, CircleQuestionMark } from 'lucide';
+
+/** Initialize Lucide icons for search bar — call AFTER header is mounted. */
+export function initSearchBarIcons() {
+  createIcons({
+    icons: {
+      CircleQuestionMark,
+    },
+  });
+}
+
 export function headerSearchBarHtml() {
   return `
     <div class="relative w-full">
-      <input type="text" id="searchInput" aria-describedby="searchHelpTooltip" title="輸入搜尋；Enter 立即搜尋；點擊 ❔ 看完整語法" placeholder="搜尋標題、網址、預覽或標籤..."
+      <input type="text" id="searchInput" aria-describedby="searchHelpTooltip" title="輸入搜尋；Enter 立即搜尋；點擊 ? 看完整語法" placeholder="搜尋標題、網址、預覽或標籤..."
         class="w-full bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-sm text-slate-100 rounded-xl pl-10 pr-14 py-2 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition">
       <svg class="size-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor"
         viewBox="0 0 24 24">
@@ -20,8 +31,8 @@ export function headerSearchBarHtml() {
       </svg>
       <!-- Search help button: shows operators + tips on hover/focus/click -->
       <button id="searchHelpBtn" type="button" aria-haspopup="tooltip" aria-label="搜尋語法說明"
-        class="absolute right-10 top-2.5 text-slate-500 hover:text-slate-200 transition-colors">
-        <span class="text-sm font-medium">❔</span>
+        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition-colors">
+        <i class="size-4" data-lucide="circle-question-mark"></i>
       </button>
       <!-- Quick reset: clears the search input (shown only when non-empty) -->
       <button id="clearSearchBtn" type="button" title="清除搜尋條件"
