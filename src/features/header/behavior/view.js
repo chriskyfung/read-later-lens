@@ -32,3 +32,34 @@ export function setClearCacheSpinning(spinning) {
     icon.classList.remove('animate-spin');
   }
 }
+
+/** Position and show the search help tooltip. */
+export function showSearchHelpTooltip() {
+  const tooltip = document.getElementById(HEADER_IDS.searchHelpTooltip);
+  const trigger = document.getElementById(HEADER_IDS.searchHelpBtn);
+  if (!tooltip || !trigger) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+
+  // Position above trigger, centered horizontally
+  let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+  const viewportPadding = 8;
+  left = Math.max(
+    viewportPadding,
+    Math.min(left, window.innerWidth - tooltipRect.width - viewportPadding),
+  );
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${rect.top - tooltipRect.height - 8}px`;
+  tooltip.classList.remove('hidden');
+}
+
+/** Hide the search help tooltip. */
+export function hideSearchHelpTooltip() {
+  const tooltip = document.getElementById(HEADER_IDS.searchHelpTooltip);
+  if (!tooltip) return;
+  tooltip.classList.add('hidden');
+  tooltip.style.left = '';
+  tooltip.style.top = '';
+}

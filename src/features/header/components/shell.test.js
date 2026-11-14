@@ -50,7 +50,7 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('id="clearSearchBtn"');
     expect(html()).toContain('清除搜尋條件');
     expect(html()).toContain('d="M6 18L18 6M6 6l12 12"'); // reset svg
-    expect(html()).toContain('pr-10'); // input padding leaves room for the button
+    expect(html()).toContain('pr-14'); // input padding leaves room for the button
   });
 
   it('keeps the import button with the hidden file input', () => {
