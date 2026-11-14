@@ -9,9 +9,9 @@
  * together.
  */
 
-import * as state from '../../core/state';
-import { STALE_STATE_REASON } from '../../core/guard.js';
-import { showToast } from '../../utils/dom';
+import * as state from '@/core/state';
+import { STALE_STATE_REASON } from '@/core/guard.js';
+import { showToast } from '@/utils/dom';
 import { deps } from './deps.js';
 import { buildImportedMessage } from './messages.js';
 import {
@@ -43,7 +43,7 @@ export function captureImportSnapshot() {
  *
  * @param {ReturnType<typeof captureImportSnapshot>} snapshot
  */
-function restoreImportSnapshot(snapshot) {
+export function restoreImportSnapshot(snapshot) {
   state.setSourceFiles(new Map(snapshot.sourceFiles));
   state.setBookmarks([...snapshot.bookmarks]);
   state.setSelectedIds(new Set(snapshot.selectedIds));

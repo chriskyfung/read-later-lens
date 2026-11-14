@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
-import { initHeader, registerHeaderListeners, setSearchInputValue, SEARCH_DEBOUNCE_MS } from './';
+import { initHeader, registerHeaderListeners, setSearchInputValue, SEARCH_DEBOUNCE_MS } from '.';
 import {
   setSearchQuery,
   setBookmarks,
