@@ -45,10 +45,21 @@ export function headerSearchBarHtml() {
       <div id="searchHelpTooltip" role="tooltip" class="hidden fixed z-50 max-w-xs bg-slate-800 border border-indigo-500/50 p-3 rounded-lg shadow-2xl pointer-events-none text-xs">
         <div class="font-bold text-white mb-2">搜尋語法說明</div>
         <dl class="space-y-1.5 text-slate-300">
-          <dt class="font-medium text-indigo-300">關鍵字</dt><dd>空格分隔，預設 AND 邏輯</dd>
-          <dt class="font-medium text-indigo-300">"精確詞組"\dt><dd>雙引號包裹</dd>
-          <dt class="font-medium text-indigo-300">link:網址</dt><dd>篩選 URL（支援部份比對）</dd>
-          <dt class="font-medium text-indigo-300">is:fav / is:♥</dt><dd>僅顯示收藏書籤</dd>
+          <div>
+            <dt class="font-medium text-indigo-300">關鍵字</dt>
+            <dd>空格分隔，預設 AND 邏輯</dd></div>
+          <div>
+            <dt class="font-medium text-indigo-300">"精確詞組"</dt>
+            <dd>雙引號包裹</dd>
+          </div>
+          <div>
+            <dt class="font-medium text-indigo-300">link:網址</dt>
+            <dd>篩選 URL（支援部份比對）</dd>
+          </div>
+          <div>
+            <dt class="font-medium text-indigo-300">is:♥ / is:fav</dt>
+            <dd>僅顯示收藏書籤</dd>
+          </div>
         </dl>
         <div class="mt-2 pt-2 border-t border-slate-700 text-slate-500 text-xs">
           Enter 立即搜尋  •  Esc 關閉提示
