@@ -1,6 +1,6 @@
 {
   "name": "read-later-lens",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Client-side bookmark aggregator, search tool, and text-analytics lens for read-later exports — Instapaper today, more sources tomorrow.",
   "type": "module",
   "private": true,
