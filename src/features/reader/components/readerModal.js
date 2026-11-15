@@ -52,7 +52,7 @@ export function readerModalHtml() {
           </button>
           <button id="readerLinkageBtn" title="在概念關聯圖中檢視"
             class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
-            <span><svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m12.342 9.316 1.764-3.527"/><path d="m12.59 14.545 2.35 3.759"/><path d="m13.982 12.332 4.03.447"/><path d="M5.414 17.586 8.88 14.12"/><path d="M9.025 9.742 5.317 5.505"/><circle cx="11" cy="12" r="3"/><circle cx="15" cy="4" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="20" cy="13" r="2"/><circle cx="4" cy="19" r="2"/><circle cx="4" cy="4" r="2"/></svg> 關聯</span>
+            <span class="flex items-center gap-1"><i class="size-4" data-lucide="graph-star"></i> 關聯</span>
           </button>
           <button id="readerFavoriteBtn" title="加星收藏" aria-label="收藏"
             class="bg-slate-800 hover:bg-pink-100 text-pink-400 hover:text-slate-900 text-xs px-4 py-2 rounded-lg border border-pink-400/60 hover:border-pink-400 flex items-center gap-1">

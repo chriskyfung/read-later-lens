@@ -6,7 +6,7 @@
 import '../styles/main.css';
 
 import { initializeLucideIcons } from '@/utils/lucide.js';
-import { CircleQuestionMark } from 'lucide';
+import { CircleQuestionMark, GraphStar } from 'lucide';
 
 import * as state from '../core/state';
 import { loadState } from '../core/persistence';
@@ -41,7 +41,7 @@ import { persistAndRender, persistAfterAction } from './persist.js';
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {
   mountHeader();
-  initializeLucideIcons({ CircleQuestionMark });
+  initializeLucideIcons({ CircleQuestionMark, GraphStar });
   mountSidebar();
   mountWorkspace();
   mountModals();

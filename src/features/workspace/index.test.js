@@ -106,7 +106,7 @@ describe('controlBar — markup parity', () => {
     expect(html()).toContain('☁️ 文字雲 (Word Cloud)');
     expect(html()).toContain('📊 域名統計');
     expect(html()).toContain(
-      '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m12.342 9.316 1.764-3.527"/><path d="m12.59 14.545 2.35 3.759"/><path d="m13.982 12.332 4.03.447"/><path d="M5.414 17.586 8.88 14.12"/><path d="M9.025 9.742 5.317 5.505"/><circle cx="11" cy="12" r="3"/><circle cx="15" cy="4" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="20" cy="13" r="2"/><circle cx="4" cy="19" r="2"/><circle cx="4" cy="4" r="2"/></svg> 概念關聯網',
+      '<i class="size-4 align-middle" data-lucide="graph-star"></i> 概念關聯網',
     );
     expect(html()).toMatch(/data-tab="bookmarks"\s*\n?\s*class="main-tab active /);
     expect(html()).toContain('main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400');
@@ -182,7 +182,7 @@ describe('panelLinkage — markup parity', () => {
       /id="panelLinkage" class="tab-panel hidden h-full flex flex-col relative">/,
     );
     expect(html()).toContain(
-      '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m12.342 9.316 1.764-3.527"/><path d="m12.59 14.545 2.35 3.759"/><path d="m13.982 12.332 4.03.447"/><path d="M5.414 17.586 8.88 14.12"/><path d="M9.025 9.742 5.317 5.505"/><circle cx="11" cy="12" r="3"/><circle cx="15" cy="4" r="2"/><circle cx="16" cy="20" r="2"/><circle cx="20" cy="13" r="2"/><circle cx="4" cy="19" r="2"/><circle cx="4" cy="4" r="2"/></svg> 書籤概念關聯圖 (D3 Force Graph)',
+      '<i class="size-4 align-middle" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)',
     );
     expect(html()).toContain('id="zoomInBtn"');
     expect(html()).toContain('id="zoomOutBtn"');
