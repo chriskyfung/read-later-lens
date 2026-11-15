@@ -41,10 +41,10 @@ import { persistAndRender, persistAfterAction } from './persist.js';
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {
   mountHeader();
-  initializeLucideIcons({ CircleQuestionMark, GraphStar });
   mountSidebar();
   mountWorkspace();
   mountModals();
+  initializeLucideIcons({ CircleQuestionMark, GraphStar });
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,
