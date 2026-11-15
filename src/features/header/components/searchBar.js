@@ -8,16 +8,6 @@
  * A help (?) button with accessible tooltip shows search operators and syntax tips.
  */
 /** Search input + magnifier icon + help button + hidden-by-default clear-reset button. */
-import { createIcons, CircleQuestionMark } from 'lucide';
-
-/** Initialize Lucide icons for search bar — call AFTER header is mounted. */
-export function initSearchBarIcons() {
-  createIcons({
-    icons: {
-      CircleQuestionMark,
-    },
-  });
-}
 
 export function headerSearchBarHtml() {
   return `

@@ -6,7 +6,6 @@
 
 // --- Presentation (markup only) ---
 export { mountHeader, headerHtml, HEADER_IDS } from './components';
-export { initSearchBarIcons } from './components/searchBar.js';
 
 // --- Behavior (state / events / side-effects) ---
 export {
