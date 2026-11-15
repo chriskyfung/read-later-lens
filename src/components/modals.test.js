@@ -59,7 +59,7 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="readerSimilarityBtn"');
     expect(html).toContain('title="刪除此書籤"');
     expect(html).toContain('title="查看相似文章"');
-    // Linkage shortcut (🕸️ 關聯), grouped beside the similarity button.
+    // Linkage shortcut (GraphStar 關聯), grouped beside the similarity button.
     expect(html).toContain('id="readerLinkageBtn"');
     expect(html).toContain('title="在概念關聯圖中檢視"');
     // Favorite (收藏) sits in the left exploratory group with a pink
