@@ -18,6 +18,7 @@ import {
   mountHeader,
   initHeader as initHeaderBehavior,
   registerHeaderListeners,
+  initSearchBarIcons,
 } from '@/features/header';
 import {
   mountSidebar,
@@ -38,6 +39,7 @@ import { persistAndRender, persistAfterAction } from './persist.js';
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {
   mountHeader();
+  initSearchBarIcons();
   mountSidebar();
   mountWorkspace();
   mountModals();

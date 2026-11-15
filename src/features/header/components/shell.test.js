@@ -38,11 +38,21 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"'); // brand svg
   });
 
-  it('keeps the search input with its placeholder and icon', () => {
+  it('keeps the search input with shortened placeholder, help button and tooltip', () => {
     expect(html()).toContain('id="searchInput"');
-    expect(html()).toContain(
-      '搜尋標題、網址、預覽內容或標籤...（多關鍵字以空格分隔；&quot;...&quot; 精確比對；link:網址 篩選 URL；is:fav 或 is:♥ 僅顯示收藏書籤）',
-    );
+    expect(html()).toContain('placeholder="搜尋標題、網址、預覽或標籤..."');
+    expect(html()).toContain('title="輸入搜尋；Enter 立即搜尋；點擊 ❔ 看完整語法"');
+    expect(html()).toContain('aria-describedby="searchHelpTooltip"');
+    expect(html()).toContain('id="searchHelpBtn"');
+    expect(html()).toContain('data-lucide="circle-question-mark"');
+    expect(html()).toContain('id="searchHelpTooltip"');
+    expect(html()).toContain('role="tooltip"');
+    expect(html()).toContain('搜尋語法說明');
+    expect(html()).toContain('關鍵字');
+    expect(html()).toContain('"精確詞組"');
+    expect(html()).toContain('link:網址');
+    expect(html()).toContain('is:fav');
+    expect(html()).toContain('is:♥');
     expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"'); // search svg
   });
 
@@ -50,7 +60,7 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('id="clearSearchBtn"');
     expect(html()).toContain('清除搜尋條件');
     expect(html()).toContain('d="M6 18L18 6M6 6l12 12"'); // reset svg
-    expect(html()).toContain('pr-10'); // input padding leaves room for the button
+    expect(html()).toContain('pr-14'); // input padding leaves room for the button
   });
 
   it('keeps the import button with the hidden file input', () => {

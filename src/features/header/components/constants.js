@@ -15,4 +15,7 @@ export const HEADER_IDS = {
   importBtn: 'importBtn',
   fileInput: 'fileInput',
   saveBackBtn: 'saveBackBtn',
+  // Search help tooltip
+  searchHelpBtn: 'searchHelpBtn',
+  searchHelpTooltip: 'searchHelpTooltip',
 };
