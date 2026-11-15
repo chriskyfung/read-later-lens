@@ -10,9 +10,9 @@
 import { setActiveTab } from '@/core/state';
 
 const ACTIVE_TAB_CLASS =
-  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm';
+  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm flex items-center gap-1';
 const INACTIVE_TAB_CLASS =
-  'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200';
+  'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1';
 
 const PANEL_IDS = {
   bookmarks: 'panelBookmarks',

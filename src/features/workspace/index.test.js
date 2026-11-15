@@ -105,7 +105,9 @@ describe('controlBar — markup parity', () => {
     expect(html()).toContain('書籤列表 (<span id="filteredCount">0</span>)');
     expect(html()).toContain('☁️ 文字雲 (Word Cloud)');
     expect(html()).toContain('📊 域名統計');
-    expect(html()).toContain('🕸️ 概念關聯網');
+    expect(html()).toContain(
+      '<i class="size-4" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)',
+    );
     expect(html()).toMatch(/data-tab="bookmarks"\s*\n?\s*class="main-tab active /);
     expect(html()).toContain('main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400');
   });
@@ -179,7 +181,9 @@ describe('panelLinkage — markup parity', () => {
     expect(html()).toMatch(
       /id="panelLinkage" class="tab-panel hidden h-full flex flex-col relative">/,
     );
-    expect(html()).toContain('🕸️ 書籤概念關聯圖 (D3 Force Graph)');
+    expect(html()).toContain(
+      '<i class="size-4" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)',
+    );
     expect(html()).toContain('id="zoomInBtn"');
     expect(html()).toContain('id="zoomOutBtn"');
     expect(html()).toContain('id="resetGraphBtn"');

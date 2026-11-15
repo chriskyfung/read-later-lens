@@ -9,9 +9,9 @@ import { activateTab } from './tabs.js';
 import { activeTab } from '@/core/state';
 
 const ACTIVE_CLASS =
-  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm';
+  'main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm flex items-center gap-1';
 const INACTIVE_CLASS =
-  'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200';
+  'main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1';
 
 function makeTabBtn(datasetTab) {
   return { dataset: { tab: datasetTab }, className: '', classList: { _s: new Set() } };
