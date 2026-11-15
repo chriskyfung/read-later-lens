@@ -15,7 +15,7 @@ export function panelLinkageHtml() {
           <div
             class="bg-slate-800/60 border border-slate-700/70 rounded-xl p-4 mb-4 flex justify-between items-center z-10">
             <div>
-              <h3 class="text-sm font-semibold text-indigo-300"><span class="flex items-center gap-1"><i class="size-4 text-gray-300" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)</span></h3>
+              <h3 class="text-sm font-semibold text-indigo-300"><span class="flex items-center gap-1"><i class="size-4" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)</span></h3>
               <p class="text-xs text-slate-400">依據共用關鍵字與域名建立拓撲。節點大小代表關聯度，顏色代表域名。支援滾輪縮放與拖曳。</p>
             </div>
             <div class="flex items-center gap-2">
