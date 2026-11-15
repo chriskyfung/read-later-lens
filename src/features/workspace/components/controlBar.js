@@ -31,7 +31,7 @@ export function controlBarHtml() {
           </button>
           <button data-tab="linkage"
             class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200">
-            <i class="size-4 align-middle" data-lucide="graph-star"></i> 概念關聯網
+            <span class="flex items-center gap-1"><i class="size-3 text-white" data-lucide="graph-star"></i> 概念關聯網</span>
           </button>
         </div>
 
