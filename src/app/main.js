@@ -5,8 +5,7 @@
  */
 import '../styles/main.css';
 
-import { initializeLucideIcons } from '@/utils/lucide.js';
-import { CircleQuestionMark, GraphStar } from 'lucide';
+import { lazyInitializeLucideIcons } from '@/utils/lucide.js';
 
 import * as state from '../core/state';
 import { loadState } from '../core/persistence';
@@ -44,7 +43,7 @@ async function boot() {
   mountSidebar();
   mountWorkspace();
   mountModals();
-  initializeLucideIcons({ CircleQuestionMark, GraphStar });
+  await lazyInitializeLucideIcons(['CircleQuestionMark', 'GraphStar']);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,
