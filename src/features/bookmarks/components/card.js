@@ -38,6 +38,20 @@ function tagsHtml(tags) {
     .join('');
 }
 
+function favoriteIconHtml(isFavorite) {
+  if (!isFavorite) return '';
+  return `<div aria-hidden="true" class="text-pink-500">
+    <i class="size-3" fill="currentColor" data-lucide="heart"></i>
+  </div>`;
+}
+
+function sourceFileHtml(sourceFileName, fileLabel) {
+  return `<div class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5 flex items-center gap-1"
+    title="${escapeHtml(sourceFileName)}" aria-label="${fileLabel}${escapeHtml(sourceFileName)}">
+    <i class="size-3 text-amber-300" data-lucide="layers-2"></i> ${escapeHtml(sourceFileName)}
+  </div>`;
+}
+
 /**
  * Build the bookmark card inner HTML.
  *
@@ -73,11 +87,14 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
 
           <div>
             <div class="flex items-start justify-between gap-2 mt-2">
-              <div>
-                <span class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded-sm border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${escapeHtml(b.detected_language)}</span>
-                <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded-sm border border-indigo-800/50 truncate max-w-35">${escapeHtml(domain)}</span>
+              <div class="flex items-center gap-1">
+                <div class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded-sm border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${escapeHtml(b.detected_language)}</div>
+                <div class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded-sm border border-indigo-800/50 truncate max-w-35">${escapeHtml(domain)}</div>
               </div>
-              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${escapeHtml(b.source_file_name)}" aria-label="${fileLabel}${escapeHtml(b.source_file_name)}">${isFavorite ? '<span aria-hidden="true" class="mr-1 text-pink-500"><i class="size-3" data-lucide="heart"></i></span>' : ''}<i class="size-3" data-lucide="file-text"></i> ${escapeHtml(b.source_file_name)}</span>
+              <div class="flex items-center gap-2.5">
+                ${favoriteIconHtml(isFavorite)}
+                ${sourceFileHtml(b.source_file_name, fileLabel)}
+              </div>
             </div>
 
             <!-- Tags list -->
