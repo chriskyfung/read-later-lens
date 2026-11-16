@@ -140,7 +140,7 @@ describe('renderBookmarkCards', () => {
     expect(html).toContain('無預覽內容');
     expect(html).toContain('apple.com'); // www. stripped domain badge
     expect(html).toContain('web'); // invalid URL domain fallback
-    expect(html).toContain('📁 My Export.csv');
+    expect(html).toContain('<i class="size-3" data-lucide="file-text"></i> My Export.csv');
     expect(html).toContain('#tech');
     expect(html).toContain('#fruit');
     expect(html).toContain('href="https://www.instapaper.com/read/1"');
@@ -286,7 +286,9 @@ describe('createBookmarkCard', () => {
     expect(card.className).toContain('bg-slate-800');
     expect(card.tabIndex).toBe(0); // keyboard-activatable card
     expect(card.innerHTML).toContain('Apple &lt;News&gt;');
-    expect(card.innerHTML).toContain('📁 My Export.csv');
+    expect(card.innerHTML).toContain(
+      '<i class="size-3" data-lucide="file-text"></i> My Export.csv',
+    );
     expect(card.innerHTML).toContain('#tech');
     expect(card.innerHTML).toContain('apple.com');
     expect(card.innerHTML).toContain('data-delete-bookmark');

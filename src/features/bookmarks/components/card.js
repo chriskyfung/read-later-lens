@@ -77,7 +77,7 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
                 <span class="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded-sm border border-slate-600/50 bg-slate-700 text-slate-300 shrink-0">${escapeHtml(b.detected_language)}</span>
                 <span class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded-sm border border-indigo-800/50 truncate max-w-35">${escapeHtml(domain)}</span>
               </div>
-              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${escapeHtml(b.source_file_name)}" aria-label="${fileLabel}${escapeHtml(b.source_file_name)}">${isFavorite ? '<span aria-hidden="true" class="mr-1 text-pink-500">❤</span>' : ''}📁 ${escapeHtml(b.source_file_name)}</span>
+              <span class="text-[10px] py-0.5 text-slate-300 truncate max-w-37.5" title="${escapeHtml(b.source_file_name)}" aria-label="${fileLabel}${escapeHtml(b.source_file_name)}">${isFavorite ? '<span aria-hidden="true" class="mr-1 text-pink-500"><i class="size-3" data-lucide="heart"></i></span>' : ''}<i class="size-3" data-lucide="file-text"></i> ${escapeHtml(b.source_file_name)}</span>
             </div>
 
             <!-- Tags list -->

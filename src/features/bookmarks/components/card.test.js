@@ -92,7 +92,7 @@ describe('bookmarkCardHtml', () => {
     const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
     expect(html).toContain(`>${bookmark.detected_language}<`); // raw, CSS uppercases it
     expect(html).toContain('apple.com');
-    expect(html).toContain('📁 My Export.csv');
+    expect(html).toContain('<i class="size-3" data-lucide="file-text"></i> My Export.csv');
     expect(html).toContain('title="My Export.csv"');
   });
 
@@ -108,13 +108,15 @@ describe('bookmarkCardHtml', () => {
       domain: 'apple.com',
       isSelected: false,
     });
-    expect(html).toContain('aria-hidden="true" class="mr-1 text-pink-500">❤');
+    expect(html).toContain(
+      'aria-hidden="true" class="mr-1 text-pink-500"><i class="size-3" data-lucide="heart"></i>',
+    );
     expect(html).toContain('aria-label="已收藏，來自檔案 My Export.csv"');
   });
 
   it('renders no heart and a plain file label when unstarred', () => {
     const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
-    expect(html).not.toContain('text-pink-500">❤');
+    expect(html).not.toContain('text-pink-500"><i class="size-3" data-lucide="heart"></i>');
     expect(html).toContain('aria-label="來自檔案 My Export.csv"');
   });
 
