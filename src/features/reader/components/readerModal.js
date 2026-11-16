@@ -28,9 +28,7 @@ export function readerModalHtml() {
         </div>
         <div class="flex items-center gap-2">
           <button id="closeReaderBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
-          <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+          <i class="size-5" data-lucide="x"></i>
         </button>
         </div>
       </div>
@@ -56,7 +54,7 @@ export function readerModalHtml() {
           </button>
           <button id="readerFavoriteBtn" title="加星收藏" aria-label="收藏"
             class="bg-slate-800 hover:bg-pink-100 text-pink-400 hover:text-slate-900 text-xs px-4 py-2 rounded-lg border border-pink-400/60 hover:border-pink-400 flex items-center gap-1">
-            <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <i class="size-3.5" data-lucide="heart"></i>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
             </svg>
@@ -66,14 +64,14 @@ export function readerModalHtml() {
           <a id="readerInstapaperBtn" href="#" target="_blank"
             class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-4 py-2 rounded-lg font-medium flex items-center gap-1">
             <span>開啟 Instapaper 閱讀器</span>
-            <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <i class="size-3.5" data-lucide="external-link"></i>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
             </svg>
           </a>
           <button id="readerDeleteBtn" title="刪除此書籤"
             class="bg-rose-600/20 hover:bg-rose-500 text-rose-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-rose-700/50 flex items-center gap-1">
-            <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <i class="size-3.5" data-lucide="trash"></i>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
             </svg>
