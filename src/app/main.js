@@ -43,7 +43,12 @@ async function boot() {
   mountSidebar();
   mountWorkspace();
   mountModals();
-  await lazyInitializeLucideIcons(['CircleQuestionMark', 'GraphStar']);
+  await lazyInitializeLucideIcons([
+    'CircleQuestionMark',
+    'GraphStar',
+    'ChartBarDecreasing',
+    'Letters',
+  ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,

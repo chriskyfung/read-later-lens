@@ -103,8 +103,8 @@ describe('controlBar — markup parity', () => {
     expect(html()).toContain('data-tab="domains"');
     expect(html()).toContain('data-tab="linkage"');
     expect(html()).toContain('書籤列表 (<span id="filteredCount">0</span>)');
-    expect(html()).toContain('☁️ 文字雲 (Word Cloud)');
-    expect(html()).toContain('📊 域名統計');
+    expect(html()).toContain('<i class="size-3" data-lucide="letters"></i> 文字雲 (Word Cloud)');
+    expect(html()).toContain('<i class="size-3" data-lucide="chart-bar-decreasing"></i> 域名統計');
     expect(html()).toContain(
       '<i class="size-4" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)',
     );
@@ -159,7 +159,9 @@ describe('panelBookmarks — markup parity', () => {
 describe('panelWordcloud — markup parity', () => {
   it('keeps the hidden panel, intro card and container', () => {
     expect(html()).toMatch(/id="panelWordcloud" class="tab-panel hidden h-full flex flex-col">/);
-    expect(html()).toContain('☁️ 關鍵字文字雲 (Word Cloud Analytics)');
+    expect(html()).toContain(
+      '<i class="size-4" data-lucide="letters"></i> 關鍵字文字雲 (Word Cloud Analytics)',
+    );
     expect(html()).toContain('N-Gram 斷詞分析');
     expect(html()).toContain('id="wordCloudContainer"');
     expect(html()).toContain('flex flex-wrap items-center justify-center gap-3');
@@ -169,7 +171,9 @@ describe('panelWordcloud — markup parity', () => {
 describe('panelDomains — markup parity', () => {
   it('keeps the hidden panel, intro card and container', () => {
     expect(html()).toMatch(/id="panelDomains" class="tab-panel hidden">/);
-    expect(html()).toContain('📊 來源域名與網站統計分析');
+    expect(html()).toContain(
+      '<i class="size-4" data-lucide="chart-bar-decreasing"></i> 來源域名與網站統計分析',
+    );
     expect(html()).toContain('前 15 大熱門網站來源與比例');
     expect(html()).toContain('id="domainChartContainer"');
     expect(html()).toContain('space-y-3 max-w-3xl mx-auto');

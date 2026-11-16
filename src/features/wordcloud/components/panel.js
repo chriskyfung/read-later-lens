@@ -11,7 +11,9 @@ export function panelWordcloudHtml() {
         <!-- Panel 2: Word Cloud View -->
         <div id="panelWordcloud" class="tab-panel hidden h-full flex flex-col">
           <div class="bg-slate-800/60 border border-slate-700/70 rounded-xl p-5 mb-4">
-            <h3 class="text-sm font-semibold text-indigo-300 mb-1">☁️ 關鍵字文字雲 (Word Cloud Analytics)</h3>
+            <h3 class="text-sm font-semibold text-indigo-300 mb-1 flex items-center gap-1">
+            <i class="size-4" data-lucide="letters"></i> 關鍵字文字雲 (Word Cloud Analytics)
+</h3>
             <p class="text-xs text-slate-400">系統以詞性標記擷取英文名詞與名詞片語主題（如 "machine learning"），依詞形（lemma）歸納同義變化，並以原始字面顯示；中日文內文則維持 N-Gram 斷詞分析。點擊任意關鍵字可立即進行全局搜尋。
             </p>
           </div>
