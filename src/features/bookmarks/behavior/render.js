@@ -8,7 +8,7 @@ import { getFilteredBookmarks } from '@/core/filters.js';
 import { updateBookmarksHeader } from './header.js';
 import { createBookmarkCard } from './card.js';
 import { initializeLucideIcons } from '@/utils/lucide.js';
-import { GraphStar, Orbit, ExternalLink, Trash } from 'lucide';
+import { GraphStar, Orbit, ExternalLink, SquareBookmark, Trash } from 'lucide';
 
 /**
  * Render the bookmark cards grid (and its header side-effects).
@@ -35,7 +35,7 @@ export function renderBookmarkCards() {
 
   // Cards are re-rendered on every search/filter/import cycle. Re-initialize
   // Lucide so newly-inserted [data-lucide="graph-star"], [data-lucide="orbit"],
-  // [data-lucide="external-link"], and [data-lucide="trash"] elements render
-  // instead of staying inert <i> placeholders.
-  initializeLucideIcons({ GraphStar, Orbit, ExternalLink, Trash });
+  // [data-lucide="external-link"], [data-lucide="square-bookmark"], and
+  // [data-lucide="trash"] elements render instead of staying inert <i> placeholders.
+  initializeLucideIcons({ GraphStar, Orbit, ExternalLink, SquareBookmark, Trash });
 }

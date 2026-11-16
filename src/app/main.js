@@ -53,6 +53,7 @@ async function boot() {
     'Trash',
     'X',
     'Heart',
+    'SquareBookmark',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
