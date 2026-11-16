@@ -48,6 +48,7 @@ async function boot() {
     'GraphStar',
     'ChartBarDecreasing',
     'Letters',
+    'Orbit',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({

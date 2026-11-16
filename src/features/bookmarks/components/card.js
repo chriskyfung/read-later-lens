@@ -89,7 +89,7 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
             <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
               <div class="flex items-center gap-1.5">
                 <button class="open-similarity-btn hover:text-indigo-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition">
-                  <span>⚡ 相似</span>
+                  <i class="size-3" data-lucide="orbit"></i> 相似
                 </button>
                 <button class="open-linkage-btn hover:text-indigo-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" title="在概念關聯圖中檢視">
                   <i class="size-3" data-lucide="graph-star"></i> 關聯

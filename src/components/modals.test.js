@@ -93,7 +93,9 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="closeSimilarityBtn"');
     expect(html).toContain('id="simTargetTitle"');
     expect(html).toContain('id="simResultsList"');
-    expect(html).toContain('⚡ 相似文章推薦分析 (Cosine Similarity)');
+    expect(html).toContain(
+      '<i class="size-4" data-lucide="orbit"></i> 相似文章推薦分析 (Cosine Similarity)',
+    );
     expect(html).toContain('目標文章:');
     expect(html).toContain('關聯度最高的文章列表：');
     expect(html).toContain('max-h-[85vh]');

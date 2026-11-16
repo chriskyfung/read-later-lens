@@ -17,7 +17,9 @@ export function similarityModalHtml() {
       class="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
       <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/90">
         <div>
-          <h3 id="similarityTitle" class="font-bold text-base text-white">⚡ 相似文章推薦分析 (Cosine Similarity)</h3>
+          <h3 id="similarityTitle" class="font-bold text-base text-white flex items-center gap-1.5">
+            <i class="size-4" data-lucide="orbit"></i> 相似文章推薦分析 (Cosine Similarity)
+</h3>
           <p class="text-xs text-slate-400">基於 TF-IDF 向量演算法計算當前文章與庫存其他文章的相似度。</p>
         </div>
         <div class="flex items-center gap-2">
