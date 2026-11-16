@@ -21,13 +21,13 @@ export function controlBarHtml() {
             class="main-tab active px-3 py-1 rounded-md text-xs font-semibold text-white bg-indigo-600 shadow-sm">
             書籤列表 (<span id="${WORKSPACE_IDS.FILTERED_COUNT}">0</span>)
           </button>
-          <button data-tab="wordcloud"
-            class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1">
-            <i class="size-3" data-lucide="letters"></i> 文字雲 (Word Cloud)
-          </button>
           <button data-tab="domains"
             class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1">
             <i class="size-3" data-lucide="chart-bar-decreasing"></i> 域名統計
+          </button>
+          <button data-tab="wordcloud"
+            class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1">
+            <i class="size-3" data-lucide="letters"></i> 文字雲
           </button>
           <button data-tab="linkage"
             class="main-tab px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1"">

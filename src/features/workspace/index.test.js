@@ -103,7 +103,7 @@ describe('controlBar — markup parity', () => {
     expect(html()).toContain('data-tab="domains"');
     expect(html()).toContain('data-tab="linkage"');
     expect(html()).toContain('書籤列表 (<span id="filteredCount">0</span>)');
-    expect(html()).toContain('<i class="size-3" data-lucide="letters"></i> 文字雲 (Word Cloud)');
+    expect(html()).toContain('<i class="size-3" data-lucide="letters"></i> 文字雲');
     expect(html()).toContain('<i class="size-3" data-lucide="chart-bar-decreasing"></i> 域名統計');
     expect(html()).toContain(
       '<i class="size-4" data-lucide="graph-star"></i> 書籤概念關聯圖 (D3 Force Graph)',
