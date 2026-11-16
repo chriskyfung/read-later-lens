@@ -49,6 +49,10 @@ async function boot() {
     'ChartBarDecreasing',
     'Letters',
     'Orbit',
+    'ExternalLink',
+    'Trash',
+    'X',
+    'Heart',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
