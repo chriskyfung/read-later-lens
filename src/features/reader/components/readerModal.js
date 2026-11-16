@@ -48,7 +48,7 @@ export function readerModalHtml() {
         <div class="flex items-center gap-2">
           <button id="readerSimilarityBtn" title="查看相似文章"
             class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">
-            <span>⚡ 相似</span>
+            <i class="size-3.5" data-lucide="orbit"></i> 相似
           </button>
           <button id="readerLinkageBtn" title="在概念關聯圖中檢視"
             class="bg-indigo-600/20 hover:bg-indigo-500 text-indigo-200 hover:text-white text-xs px-4 py-2 rounded-lg border border-indigo-700/50 flex items-center gap-1">

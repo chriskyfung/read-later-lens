@@ -80,7 +80,7 @@ describe('bookmarkCardHtml', () => {
     const html = bookmarkCardHtml({ bookmark, domain: 'apple.com', isSelected: false });
     expect(html).toContain('data-delete-bookmark');
     expect(html).toContain('open-similarity-btn');
-    expect(html).toContain('⚡ 相似');
+    expect(html).toContain('<i class="size-3" data-lucide="orbit"></i> 相似');
     expect(html).toContain('open-linkage-btn');
     expect(html).toContain('<i class="size-3" data-lucide="graph-star"></i> 關聯');
     expect(html).toContain('title="在概念關聯圖中檢視"');

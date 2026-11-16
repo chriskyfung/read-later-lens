@@ -292,7 +292,7 @@ describe('createBookmarkCard', () => {
     expect(card.innerHTML).toContain('data-delete-bookmark');
     expect(card.innerHTML).not.toContain('open-reader-btn');
     expect(card.innerHTML).not.toContain('📖 閱讀');
-    expect(card.innerHTML).toContain('⚡ 相似');
+    expect(card.innerHTML).toContain('<i class="size-3" data-lucide="orbit"></i> 相似');
     expect(card.innerHTML).toContain('href="https://www.instapaper.com/read/1"');
   });
 
