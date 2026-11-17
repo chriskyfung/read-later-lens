@@ -53,13 +53,13 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('link:網址');
     expect(html()).toContain('is:fav');
     expect(html()).toContain('is:♥');
-    expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"'); // search svg
+    expect(html()).toContain('data-lucide="search"'); // search svg
   });
 
   it('adds the quick-reset button with room reserved in the input', () => {
     expect(html()).toContain('id="clearSearchBtn"');
     expect(html()).toContain('清除搜尋條件');
-    expect(html()).toContain('d="M6 18L18 6M6 6l12 12"'); // reset svg
+    expect(html()).toContain('data-lucide="x"'); // reset svg
     expect(html()).toContain('pr-14'); // input padding leaves room for the button
   });
 

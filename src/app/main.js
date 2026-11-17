@@ -54,6 +54,7 @@ async function boot() {
     'X',
     'Heart',
     'SquareBookmark',
+    'Search',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
