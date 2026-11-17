@@ -192,10 +192,8 @@ describe('panelLinkage — markup parity', () => {
     expect(html()).toContain('title="放大"');
     expect(html()).toContain('title="縮小"');
     expect(html()).toContain('重置視圖');
-    expect(html()).toContain(
-      'd="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"',
-    );
-    expect(html()).toContain('d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"');
+    expect(html()).toContain('data-lucide="zoom-in"'); // zoom-in control icon
+    expect(html()).toContain('data-lucide="zoom-out"'); // zoom-out control icon
     expect(html()).toContain('id="d3GraphCanvas"');
     expect(html()).toContain('min-h-112.5');
   });

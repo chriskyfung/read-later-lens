@@ -58,6 +58,8 @@ async function boot() {
     'FileInput',
     'FileOutput',
     'GalleryVerticalEnd',
+    'ZoomIn',
+    'ZoomOut',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
