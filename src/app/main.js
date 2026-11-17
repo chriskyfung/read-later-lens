@@ -57,6 +57,7 @@ async function boot() {
     'Search',
     'FileInput',
     'FileOutput',
+    'GalleryVerticalEnd',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
