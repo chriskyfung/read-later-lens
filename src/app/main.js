@@ -54,6 +54,12 @@ async function boot() {
     'X',
     'Heart',
     'SquareBookmark',
+    'Search',
+    'FileInput',
+    'FileOutput',
+    'GalleryVerticalEnd',
+    'ZoomIn',
+    'ZoomOut',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
