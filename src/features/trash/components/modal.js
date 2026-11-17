@@ -23,10 +23,7 @@ export function trashModalHtml() {
         <header class="shrink-0 flex items-center justify-between border-b border-slate-700 px-5 py-4">
           <h2 id="trashTitle" class="text-lg font-semibold text-white">回收桶</h2>
           <button id="closeTrashBtn" class="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition" aria-label="關閉回收桶">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="6" y1="6" x2="14" y2="14"></line>
-              <line x1="14" y1="6" x2="6" y2="14"></line>
-            </svg>
+            <i class="size-5" data-lucide="x"></i>
           </button>
         </header>
 
@@ -35,10 +32,7 @@ export function trashModalHtml() {
 
           <div id="trashEmptyState" class="hidden flex flex-col items-center justify-center py-6 text-center">
             <div class="bg-slate-800/80 p-4 rounded-full text-slate-500 mb-3">
-              <svg class="size-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
+              <i class="size-10" data-lucide="trash"></i>
             </div>
             <h3 class="text-slate-300 font-semibold mb-1">回收桶是空的</h3>
             <p class="text-slate-500 text-xs max-w-sm">刪除的書籤會先移到此處；您可隨時還原或永久刪除。</p>
