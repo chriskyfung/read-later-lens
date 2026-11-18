@@ -19,6 +19,8 @@ export default [
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
+        Worker: 'readonly',
+        MessageChannel: 'readonly',
         indexedDB: 'readonly',
         console: 'readonly',
         alert: 'readonly',

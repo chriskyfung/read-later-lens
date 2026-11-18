@@ -299,3 +299,80 @@ export function wordCloudItems(sorted) {
     sizeRatio: 0.75 + (count / maxCount) * 1.5,
   }));
 }
+
+/**
+ * Lazily-created, cached Web Worker for off-main-thread word cloud
+ * computation. Created on first use so the worker chunk is never fetched
+ * unless the word cloud tab is actually opened.
+ *
+ * @type {Worker | null}
+ */
+let wordCloudWorker = null;
+
+/**
+ * @returns {Worker} The shared worker instance, creating it on first call.
+ */
+function getWordCloudWorker() {
+  if (!wordCloudWorker) {
+    wordCloudWorker = new Worker(new URL('./worker/index.js', import.meta.url), { type: 'module' });
+  }
+  return wordCloudWorker;
+}
+
+/**
+ * Serialize BookmarkRecord objects to plain DTOs for transfer to the worker.
+ * Only the fields needed for extraction are included, keeping the payload
+ * small (~500 bytes/bookmark).
+ *
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @returns {Array<{ id: string|number, title: string, article_preview: string, detected_language: string }>}
+ */
+function serializeForWorker(list) {
+  return list.map((b) => ({
+    id: b.id,
+    title: b.title || '',
+    article_preview: b.article_preview || '',
+    detected_language: b.detected_language,
+  }));
+}
+
+/**
+ * Async wrapper around `wordCloudFrequencies` that performs extraction and
+ * aggregation in a Web Worker, keeping the main thread free for UI work.
+ *
+ * Falls back to the synchronous `wordCloudFrequencies` if Workers are
+ * unavailable or the worker errors, so rendering never breaks.
+ *
+ * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord[]} list
+ * @returns {Promise<Array<{ word: string, count: number, sizeRatio: number }>>}
+ */
+export function wordCloudFrequenciesAsync(list) {
+  return new Promise((resolve) => {
+    if (typeof Worker === 'undefined') {
+      // No Worker support — fall back to synchronous computation.
+      resolve(wordCloudItems(wordCloudFrequencies(list)));
+      return;
+    }
+
+    const worker = getWordCloudWorker();
+    const channel = new MessageChannel();
+
+    channel.port1.onmessage = (event) => {
+      const { items, error } = event.data || {};
+      channel.port1.close();
+      if (error || !items) {
+        // Fall back to synchronous computation on worker error.
+        resolve(wordCloudItems(wordCloudFrequencies(list)));
+        return;
+      }
+      resolve(items);
+    };
+    channel.port1.onmessageerror = () => {
+      channel.port1.close();
+      resolve(wordCloudItems(wordCloudFrequencies(list)));
+    };
+
+    const requestId = `wc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    worker.postMessage({ requestId, bookmarks: serializeForWorker(list) }, [channel.port2]);
+  });
+}
