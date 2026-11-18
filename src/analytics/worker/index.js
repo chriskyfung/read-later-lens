@@ -27,8 +27,12 @@ self.onmessage = async (event) => {
     return;
   }
 
-  // Fire-and-forget engine preload so compromise starts downloading ASAP.
-  preloadWorkerEngine();
+  // Fire-and-forget engine preload only if any bookmark is English-routed.
+  // CJK-only libraries never need compromise — Intl.Segmenter suffices.
+  const hasEnglish = bookmarks.some((b) => b.detected_language === 'en');
+  if (hasEnglish) {
+    preloadWorkerEngine();
+  }
 
   try {
     const sorted = computeWordCloudFrequencies(bookmarks);
