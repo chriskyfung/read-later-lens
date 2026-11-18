@@ -9,7 +9,7 @@
 export { topDomains } from './domains.js';
 export { buildLinkageGraph, buildGraphNodes, LINKAGE_LIMIT, LINKAGE_THRESHOLD } from './linkage.js';
 export { mostSimilarAuto, mostSimilar, cosineSimilarity, bookmarkTokenFreq } from './similarity.js';
-export { wordCloudFrequencies, wordCloudItems } from './wordcloud.js';
+export { wordCloudFrequencies, wordCloudItems, wordCloudFrequenciesAsync } from './wordcloud.js';
 export {
   loadKeywordsEngine,
   keywordsReady,

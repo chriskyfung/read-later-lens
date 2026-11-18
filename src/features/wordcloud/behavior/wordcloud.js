@@ -14,12 +14,7 @@
  */
 
 import { getFilteredBookmarks } from 'src/core/filters.js';
-import {
-  wordCloudFrequencies,
-  wordCloudItems,
-  needsKeywordEngine,
-  loadKeywordsEngine,
-} from '@/analytics';
+import { wordCloudFrequenciesAsync } from '@/analytics';
 import { setSearchQuery } from '@/core/state';
 import { setSearchInputValue } from '@/features/header';
 import { activateTab } from '@/behavior/tabs.js';
@@ -34,44 +29,53 @@ export function initWordCloud(injectedDeps) {
 /**
  * Render the word-cloud tab.
  *
- * The English keyword engine is loaded lazily: when the visible library needs
- * it, a loading placeholder renders once and the view re-renders itself when
- * the chunk arrives. A failed load falls through to the legacy tokenizer, so
- * the cloud still renders (see `keywords.js`).
+ * Extraction and aggregation run in a Web Worker (see `wordCloudFrequenciesAsync`),
+ * so the main thread stays free for UI work. A loading placeholder renders
+ * immediately; the worker result replaces it when ready. Engine loading and
+ * failure handling happen inside the worker — this file no longer manages
+ * the compromise lifecycle on the main thread.
  */
-export function renderWordCloud() {
+export async function renderWordCloud() {
   const container = document.getElementById('wordCloudContainer');
 
-  // The filtered list is expensive (relevance scoring, sorting) and needed
-  // twice below, so compute it once per render rather than once per check.
+  // Show a loading state immediately so the UI never freezes while the
+  // worker extracts terms across thousands of bookmarks.
+  container.innerHTML = '<span class="text-slate-500 text-xs">正在分析關鍵字…</span>';
+
+  // The filtered list is expensive (relevance scoring, sorting) — compute
+  // once per render rather than once per check.
   const filtered = getFilteredBookmarks();
 
-  if (needsKeywordEngine(filtered)) {
-    container.innerHTML = '<span class="text-slate-500 text-xs">正在載入關鍵字分析引擎…</span>';
-    loadKeywordsEngine().then(() => deps.render());
-    return;
+  try {
+    // Off-main-thread: extraction + aggregation in the Web Worker.
+    // Falls back to synchronous computation if Workers are unavailable
+    // or the worker errors — rendering never breaks.
+    const items = await wordCloudFrequenciesAsync(filtered);
+
+    if (items.length === 0) {
+      container.innerHTML = wordCloudEmptyStateHtml();
+      return;
+    }
+
+    container.innerHTML = '';
+
+    items.forEach(({ word, count, sizeRatio }) => {
+      const item = document.createElement('span');
+      item.className = wordCloudItemClass();
+      item.style.fontSize = `${sizeRatio}rem`;
+      item.innerText = wordCloudItemLabel({ word, count });
+      item.onclick = () => {
+        setSearchQuery(word);
+        setSearchInputValue(word);
+        activateTab('bookmarks');
+        deps.render();
+      };
+      container.appendChild(item);
+    });
+  } catch (err) {
+    // `wordCloudFrequenciesAsync` already falls back to sync computation,
+    // so this is only for unexpected errors. Render nothing to avoid a
+    // half-updated UI; the next renderAll() will retry.
+    console.error('Word cloud render failed:', err);
   }
-
-  const items = wordCloudItems(wordCloudFrequencies(filtered));
-
-  if (items.length === 0) {
-    container.innerHTML = wordCloudEmptyStateHtml();
-    return;
-  }
-
-  container.innerHTML = '';
-
-  items.forEach(({ word, count, sizeRatio }) => {
-    const item = document.createElement('span');
-    item.className = wordCloudItemClass();
-    item.style.fontSize = `${sizeRatio}rem`;
-    item.innerText = wordCloudItemLabel({ word, count });
-    item.onclick = () => {
-      setSearchQuery(word);
-      setSearchInputValue(word);
-      activateTab('bookmarks');
-      deps.render();
-    };
-    container.appendChild(item);
-  });
 }
