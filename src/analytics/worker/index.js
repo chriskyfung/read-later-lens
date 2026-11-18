@@ -3,11 +3,11 @@
  *
  * Receives serialized bookmark DTOs from the main thread, performs term
  * extraction + frequency aggregation entirely off the main thread, and
- * posts the results back.
+ * posts the results back through the transferred MessagePort.
  *
  * Protocol:
- *   in:  { requestId, bookmarks: BookmarkDTO[] }
- *   out: { requestId, items: { word, count, sizeRatio }[], error: string|null }
+ *   in:  { requestId, bookmarks: BookmarkDTO[] } (with a transferred port in event.ports[0])
+ *   out: { requestId, items: { word, count, sizeRatio }[], error: string|null } (via the transferred port)
  */
 
 import { computeWordCloudFrequencies, computeWordCloudItems } from './aggregate.js';
@@ -17,13 +17,17 @@ import { preloadWorkerEngine } from './extract.js';
 
 self.onmessage = async (event) => {
   const { requestId, bookmarks } = event.data || {};
+  /** @type {MessagePort} */
+  const replyPort = event.ports[0];
 
-  if (!requestId || !Array.isArray(bookmarks)) {
-    self.postMessage({
-      requestId: requestId ?? null,
-      items: null,
-      error: 'Invalid request: expected { requestId, bookmarks[] }',
-    });
+  if (!requestId || !Array.isArray(bookmarks) || !replyPort) {
+    if (replyPort) {
+      replyPort.postMessage({
+        requestId: requestId ?? null,
+        items: null,
+        error: 'Invalid request: expected { requestId, bookmarks[] } with a reply port',
+      });
+    }
     return;
   }
 
@@ -37,10 +41,10 @@ self.onmessage = async (event) => {
   try {
     const sorted = computeWordCloudFrequencies(bookmarks);
     const items = computeWordCloudItems(sorted);
-    self.postMessage({ requestId, items, error: null });
+    replyPort.postMessage({ requestId, items, error: null });
   } catch (err) {
     console.error('Worker: word cloud computation failed:', err);
-    self.postMessage({
+    replyPort.postMessage({
       requestId,
       items: null,
       error: err instanceof Error ? err.message : String(err),
