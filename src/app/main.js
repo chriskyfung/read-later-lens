@@ -61,6 +61,7 @@ async function boot() {
     'ZoomIn',
     'ZoomOut',
     'Info',
+    'TriangleExclamationPoint',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
