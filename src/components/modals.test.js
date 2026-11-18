@@ -68,7 +68,7 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('title="加星收藏"');
     expect(html).toContain('text-pink-400');
     expect(html).toContain('hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
-    expect(html).toContain('d="M6 18L18 6M6 6l12 12"'); // close icon path
+    expect(html).toContain('data-lucide="x"'); // close icon uses Lucide x
   });
 
   it('groups 收藏 with 相似/關聯 on the left, ahead of the trash group', () => {
@@ -108,7 +108,8 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="saveSourceFilesList"');
     expect(html).toContain('id="exportAllUnifiedJsonBtn"');
     expect(html).toContain('id="exportAllUnifiedCsvBtn"');
-    expect(html).toContain('💾 儲存與匯出變更');
+    expect(html).toContain('data-lucide="file-output"');
+    expect(html).toContain('儲存與匯出變更');
     expect(html).toContain('匯出成統一 JSON');
     expect(html).toContain('匯出成統一');
     expect(html).toContain('CSV');
