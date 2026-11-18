@@ -73,11 +73,11 @@ export function importModalHtml() {
     role="dialog" aria-modal="true" aria-labelledby="importTitle" tabindex="-1">
     <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-5">
       <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-        <h3 id="importTitle" class="font-bold text-base text-white">📥 選擇匯入來源</h3>
+        <h3 id="importTitle" class="font-bold text-base text-white flex items-center gap-1.5">
+          <i class="size-5" data-lucide="file-input"></i> 選擇匯入來源
+        </h3>
         <button id="closeImportBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
-          <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+          <i class="size-5" data-lucide="x"></i>
         </button>
       </div>
 
@@ -88,8 +88,8 @@ export function importModalHtml() {
       </div>
       ${roadmap}
 
-      <p class="text-[11px] text-slate-500 leading-relaxed border-t border-slate-700 pt-3">
-        ℹ️ 官方 Instapaper CSV 匯出（URL/Title/…）僅含連結、無預覽內容，不在此支援；請改用 InstapaperScraper 匯出以取得完整資料。
+      <p class="text-[11px] text-slate-500 leading-relaxed border-t border-slate-700 pt-3 flex items-start gap-1">
+        <i class="size-5 text-slate-400" data-lucide="info"></i> 官方 Instapaper CSV 匯出（URL/Title/…）僅含連結、無預覽內容，不在此支援；請改用 InstapaperScraper 匯出以取得完整資料。
       </p>
 
       <div class="pt-1 flex justify-end gap-2">

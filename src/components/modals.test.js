@@ -122,7 +122,8 @@ describe('mountModals — overlay markup parity', () => {
     expect(html).toContain('id="importProfile-instapaper-scraper"');
     expect(html).toContain('id="importPickFileBtn"');
     expect(html).toContain('id="importCancelBtn"');
-    expect(html).toContain('📥 選擇匯入來源');
+    expect(html).toContain('data-lucide="file-input"');
+    expect(html).toContain('選擇匯入來源');
     expect(html).toContain('選擇檔案…');
   });
 

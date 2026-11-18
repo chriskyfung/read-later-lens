@@ -60,6 +60,7 @@ async function boot() {
     'GalleryVerticalEnd',
     'ZoomIn',
     'ZoomOut',
+    'Info',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({

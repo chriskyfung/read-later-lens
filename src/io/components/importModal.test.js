@@ -10,7 +10,8 @@ describe('importModalHtml — markup parity', () => {
       'role="dialog" aria-modal="true" aria-labelledby="importTitle" tabindex="-1"',
     );
     expect(html()).toContain('id="importTitle"');
-    expect(html()).toContain('📥 選擇匯入來源');
+    expect(html()).toContain('data-lucide="file-input"');
+    expect(html()).toContain('選擇匯入來源');
     expect(html()).toContain('class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm');
   });
 
@@ -61,6 +62,6 @@ describe('importModalHtml — markup parity', () => {
     expect(html()).toContain('取消');
     expect(html()).toContain('選擇檔案…');
     // The close glyph matches every other modal.
-    expect(html()).toContain('d="M6 18L18 6M6 6l12 12"');
+    expect(html()).toContain('data-lucide="x"');
   });
 });
