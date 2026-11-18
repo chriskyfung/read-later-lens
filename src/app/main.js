@@ -60,6 +60,8 @@ async function boot() {
     'GalleryVerticalEnd',
     'ZoomIn',
     'ZoomOut',
+    'Info',
+    'TriangleExclamationPoint',
   ]);
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
