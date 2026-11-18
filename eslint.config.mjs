@@ -21,6 +21,7 @@ export default [
         navigator: 'readonly',
         Worker: 'readonly',
         MessageChannel: 'readonly',
+        requestIdleCallback: 'readonly',
         indexedDB: 'readonly',
         console: 'readonly',
         alert: 'readonly',

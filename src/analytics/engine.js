@@ -66,6 +66,21 @@ export function keywordsFailed() {
   return engineState === 'failed';
 }
 
+/**
+ * Pre-load the keyword engine during browser idle time.
+ *
+ * Delegates to `loadKeywordsEngine()` so the `compromise` chunk starts
+ * downloading before the user opens the word cloud tab. Idempotent: only the
+ * first call initiates the load; subsequent calls return the existing promise.
+ * Safe to call even if the engine already failed — it resolves to `null` and
+ * the worker degrades to the legacy tokenizer.
+ *
+ * @returns {Promise<Function|null>}
+ */
+export function preloadEngine() {
+  return loadKeywordsEngine();
+}
+
 export function getNlp() {
   return nlp;
 }

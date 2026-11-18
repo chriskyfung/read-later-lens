@@ -282,6 +282,10 @@ describe('entry-point feature wiring', () => {
       .find((el) => el.dataset.tab === tab)
       .dispatch('click');
     expect(state.activeTab).toBe(tab);
+    // renderWordCloud is now async (Web Worker offloading); wait for items
+    // to appear before clicking. For the domains tab this resolves
+    // immediately since its render is synchronous.
+    await vi.waitFor(() => expect(els[container].children.length).toBeGreaterThan(0));
     els[container].children[0].onclick();
     expect(state.activeTab).toBe('bookmarks');
     expect(state.searchQuery).not.toBe('');

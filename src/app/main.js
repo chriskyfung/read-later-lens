@@ -102,6 +102,15 @@ async function boot() {
     console.error('Storage usage update failed:', err);
   }
   renderAll();
+
+  // Pre-warm the keyword engine during idle time so the word cloud tab opens
+  // without waiting for the compromise chunk to download. Skipped silently in
+  // environments without requestIdleCallback (tests, older browsers).
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => {
+      import('@/analytics/engine.js').then(({ preloadEngine }) => preloadEngine());
+    });
+  }
 }
 
 export const ready = boot();
