@@ -5,7 +5,7 @@ export let activeTag = null;
 /** @type {'bookmarks' | 'wordcloud' | 'domains' | 'linkage'} */
 export let activeTab = 'bookmarks';
 export let searchQuery = '';
-/** @type {'relevance' | 'newer' | 'older' | 'title_asc' | 'title_desc'} */
+/** @type {'relevance' | 'newer' | 'older' | 'title_asc' | 'title_desc' | 'random'} */
 export let sortBy = 'relevance';
 /** @type {Set<string>} */
 export let selectedIds = new Set();

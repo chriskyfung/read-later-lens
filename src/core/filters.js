@@ -93,6 +93,12 @@ export function applyFilters(list) {
     filtered.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-TW'));
   } else if (sortBy === 'title_desc') {
     filtered.sort((a, b) => (b.title || '').localeCompare(a.title || '', 'zh-TW'));
+  } else if (sortBy === 'random') {
+    // Fisher-Yates shuffle for unbiased random ordering
+    for (let i = filtered.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+    }
   }
 
   return filtered;
