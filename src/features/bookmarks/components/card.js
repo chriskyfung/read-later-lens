@@ -119,7 +119,7 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
                 <button class="open-linkage-btn hover:text-indigo-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" title="在概念關聯圖中檢視">
                   <i class="size-3" data-lucide="graph-star"></i> 關聯
                 </button>
-                <button class="add-queue-btn hover:text-amber-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" data-add-queue="${b.id}" title="${queued ? '移出閱讀佇列' : '加入閱讀佇列'}">
+                <button class="add-queue-btn hover:text-amber-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" data-add-queue="${escapeHtml(b.id)}" title="${queued ? '移出閱讀佇列' : '加入閱讀佇列'}">
                   <i class="size-3" data-lucide="${queued ? 'list-x' : 'list-plus'}"></i>
                   <span>${queued ? '移出佇列' : '加入佇列'}</span>
                 </button>
