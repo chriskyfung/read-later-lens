@@ -2,7 +2,7 @@
  * @fileoverview Restore state from IndexedDB into the module-level bindings.
  */
 
-import { setBookmarks, setSourceFiles } from '../state';
+import { setBookmarks, setSourceFiles, setReadingQueue } from '../state';
 import { REV_KEY, STORE_NAME } from './constants.js';
 import { getDb } from './connection.js';
 import { migrateLegacyDb } from './migration.js';
@@ -24,9 +24,10 @@ import { setKnownRev } from './revision.js';
 export async function loadState() {
   const db = await getDb();
   await migrateLegacyDb(db);
-  const [bookmarksRow, sourcesRow, revRow] = await Promise.all([
+  const [bookmarksRow, sourcesRow, queueRow, revRow] = await Promise.all([
     db.get(STORE_NAME, 'bookmarks'),
     db.get(STORE_NAME, 'sources'),
+    db.get(STORE_NAME, 'readingQueue'),
     db.get(STORE_NAME, REV_KEY),
   ]);
   setKnownRev(revRow?.data);
@@ -35,6 +36,9 @@ export async function loadState() {
     setBookmarks(bookmarksRow.data || []);
     const sources = sourcesRow.data || [];
     setSourceFiles(new Map(sources.map((s) => [s.id, s])));
+    if (queueRow) {
+      setReadingQueue(queueRow.data || []);
+    }
     return true;
   }
   return false;

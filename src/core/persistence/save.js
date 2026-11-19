@@ -2,7 +2,7 @@
  * @fileoverview Persist the current working set (bookmarks + source metadata).
  */
 
-import { bookmarks, sourceFiles } from '../state';
+import { bookmarks, sourceFiles, readingQueue } from '../state';
 import { REV_KEY, STORE_NAME } from './constants.js';
 import { getDb } from './connection.js';
 import { getKnownRev, setKnownRev } from './revision.js';
@@ -74,6 +74,7 @@ export async function saveState() {
     try {
       put('bookmarks', bookmarks);
       put('sources', sourcesArray);
+      put('readingQueue', readingQueue);
       put(REV_KEY, nextRev);
     } catch (err) {
       // A synchronous throw (DataCloneError) once the first row is queued would
