@@ -152,6 +152,30 @@ describe('applyFilters', () => {
     setSortBy('title_asc');
     expect(getFilteredBookmarks().map((b) => b.title)).toEqual(['apple', 'banana']);
   });
+
+  it('sorts randomly and produces different orders on each call', () => {
+    setBookmarks([mk(1), mk(2), mk(3), mk(4), mk(5)]);
+    setSortBy('random');
+    const orders = new Set();
+    for (let i = 0; i < 20; i++) {
+      const result = getFilteredBookmarks()
+        .map((b) => b.id)
+        .join(',');
+      orders.add(result);
+    }
+    // With 5 items, there are 120 permutations. 20 runs should produce
+    // multiple different orders (extremely unlikely to get same order every time).
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('random sort returns all items (no loss)', () => {
+    setBookmarks([mk(1), mk(2), mk(3), mk(4), mk(5)]);
+    setSortBy('random');
+    const result = getFilteredBookmarks();
+    expect(result).toHaveLength(5);
+    const ids = new Set(result.map((b) => b.id));
+    expect(ids.size).toBe(5);
+  });
 });
 
 describe('getFilteredBookmarksTop', () => {

@@ -47,6 +47,7 @@ export function controlBarHtml() {
               <option value="older">最舊優先 (Older First)</option>
               <option value="title_asc">標題 A-Z</option>
               <option value="title_desc">標題 Z-A</option>
+              <option value="random">隨機順序 (Random)</option>
             </select>
           </div>
 
