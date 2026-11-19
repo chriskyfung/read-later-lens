@@ -37,7 +37,7 @@ import {
   registerQueueListeners,
   addToQueue,
   removeFromQueue,
-} from '@/features/readingQueue';
+} from '@/features/readingQueue/behavior';
 import {
   closeLayer,
   registerModalLayer,
