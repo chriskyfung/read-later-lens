@@ -12,6 +12,7 @@ import { openReaderModal } from '@/features/reader';
 import { openSimilarityModal } from '@/features/similarityModal';
 import { openLinkageForBookmark } from '@/features/linkage';
 import { toggleSelectBookmark } from './selection.js';
+import { isInQueue, addToQueue, removeFromQueue } from '@/features/readingQueue';
 
 // Descendants that own their own click behaviour; clicking them must NOT
 // trigger the card's "open reader" handler. Delete is delegated at the grid
@@ -48,6 +49,25 @@ export function createBookmarkCard(bookmark) {
     .querySelector('.open-linkage-btn')
     .addEventListener('click', () => openLinkageForBookmark(bookmark.id));
   card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = bookmark.id;
+
+  // Queue toggle button
+  const queueBtn = card.querySelector('[data-add-queue]');
+  if (queueBtn) {
+    queueBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isInQueue(bookmark.id)) {
+        removeFromQueue(bookmark.id);
+      } else {
+        addToQueue(bookmark.id);
+      }
+      // Re-render the card to reflect the new queue state
+      const parent = card.parentElement;
+      if (parent) {
+        const newCard = createBookmarkCard(bookmark);
+        parent.replaceChild(newCard, card);
+      }
+    });
+  }
 
   card.tabIndex = 0;
   card.addEventListener('click', (e) => {

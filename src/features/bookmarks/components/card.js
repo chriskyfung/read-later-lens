@@ -8,6 +8,7 @@
  */
 
 import { escapeHtml, safeUrl } from '@/utils/dom';
+import { isInQueue } from '@/features/readingQueue';
 
 /**
  * Card wrapper class list, driven by selection state (monolith parity).
@@ -60,23 +61,30 @@ function sourceFileHtml(sourceFileName, fileLabel) {
  * `#`-tag, the 相似 button, the original + Instapaper links, and the
  * delete button. A starred bookmark prefixes a decorative pink ❤ to the
  * source-file badge (announced via its aria-label); starring itself happens
- * in the reader modal, so the card carries no favorite control. No DOM
+ * in the reader modal, so the card carries no favorite control. When the
+ * bookmark is in the reading queue, an amber queue indicator appears next to
+ * the title and the card footer gains an "移出佇列" button. No DOM
  * reads — this is a pure string builder.
  *
  * @param {object} opts
  * @param {import('../../core/model/BookmarkRecord.js').BookmarkRecord} opts.bookmark
  * @param {string} opts.domain  Resolved domain badge text (caller derives).
  * @param {boolean} opts.isSelected
+ * @param {boolean} opts.isInQueue  True when the bookmark is in the reading queue.
  * @returns {string}
  */
 export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
   const b = bookmark;
   const isFavorite = Boolean(b.is_favorite);
   const fileLabel = isFavorite ? '已收藏，來自檔案 ' : '來自檔案 ';
+  const queued = isInQueue(b.id);
   return `
           <div>
             <label class="flex items-baseline justify-between gap-2 cursor-pointer">
-              <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug align-middle">${escapeHtml(b.title)}</h3>
+              <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug align-middle flex items-center gap-1.5">
+                ${queued ? `<span class="queue-indicator" aria-label="已在閱讀佇列" title="已在閱讀佇列"><i class="size-3.5 text-amber-400" data-lucide="list-plus"></i></span>` : ''}
+                ${escapeHtml(b.title)}
+              </h3>
               <input type="checkbox" ${isSelected ? 'checked' : ''} class="mt-1 rounded-sm border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900 select-bookmark-cb">
             </label>
 
@@ -110,6 +118,10 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
                 </button>
                 <button class="open-linkage-btn hover:text-indigo-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" title="在概念關聯圖中檢視">
                   <i class="size-3" data-lucide="graph-star"></i> 關聯
+                </button>
+                <button class="add-queue-btn hover:text-amber-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" data-add-queue="${b.id}" title="${queued ? '移出閱讀佇列' : '加入閱讀佇列'}">
+                  <i class="size-3" data-lucide="${queued ? 'list-x' : 'list-plus'}"></i>
+                  <span>${queued ? '移出佇列' : '加入佇列'}</span>
                 </button>
               </div>
 
