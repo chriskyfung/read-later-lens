@@ -99,3 +99,12 @@ export function renderSidebarFolders() {
     });
   }
 }
+
+/**
+ * Update only the queue count badge — used after queue mutations so the
+ * sidebar counter stays in sync without a full re-render.
+ */
+export function updateQueueBadge() {
+  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
+  if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
+}
