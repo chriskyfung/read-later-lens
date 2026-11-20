@@ -7,8 +7,15 @@ export let activeTab = 'bookmarks';
 export let searchQuery = '';
 /** @type {'relevance' | 'newer' | 'older' | 'title_asc' | 'title_desc' | 'random'} */
 export let sortBy = 'relevance';
+/** @type {string[]} Ordered reading queue (FIFO). Max 100 items. */
+export let readingQueue = [];
+
 /** @type {Set<string>} */
 export let selectedIds = new Set();
+
+export function setReadingQueue(v) {
+  readingQueue = v;
+}
 
 export function setActiveFolder(v) {
   activeFolder = v;

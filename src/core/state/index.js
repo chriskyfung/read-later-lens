@@ -19,6 +19,7 @@ export {
   activeTab,
   searchQuery,
   sortBy,
+  readingQueue,
   selectedIds,
   setActiveFolder,
   setActiveLang,
@@ -26,5 +27,6 @@ export {
   setActiveTab,
   setSearchQuery,
   setSortBy,
+  setReadingQueue,
   setSelectedIds,
 } from './session.js';
