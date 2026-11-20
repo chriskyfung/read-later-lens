@@ -14,7 +14,7 @@ export {
   collectTagCounts,
 } from './service.js';
 export { initSidebarActions, getDeps } from './deps.js';
-export { renderSidebarFolders, applyTrashFallback } from './folders.js';
+export { renderSidebarFolders, applyTrashFallback, updateQueueBadge } from './folders.js';
 export { renderTagCloud } from './tags.js';
 export { renderSidebar } from './view.js';
 export { selectFolder, confirmDeleteFolder, deleteFolder } from './actions.js';
