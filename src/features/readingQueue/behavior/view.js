@@ -71,22 +71,102 @@ export function captureDomRowCount() {
  * @param {string} id Id of the row that changed.
  * @param {number} expectedDomRows Row count the DOM must still show — captured
  *   BEFORE the mutation via captureDomRowCount().
+ * @param {string} operation One of 'add', 'remove', 'move'
  * @returns {boolean} True when the patch landed; false when the DOM drifted.
  */
-export function patchQueueRow(id, expectedDomRows) {
+export function patchQueueRow(id, expectedDomRows, operation) {
   const list = document.getElementById(QUEUE_IDS.list);
   const summary = document.getElementById(QUEUE_IDS.summary);
   const emptyState = document.getElementById(QUEUE_IDS.emptyState);
+  const countBadge = document.getElementById(QUEUE_IDS.modalTitleBadge);
   if (!list || !summary || !emptyState) return false;
 
   const rows = Array.from(list.children);
+  // The DOM still shows the pre-mutation state (the caller captured its row
+  // count before mutating); a mismatch means some other render interleaved,
+  // so refuse to guess and let the caller rebuild.
   if (rows.length !== expectedDomRows) return false;
 
-  // Full re-render is simpler and safer for reorder operations (all rows
-  // change position), so we only handle add/remove here.
-  const target = rows.find((row) => row.getAttribute?.('data-queue-row') === id);
-  if (!target) return false;
+  const queued = getQueuedBookmarks();
 
-  // Rebuild the whole list since positions may have shifted.
-  return false;
+  if (operation === 'add') {
+    // Find the new item's index in the queue
+    const newIndex = queued.findIndex((b) => b.id === id);
+    if (newIndex === -1) return false;
+
+    // Create the new row
+    const newRow = document.createElement('div');
+    newRow.innerHTML = queueItemHtml({
+      bookmark: queued[newIndex],
+      index: newIndex,
+      domain: getBookmarkDomain(queued[newIndex].url),
+    });
+    const newElement = newRow.firstElementChild;
+
+    // Insert at the correct position
+    if (newIndex < rows.length) {
+      list.insertBefore(newElement, rows[newIndex]);
+    } else {
+      list.appendChild(newElement);
+    }
+
+    // Update indices for all rows after the new one
+    const allRows = Array.from(list.children);
+    allRows.forEach((row, i) => {
+      const indexSpan = row.querySelector('.text-xs.text-slate-500.font-mono.w-6.text-right');
+      if (indexSpan) indexSpan.textContent = String(i + 1);
+      row.dataset.queueRow = queued[i].id;
+      row.dataset.openReader = queued[i].id;
+      // Update all data attributes
+      const dragHandle = row.querySelector('[data-drag-handle]');
+      if (dragHandle) dragHandle.dataset.dragHandle = queued[i].id;
+      const moveTop = row.querySelector('[data-move-top]');
+      if (moveTop) moveTop.dataset.moveTop = queued[i].id;
+      const moveBottom = row.querySelector('[data-move-bottom]');
+      if (moveBottom) moveBottom.dataset.moveBottom = queued[i].id;
+      const removeBtn = row.querySelector('[data-remove-queue]');
+      if (removeBtn) removeBtn.dataset.removeQueue = queued[i].id;
+    });
+  } else if (operation === 'remove') {
+    const target = rows.find((row) => row.getAttribute?.('data-queue-row') === id);
+    if (!target) return false;
+    target.remove();
+
+    // Update indices for remaining rows
+    const allRows = Array.from(list.children);
+    allRows.forEach((row, i) => {
+      const indexSpan = row.querySelector('.text-xs.text-slate-500.font-mono.w-6.text-right');
+      if (indexSpan) indexSpan.textContent = String(i + 1);
+      row.dataset.queueRow = queued[i].id;
+      row.dataset.openReader = queued[i].id;
+      const dragHandle = row.querySelector('[data-drag-handle]');
+      if (dragHandle) dragHandle.dataset.dragHandle = queued[i].id;
+      const moveTop = row.querySelector('[data-move-top]');
+      if (moveTop) moveTop.dataset.moveTop = queued[i].id;
+      const moveBottom = row.querySelector('[data-move-bottom]');
+      if (moveBottom) moveBottom.dataset.moveBottom = queued[i].id;
+      const removeBtn = row.querySelector('[data-remove-queue]');
+      if (removeBtn) removeBtn.dataset.removeQueue = queued[i].id;
+    });
+  } else if (operation === 'move') {
+    // For move operations, full re-render is simpler and safer
+    return false;
+  }
+
+  // Update summary and badge
+  if (countBadge) countBadge.textContent = String(queued.length);
+  summary.textContent = `${queued.length} 個項目`;
+
+  if (queued.length === 0) {
+    emptyState.classList.remove('hidden');
+  } else {
+    emptyState.classList.add('hidden');
+  }
+
+  // Re-initialize Lucide icons for new elements
+  import('@/utils/lucide').then(({ initializeLucideIcons }) => {
+    initializeLucideIcons({ GripVertical, ListStart, ListEnd, ListX });
+  });
+
+  return true;
 }

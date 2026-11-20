@@ -50,7 +50,7 @@ import {
 } from '@/utils/dom';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
 import { renderBookmarkCards } from '@/features/bookmarks';
-import { persistAfterAction } from '@/app/persist.js';
+import { persistAfterActionFireAndForget } from '@/app/persist.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 
 /**
@@ -112,14 +112,14 @@ export function registerModalListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       showToast('已加入閱讀佇列');
     } else if (await removeFromQueue(id)) {
       syncReaderQueueButton(id);
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       showToast('已移出閱讀佇列');
     }
   });
