@@ -9,7 +9,7 @@
 
 import { getBookmarkById } from '@/core/state';
 import { safeUrl } from '@/utils/dom';
-import { isInQueue } from '@/features/readingQueue/behavior';
+import { isInQueue } from '@/features/readingQueue/behavior/service.js';
 import { applyFavoriteVariant } from './favorite.js';
 import { applyQueueVariant } from './queue.js';
 import { setReaderBookmarkId } from './state.js';

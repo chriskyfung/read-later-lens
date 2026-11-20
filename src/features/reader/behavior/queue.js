@@ -40,11 +40,11 @@ export const QUEUE_ALL = [
  * Apply the on/off variant to the queue button (single remove + add).
  *
  * @param {HTMLElement} queueBtn
- * @param {boolean} isQueud
+ * @param {boolean} isQueued
  */
-export function applyQueueVariant(queueBtn, isQueud) {
+export function applyQueueVariant(queueBtn, isQueued) {
   queueBtn.classList.remove(...QUEUE_ALL);
-  queueBtn.classList.add(...(isQueud ? QUEUE_ON : QUEUE_OFF));
-  queueBtn.setAttribute('aria-pressed', String(isQueud));
-  queueBtn.title = isQueud ? '移出閱讀佇列' : '加入閱讀佇列';
+  queueBtn.classList.add(...(isQueued ? QUEUE_ON : QUEUE_OFF));
+  queueBtn.setAttribute('aria-pressed', String(isQueued));
+  queueBtn.title = isQueued ? '移出閱讀佇列' : '加入閱讀佇列';
 }

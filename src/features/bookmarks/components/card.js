@@ -39,11 +39,6 @@ function tagsHtml(tags) {
     .join('');
 }
 
-function queneIndicatorHtml(queued) {
-  if (!queued) return '';
-  return `<div class="queue-indicator" aria-label="已在閱讀佇列" title="已在閱讀佇列"><i class="size-3 text-amber-400" data-lucide="list-plus"></i></div>`;
-}
-
 function favoriteIconHtml(isFavorite) {
   if (!isFavorite) return '';
   return `<div aria-hidden="true" class="text-pink-500">
@@ -86,7 +81,10 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
   return `
           <div>
             <label class="flex items-baseline justify-between gap-2 cursor-pointer">
-              <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug align-middle">${escapeHtml(b.title)}</h3>
+              <h3 class="font-bold text-sm text-slate-100 group-hover:text-indigo-300 transition line-clamp-2 mb-1.5 leading-snug align-middle flex items-center gap-1.5">
+                ${queued ? `<span class="queue-indicator" aria-label="已在閱讀佇列" title="已在閱讀佇列"><i class="size-3.5 text-amber-400" data-lucide="list-plus"></i></span>` : ''}
+                ${escapeHtml(b.title)}
+              </h3>
               <input type="checkbox" ${isSelected ? 'checked' : ''} class="mt-1 rounded-sm border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900 select-bookmark-cb">
             </label>
 
@@ -102,7 +100,6 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
                 <div class="text-[10px] bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded-sm border border-indigo-800/50 truncate max-w-35">${escapeHtml(domain)}</div>
               </div>
               <div class="flex items-center gap-2.5">
-                ${queneIndicatorHtml(queued)}
                 ${favoriteIconHtml(isFavorite)}
                 ${sourceFileHtml(b.source_file_name, fileLabel)}
               </div>
@@ -122,13 +119,13 @@ export function bookmarkCardHtml({ bookmark, domain, isSelected }) {
                 <button class="open-linkage-btn hover:text-indigo-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" title="在概念關聯圖中檢視">
                   <i class="size-3" data-lucide="graph-star"></i> 關聯
                 </button>
+                <button class="add-queue-btn hover:text-amber-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition" data-add-queue="${escapeHtml(b.id)}" title="${queued ? '移出閱讀佇列' : '加入閱讀佇列'}">
+                  <i class="size-3" data-lucide="${queued ? 'list-x' : 'list-plus'}"></i>
+                  <span>${queued ? '移出佇列' : '加入佇列'}</span>
+                </button>
               </div>
 
               <div class="flex items-center gap-1">
-                <button class="add-queue-btn text-slate-400 hover:text-slate-100 p-1" data-add-queue="${escapeHtml(b.id)}" title="${queued ? '移出閱讀佇列' : '加入閱讀佇列'}">
-                <i class="size-4" data-lucide="${queued ? 'list-x' : 'list-plus'}"></i>
-                </button>
-                <span aria-hidden="true" class="w-2"></span>
                 <a href="${escapeHtml(safeUrl(b.url))}" target="_blank" title="前往原始網站" class="text-slate-400 hover:text-slate-100 p-1">
                   <i class="size-4" data-lucide="external-link"></i>
                 </a>
