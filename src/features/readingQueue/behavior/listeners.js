@@ -27,7 +27,7 @@ let draggedId = null;
 /**
  * Compute the zero-based insert index for a drop on a target row.
  * If the pointer is in the lower half of the target row, insert after it;
- * otherwise insert before it.
+ * otherwise insert before it. Accounts for scroll position.
  *
  * @param {HTMLElement} targetRow
  * @param {number} clientY
@@ -123,32 +123,35 @@ export function registerQueueListeners() {
     const row = handle.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
     if (!row) return;
 
-    draggedId = row.dataset.queueRow;
+    // Store dragged id in dataTransfer (survives dragend→drop race)
+    const id = row.dataset.queueRow;
+    draggedId = id;
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', draggedId);
+    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.setDragImage(row, 0, 0);
 
     // Visual feedback on the dragged row
-    row.classList.add('opacity-40', 'rotate-1', 'shadow-lg');
-    e.dataTransfer.setDragImage(row, 0, 0);
+    row.classList.add('dragging');
   });
 
   list?.addEventListener('dragend', (e) => {
-    e.target
-      .closest(`[${QUEUE_DATA_ATTRS.queueRow}]`)
-      ?.classList.remove('opacity-40', 'rotate-1', 'shadow-lg');
+    const row = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
+    row?.classList.remove('dragging');
     document.querySelectorAll('#queueList .drag-over').forEach((el) => {
       el.classList.remove('drag-over');
     });
-    draggedId = null;
+    // NOTE: do NOT clear draggedId here — dragend fires before drop in Chrome.
+    // Clear it at the end of the drop handler instead.
   });
 
   list?.addEventListener('dragover', (e) => {
-    if (!draggedId) return;
+    const data = e.dataTransfer.getData('text/plain');
+    if (!data) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 
     const row = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    if (row && row.dataset.queueRow !== draggedId) {
+    if (row && row.dataset.queueRow !== data) {
       row.classList.add('drag-over');
     }
   });
@@ -162,10 +165,12 @@ export function registerQueueListeners() {
 
   list?.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (!draggedId) return;
+    // Read dragged id from dataTransfer (not the module variable, which may be cleared by dragend)
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
 
     const targetRow = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    if (!targetRow || targetRow.dataset.queueRow === draggedId) {
+    if (!targetRow || targetRow.dataset.queueRow === id) {
       document.querySelectorAll('#queueList .drag-over').forEach((el) => {
         el.classList.remove('drag-over');
       });
@@ -173,7 +178,7 @@ export function registerQueueListeners() {
     }
 
     const idx = dropIndex(targetRow, e.clientY);
-    moveQueueItem(draggedId, idx);
+    moveQueueItem(id, idx);
     renderQueueView();
     updateQueueBadge();
     renderBookmarkCards();
