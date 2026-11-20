@@ -12,10 +12,15 @@ import {
   moveQueueItemToTop,
   moveQueueItemToBottom,
   clearQueue,
+  getQueuedBookmarks,
 } from '@/features/readingQueue';
 import { renderQueueView } from './view.js';
 import { QUEUE_IDS, QUEUE_DATA_ATTRS } from './constants.js';
 import { closeQueueModal } from './controller.js';
+import { updateQueueBadge } from '@/features/sidebar/behavior';
+import { renderBookmarkCards } from '@/features/bookmarks';
+import { persistAfterAction } from '@/app/persist.js';
+import { showToast } from '@/utils/dom';
 
 let draggedId = null;
 
@@ -51,8 +56,13 @@ export function registerQueueListeners() {
   // --- Clear queue button ---
   clearBtn?.addEventListener('click', () => {
     if (window.confirm('確定要清空閱讀佇列嗎？')) {
+      const countBefore = getQueuedBookmarks().length;
       clearQueue();
       renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      if (countBefore > 0) showToast(`已清空閱讀佇列（${countBefore} 項）`);
     }
   });
 
@@ -64,6 +74,10 @@ export function registerQueueListeners() {
       e.stopPropagation();
       moveQueueItemToTop(moveTopBtn.dataset.moveTop);
       renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      showToast('已移至最上層');
       return;
     }
 
@@ -73,6 +87,10 @@ export function registerQueueListeners() {
       e.stopPropagation();
       moveQueueItemToBottom(moveBottomBtn.dataset.moveBottom);
       renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      showToast('已移至最下層');
       return;
     }
 
@@ -82,6 +100,10 @@ export function registerQueueListeners() {
       e.stopPropagation();
       removeFromQueue(removeBtn.dataset.removeQueue);
       renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      showToast('已移出閱讀佇列');
       return;
     }
 
@@ -153,6 +175,10 @@ export function registerQueueListeners() {
     const idx = dropIndex(targetRow, e.clientY);
     moveQueueItem(draggedId, idx);
     renderQueueView();
+    updateQueueBadge();
+    renderBookmarkCards();
+    persistAfterAction();
+    showToast('已調整佇列順序');
 
     document.querySelectorAll('#queueList .drag-over').forEach((el) => {
       el.classList.remove('drag-over');
