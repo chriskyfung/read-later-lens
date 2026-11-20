@@ -20,7 +20,7 @@ export function queueModalHtml() {
           <div class="flex items-center gap-2">
             <h2 id="queueTitle" class="text-lg font-semibold text-white flex items-center gap-2">
               <i class="size-5" data-lucide="list-clock"></i> 閱讀佇列
-              <span id="queueCountBadge" class="bg-amber-900/50 text-amber-200 text-xs px-2 py-0.5 rounded-full">0</span>
+              <span id="queueModalCountBadge" class="bg-amber-900/50 text-amber-200 text-xs px-2 py-0.5 rounded-full">0</span>
             </h2>
           </div>
           <button id="closeQueueBtn" class="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition" aria-label="關閉閱讀佇列">

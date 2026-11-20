@@ -23,7 +23,7 @@ export function renderQueueView() {
   const list = document.getElementById(QUEUE_IDS.list);
   const summary = document.getElementById(QUEUE_IDS.summary);
   const emptyState = document.getElementById(QUEUE_IDS.emptyState);
-  const countBadge = document.getElementById(QUEUE_IDS.titleBadge);
+  const countBadge = document.getElementById(QUEUE_IDS.modalTitleBadge);
   if (!list || !summary || !emptyState) return false;
 
   const queued = getQueuedBookmarks();
