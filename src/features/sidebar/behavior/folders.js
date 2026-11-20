@@ -70,6 +70,8 @@ export function renderSidebarFolders() {
   if (allCountBadge) allCountBadge.innerText = String(active);
   if (trashCountBadge) trashCountBadge.innerText = String(trashed);
   if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
+  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
+  if (queueFolderBtn) queueFolderBtn.classList.toggle('hidden', getQueueLength() === 0);
 
   const isAllActive = activeFolder === FOLDER_ALL;
   if (allFolderBtn) {
@@ -106,5 +108,8 @@ export function renderSidebarFolders() {
  */
 export function updateQueueBadge() {
   const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
-  if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
+  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
+  const length = getQueueLength();
+  if (queueCountBadge) queueCountBadge.innerText = String(length);
+  if (queueFolderBtn) queueFolderBtn.classList.toggle('hidden', length === 0);
 }
