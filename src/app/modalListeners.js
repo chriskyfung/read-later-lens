@@ -37,6 +37,7 @@ import {
   registerQueueListeners,
   addToQueue,
   removeFromQueue,
+  renderQueueView,
 } from '@/features/readingQueue/behavior';
 import {
   closeLayer,
@@ -45,7 +46,11 @@ import {
   topLayer,
   topLayerId,
   trapFocus,
+  showToast,
 } from '@/utils/dom';
+import { updateQueueBadge } from '@/features/sidebar/behavior';
+import { renderBookmarkCards } from '@/features/bookmarks';
+import { persistAfterAction } from '@/app/persist.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 
 /**
@@ -104,8 +109,18 @@ export function registerModalListeners() {
     if (!id) return;
     if (await addToQueue(id)) {
       syncReaderQueueButton(id);
+      renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      showToast('已加入閱讀佇列');
     } else if (await removeFromQueue(id)) {
       syncReaderQueueButton(id);
+      renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterAction();
+      showToast('已移出閱讀佇列');
     }
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
