@@ -19,7 +19,7 @@ export function queueModalHtml() {
         <header class="shrink-0 flex items-center justify-between border-b border-slate-700 px-5 py-4">
           <div class="flex items-center gap-2">
             <h2 id="queueTitle" class="text-lg font-semibold text-white flex items-center gap-2">
-              <i class="size-5" data-lucide="list-plus"></i> 閱讀佇列
+              <i class="size-5" data-lucide="list-clock"></i> 閱讀佇列
               <span id="queueCountBadge" class="bg-amber-900/50 text-amber-200 text-xs px-2 py-0.5 rounded-full">0</span>
             </h2>
           </div>
