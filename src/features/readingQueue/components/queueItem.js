@@ -25,13 +25,14 @@ export function queueItemHtml({ bookmark, index, domain }) {
       data-open-reader="${b.id}"
       aria-roledescription="可拖曳排序項目">
       <!-- Drag handle -->
-      <button class="drag-handle text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 rounded transition-colors flex-shrink-0"
+      <span class="drag-handle text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 rounded transition-colors flex-shrink-0 select-none"
         data-drag-handle="${b.id}"
         aria-label="拖曳排序"
         tabindex="-1"
-        title="拖曳以重新排序">
+        title="拖曳以重新排序"
+        draggable="false">
         <i class="size-4" data-lucide="grip-vertical"></i>
-      </button>
+      </span>
 
       <span class="text-xs text-slate-500 font-mono w-6 text-right">${displayIndex}</span>
 

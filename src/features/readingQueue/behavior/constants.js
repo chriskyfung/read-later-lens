@@ -15,7 +15,10 @@ export const QUEUE_IDS = {
   summary: 'queueSummary',
   clearBtn: 'clearQueueBtn',
   closeBtn: 'closeQueueBtn',
+  // Sidebar queue badge
   titleBadge: 'queueCountBadge',
+  // Queue modal header badge (unique ID to avoid collision with sidebar)
+  modalTitleBadge: 'queueModalCountBadge',
 };
 
 /**
