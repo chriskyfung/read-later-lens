@@ -26,7 +26,7 @@ export function sidebarFoldersSectionHtml() {
           <button data-folder="QUEUE" id="queueFolderBtn"
             class="folder-btn w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between text-slate-300 border border-transparent hover:bg-slate-700/50">
             <span class="flex items-center gap-2 truncate">
-              <i class="size-4" data-lucide="list-plus"></i>
+              <i class="size-4" data-lucide="list-clock"></i>
               <span class="truncate">閱讀佇列 (Reading Queue)</span>
             </span>
             <span id="queueCountBadge" class="bg-amber-900/50 text-amber-200 text-xs px-1.5 py-0.5 rounded-sm">0</span>
