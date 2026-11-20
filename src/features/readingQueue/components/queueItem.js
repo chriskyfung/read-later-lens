@@ -42,21 +42,21 @@ export function queueItemHtml({ bookmark, index, domain }) {
       </div>
 
       <!-- Hover actions -->
-      <div class="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button class="move-top-btn hover:text-sky-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition text-xs"
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button class="move-top-btn hover:text-sky-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
           data-move-top="${b.id}"
           title="移至最上層">
-          <i class="size-3" data-lucide="chevrons-up"></i>
+          <i class="size-4" data-lucide="list-start"></i>
         </button>
-        <button class="move-bottom-btn hover:text-sky-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition text-xs"
+        <button class="move-bottom-btn hover:text-sky-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
           data-move-bottom="${b.id}"
           title="移至最下層">
-          <i class="size-3" data-lucide="chevrons-down"></i>
+          <i class="size-4" data-lucide="list-end"></i>
         </button>
-        <button class="remove-queue-btn hover:text-rose-300 flex items-center gap-1 bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded-sm transition text-xs"
+        <button class="remove-queue-btn hover:text-rose-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
           data-remove-queue="${b.id}"
           title="移出佇列">
-          <i class="size-3" data-lucide="list-x"></i>
+          <i class="size-4" data-lucide="list-x"></i>
         </button>
       </div>
     </div>
