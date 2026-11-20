@@ -15,4 +15,5 @@ export {
   openReaderModal,
   closeReaderModal,
   applyFavoriteVariant,
+  syncReaderQueueButton,
 } from './behavior';
