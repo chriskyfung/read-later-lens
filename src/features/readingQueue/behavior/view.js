@@ -11,6 +11,8 @@ import { queueItemHtml } from '../components';
 import { getQueuedBookmarks } from './service.js';
 import { QUEUE_IDS } from './constants.js';
 import { getBookmarkDomain } from '@/utils/url.js';
+import { initializeLucideIcons } from '@/utils/lucide';
+import { GripVertical, ListStart, ListEnd, ListX } from 'lucide';
 
 /**
  * Render the queue modal's list + summary + empty state.
@@ -48,6 +50,7 @@ export function renderQueueView() {
     )
     .join('');
 
+  initializeLucideIcons({ GripVertical, ListStart, ListEnd, ListX });
   return true;
 }
 
