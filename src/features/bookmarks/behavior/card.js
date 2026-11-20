@@ -15,8 +15,14 @@ import { toggleSelectBookmark } from './selection.js';
 import { renderBookmarkCards } from './render.js'; // eslint-disable-line import/no-cycle
 import { isInQueue, addToQueue, removeFromQueue } from '@/features/readingQueue';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
-import { persistAfterAction } from '@/app/persist.js'; // eslint-disable-line import/no-cycle
+import { persistAfterActionFireAndForget } from '@/app/persist.js'; // eslint-disable-line import/no-cycle
 import { showToast } from '@/utils/dom';
+import {
+  renderQueueView,
+  patchQueueRow,
+  captureDomRowCount,
+} from '@/features/readingQueue/behavior/view.js';
+import { QUEUE_IDS } from '@/features/readingQueue/behavior/constants.js';
 
 // Descendants that own their own click behaviour; clicking them must NOT
 // trigger the card's "open reader" handler. Delete is delegated at the grid
@@ -60,16 +66,27 @@ export function createBookmarkCard(bookmark) {
     queueBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const wasInQueue = isInQueue(bookmark.id);
+      const modalOpen = !document.getElementById(QUEUE_IDS.modal)?.classList.contains('hidden');
+
       if (wasInQueue) {
+        const expectedRows = modalOpen ? captureDomRowCount() : 0;
         removeFromQueue(bookmark.id);
+        if (modalOpen) {
+          const patched = patchQueueRow(bookmark.id, expectedRows, 'remove');
+          if (!patched) renderQueueView();
+        }
         showToast('已移出閱讀佇列');
       } else {
         addToQueue(bookmark.id);
+        if (modalOpen) {
+          const patched = patchQueueRow(bookmark.id, 0, 'add');
+          if (!patched) renderQueueView();
+        }
         showToast('已加入閱讀佇列');
       }
       renderBookmarkCards();
       updateQueueBadge();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
     });
   }
 

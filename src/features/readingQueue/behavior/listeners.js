@@ -14,15 +14,15 @@ import {
   clearQueue,
   getQueuedBookmarks,
 } from '@/features/readingQueue';
-import { renderQueueView } from './view.js';
+import { renderQueueView, patchQueueRow, captureDomRowCount } from './view.js';
 import { QUEUE_IDS, QUEUE_DATA_ATTRS } from './constants.js';
 import { closeQueueModal } from './controller.js';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
 import { renderBookmarkCards } from '@/features/bookmarks';
-import { persistAfterAction } from '@/app/persist.js';
+import { persistAfterActionFireAndForget } from '@/app/persist.js';
 import { showToast } from '@/utils/dom';
 
-let draggedId = null;
+// let draggedId = null; // Not needed - using dataTransfer instead
 
 /**
  * Compute the zero-based insert index for a drop on a target row.
@@ -61,7 +61,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       if (countBefore > 0) showToast(`已清空閱讀佇列（${countBefore} 項）`);
     }
   });
@@ -76,7 +76,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       showToast('已移至最上層');
       return;
     }
@@ -89,7 +89,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       showToast('已移至最下層');
       return;
     }
@@ -98,11 +98,14 @@ export function registerQueueListeners() {
     const removeBtn = e.target.closest(`[${QUEUE_DATA_ATTRS.removeQueue}]`);
     if (removeBtn) {
       e.stopPropagation();
-      removeFromQueue(removeBtn.dataset.removeQueue);
-      renderQueueView();
+      const id = removeBtn.dataset.removeQueue;
+      const expectedRows = captureDomRowCount();
+      removeFromQueue(id);
+      const patched = patchQueueRow(id, expectedRows, 'remove');
+      if (!patched) renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterAction();
+      persistAfterActionFireAndForget();
       showToast('已移出閱讀佇列');
       return;
     }
@@ -125,7 +128,6 @@ export function registerQueueListeners() {
 
     // Store dragged id in dataTransfer (survives dragend→drop race)
     const id = row.dataset.queueRow;
-    draggedId = id;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.setDragImage(row, 0, 0);
@@ -182,12 +184,12 @@ export function registerQueueListeners() {
     renderQueueView();
     updateQueueBadge();
     renderBookmarkCards();
-    persistAfterAction();
+    persistAfterActionFireAndForget();
     showToast('已調整佇列順序');
 
     document.querySelectorAll('#queueList .drag-over').forEach((el) => {
       el.classList.remove('drag-over');
     });
-    draggedId = null;
+    // Clear any potential module-level draggedId (if still used elsewhere)
   });
 }

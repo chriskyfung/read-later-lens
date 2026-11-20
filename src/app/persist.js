@@ -67,4 +67,28 @@ async function persistAfterAction() {
   return { persisted, conflict };
 }
 
+/**
+ * Fire-and-forget persist for non-critical operations (e.g., reading queue mutations).
+ * Returns immediately with optimistic success, shows toast on failure.
+ * @returns {Promise<{persisted: boolean, conflict: boolean}>}
+ */
+export async function persistAfterActionFireAndForget() {
+  // Fire-and-forget: don't await the save, let it run in background
+  // This avoids blocking the UI thread for 1-3 seconds
+  persistCore()
+    .then(({ persisted, conflict }) => {
+      if (!persisted && !conflict) {
+        showToast(PERSIST_WRITE_FAILED_MESSAGE);
+      } else if (conflict) {
+        showToast(STALE_STATE_MESSAGE);
+      }
+    })
+    .catch((err) => {
+      console.warn('Persist after action failed:', err);
+    });
+
+  // Return immediately with optimistic success
+  return { persisted: true, conflict: false };
+}
+
 export { persistCore, persistAndRender, persistAfterAction };
