@@ -18,6 +18,8 @@ export const SIDEBAR_IDS = {
   allCountBadge: 'allCountBadge',
   trashFolderBtn: 'trashFolderBtn',
   trashCountBadge: 'trashCountBadge',
+  queueFolderBtn: 'queueFolderBtn',
+  queueCountBadge: 'queueCountBadge',
   tagFilterCloud: 'tagFilterCloud',
   languageFilters: 'languageFilters',
   storageUsageText: 'storageUsageText',

@@ -25,6 +25,7 @@ import {
   FOLDER_TRASH,
 } from './constants.js';
 import { partitionBookmarks, countActiveByFolder } from './service.js';
+import { getQueueLength } from '@/features/readingQueue';
 
 /**
  * Fallback policy: with an empty trash, the TRASH pseudo-row shows nothing, so
@@ -59,6 +60,7 @@ export function renderSidebarFolders() {
   const allCountBadge = document.getElementById(SIDEBAR_IDS.allCountBadge);
   const trashFolderBtn = document.getElementById(SIDEBAR_IDS.trashFolderBtn);
   const trashCountBadge = document.getElementById(SIDEBAR_IDS.trashCountBadge);
+  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
 
   const { activeList, active, trashed } = partitionBookmarks();
 
@@ -67,6 +69,7 @@ export function renderSidebarFolders() {
   if (totalSourceCount) totalSourceCount.innerText = String(sourceFiles.size);
   if (allCountBadge) allCountBadge.innerText = String(active);
   if (trashCountBadge) trashCountBadge.innerText = String(trashed);
+  if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
 
   const isAllActive = activeFolder === FOLDER_ALL;
   if (allFolderBtn) {
