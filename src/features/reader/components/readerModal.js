@@ -61,7 +61,7 @@ export function readerModalHtml() {
           </button>
           <button id="readerQueueBtn" title="加入/移出閱讀佇列" aria-label="閱讀佇列"
             class="bg-slate-800 hover:bg-amber-100 text-amber-400 hover:text-slate-900 text-xs px-4 py-2 rounded-lg border border-amber-400/60 hover:border-amber-400 flex items-center gap-1">
-            <i class="size-3.5" data-lucide="list-plus"></i>
+            <i class="size-3.5" data-lucide="list-clock"></i>
             <span>佇列</span>
           </button>
         </div>

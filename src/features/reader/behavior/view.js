@@ -9,8 +9,9 @@
 
 import { getBookmarkById } from '@/core/state';
 import { safeUrl } from '@/utils/dom';
-import { isInQueue } from '@/features/readingQueue/behavior/service.js';
+import { isInQueue } from '@/features/readingQueue/behavior';
 import { applyFavoriteVariant } from './favorite.js';
+import { applyQueueVariant } from './queue.js';
 import { setReaderBookmarkId } from './state.js';
 
 /**
@@ -42,6 +43,10 @@ export function renderReaderModal(bookmarkId) {
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
   if (favoriteBtn) applyFavoriteVariant(favoriteBtn, Boolean(bookmark.is_favorite));
 
+  const queueBtn = document.getElementById('readerQueueBtn');
+  console.log();
+  if (queueBtn) applyQueueVariant(queueBtn, isInQueue(bookmarkId));
+
   return true;
 }
 
@@ -69,14 +74,8 @@ export function syncReaderFavoriteButton(bookmarkId) {
  * @returns {boolean} Whether the button was synced.
  */
 export function syncReaderQueueButton(bookmarkId) {
-  const bookmark = getBookmarkById(bookmarkId);
   const queueBtn = document.getElementById('readerQueueBtn');
-  if (!bookmark || !queueBtn) return false;
-  const queued = isInQueue(bookmarkId);
-  const icon = queueBtn.querySelector('i[data-lucide]');
-  const label = queueBtn.querySelector('span');
-  if (icon) icon.setAttribute('data-lucide', queued ? 'list-x' : 'list-plus');
-  if (label) label.textContent = queued ? '移出佇列' : '佇列';
-  queueBtn.title = queued ? '移出閱讀佇列' : '加入閱讀佇列';
+  if (!queueBtn) return false;
+  applyQueueVariant(queueBtn, isInQueue(bookmarkId));
   return true;
 }
