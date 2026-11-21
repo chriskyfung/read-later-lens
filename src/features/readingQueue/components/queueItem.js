@@ -20,17 +20,18 @@ export function queueItemHtml({ bookmark, index, domain }) {
   const displayIndex = index + 1;
   return `
     <div class="queue-item bg-slate-700/50 border border-slate-600/50 rounded-xl p-3 flex items-center gap-3 group cursor-pointer hover:bg-slate-700 transition-colors"
-      draggable="true"
+      draggable="false"
       data-queue-row="${b.id}"
       data-open-reader="${b.id}"
       aria-roledescription="可拖曳排序項目">
-      <!-- Drag handle -->
+      <!-- Drag handle — the only draggable element, so a drag never starts from
+           the row's click-to-open-reader surface. -->
       <span class="drag-handle text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 rounded transition-colors shrink-0 select-none"
         data-drag-handle="${b.id}"
         aria-label="拖曳排序"
         tabindex="-1"
         title="拖曳以重新排序"
-        draggable="false">
+        draggable="true">
         <i class="size-4" data-lucide="grip-vertical"></i>
       </span>
 

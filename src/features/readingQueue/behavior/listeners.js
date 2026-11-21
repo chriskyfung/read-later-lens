@@ -231,9 +231,9 @@ export function registerQueueListeners() {
     if (!draggedElement) return;
 
     const id = draggedElement.dataset.queueRow;
-    const _afterElement = getDragAfterElement(list, e.clientY);
 
-    // Find the new index by comparing with current DOM order
+    // dragover() already moved the row to its final visual position, so the
+    // drop index is simply its current DOM position.
     const allRows = Array.from(list.querySelectorAll(`[${QUEUE_DATA_ATTRS.queueRow}]`));
     const newIndex = allRows.indexOf(draggedElement);
 
