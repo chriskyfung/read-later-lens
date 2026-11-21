@@ -18,7 +18,8 @@ import {
   Layers2,
   BookOpen,
   ListPlus,
-  ListX,
+  Plus,
+  Minus,
 } from 'lucide';
 
 /**
@@ -61,7 +62,8 @@ export function renderBookmarkCards() {
       Layers2,
       BookOpen,
       ListPlus,
-      ListX,
+      Plus,
+      Minus,
     },
     root: grid,
   });
