@@ -55,6 +55,7 @@ import {
   ZoomOut,
   Info,
   TriangleExclamationPoint,
+  BookOpen,
 } from 'lucide';
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
@@ -83,6 +84,7 @@ async function boot() {
       ZoomOut,
       Info,
       TriangleExclamationPoint,
+      BookOpen,
     },
   });
   initHeaderBehavior({ render: renderAll, persistAndRender });
