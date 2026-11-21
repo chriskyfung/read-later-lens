@@ -111,7 +111,7 @@ export default [
       // Fails when the same module is imported more than once.
       'import/no-duplicates': 'warn',
       // Fails when circular imports are detected.
-      'import/no-cycle': 'warn',
+      'import/no-cycle': 'error',
     },
   },
   prettier,
