@@ -22,25 +22,34 @@ import { renderBookmarkCards } from '@/features/bookmarks';
 import { persistAfterActionFireAndForget } from '@/app/persist.js';
 import { showToast } from '@/utils/dom';
 
-// let draggedId = null; // Not needed - using dataTransfer instead
-
 /**
- * Compute the zero-based insert index for a drop on a target row.
- * If the pointer is in the lower half of the target row, insert after it;
- * otherwise insert before it. Accounts for scroll position.
+ * Find the element after which the dragged item should be inserted,
+ * based on the mouse Y position. Returns null if the item should go at the end.
+ * Similar to the reference example's getDragAfterElement.
  *
- * @param {HTMLElement} targetRow
- * @param {number} clientY
- * @returns {number}
+ * @param {HTMLElement} container The queue list container
+ * @param {number} y The clientY position of the mouse
+ * @returns {HTMLElement|null} The element after which to insert, or null for end
  */
-function dropIndex(targetRow, clientY) {
-  const rect = targetRow.getBoundingClientRect();
-  const center = rect.top + rect.height / 2;
-  const allRows = Array.from(document.getElementById(QUEUE_IDS.list)?.children ?? []);
-  const targetIndex = allRows.indexOf(targetRow);
-  const insertIdx = clientY > center ? targetIndex + 1 : targetIndex;
-  return Math.max(0, Math.min(insertIdx, allRows.length));
+function getDragAfterElement(container, y) {
+  const draggableElements = [
+    ...container.querySelectorAll(`[${QUEUE_DATA_ATTRS.queueRow}]:not(.dragging)`),
+  ];
+
+  return draggableElements.reduce(
+    (closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      }
+      return closest;
+    },
+    { offset: Number.NEGATIVE_INFINITY },
+  ).element;
 }
+
+let draggedElement = null;
 
 /**
  * Wire all queue modal interaction handlers.
@@ -160,77 +169,89 @@ export function registerQueueListeners() {
       });
     }
   });
-  // --- Drag-and-drop reorder ---
+
+  // --- Drag-and-drop reorder (matches reference example pattern) ---
   list?.addEventListener('dragstart', (e) => {
     const handle = e.target.closest(`[${QUEUE_DATA_ATTRS.dragHandle}]`);
     if (!handle) return;
     const row = handle.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
     if (!row) return;
 
-    // Store dragged id in dataTransfer (survives dragend→drop race)
-    const id = row.dataset.queueRow;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-    e.dataTransfer.setDragImage(row, 0, 0);
-
-    // Visual feedback on the dragged row
+    draggedElement = row;
     row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', row.dataset.queueRow);
+    e.dataTransfer.setDragImage(row, 0, 0);
   });
 
-  list?.addEventListener('dragend', (e) => {
-    const row = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    row?.classList.remove('dragging');
-    document.querySelectorAll('#queueList .drag-over').forEach((el) => {
-      el.classList.remove('drag-over');
+  list?.addEventListener('dragend', (_e) => {
+    if (draggedElement) {
+      draggedElement.classList.remove('dragging');
+    }
+    document.querySelectorAll(`#${QUEUE_IDS.list} .over`).forEach((el) => {
+      el.classList.remove('over');
     });
-    // NOTE: do NOT clear draggedId here — dragend fires before drop in Chrome.
-    // Clear it at the end of the drop handler instead.
+    draggedElement = null;
   });
 
   list?.addEventListener('dragover', (e) => {
-    const data = e.dataTransfer.getData('text/plain');
-    if (!data) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 
-    const row = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    if (row && row.dataset.queueRow !== data) {
-      row.classList.add('drag-over');
+    if (!draggedElement) return;
+
+    const afterElement = getDragAfterElement(list, e.clientY);
+
+    // Clear previous 'over' state
+    document.querySelectorAll(`#${QUEUE_IDS.list} .over`).forEach((el) => {
+      el.classList.remove('over');
+    });
+
+    if (afterElement) {
+      // Insert before the element we're hovering over
+      afterElement.classList.add('over');
+      list.insertBefore(draggedElement, afterElement);
+    } else {
+      // Insert at the end
+      list.appendChild(draggedElement);
     }
   });
 
   list?.addEventListener('dragleave', (e) => {
-    const row = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    if (row) {
-      row.classList.remove('drag-over');
+    // Only clear 'over' when leaving the list entirely
+    if (!list.contains(e.relatedTarget)) {
+      document.querySelectorAll(`#${QUEUE_IDS.list} .over`).forEach((el) => {
+        el.classList.remove('over');
+      });
     }
   });
 
   list?.addEventListener('drop', (e) => {
     e.preventDefault();
-    // Read dragged id from dataTransfer (not the module variable, which may be cleared by dragend)
-    const id = e.dataTransfer.getData('text/plain');
-    if (!id) return;
+    if (!draggedElement) return;
 
-    const targetRow = e.target.closest(`[${QUEUE_DATA_ATTRS.queueRow}]`);
-    if (!targetRow || targetRow.dataset.queueRow === id) {
-      document.querySelectorAll('#queueList .drag-over').forEach((el) => {
-        el.classList.remove('drag-over');
-      });
-      return;
+    const id = draggedElement.dataset.queueRow;
+    const _afterElement = getDragAfterElement(list, e.clientY);
+
+    // Find the new index by comparing with current DOM order
+    const allRows = Array.from(list.querySelectorAll(`[${QUEUE_DATA_ATTRS.queueRow}]`));
+    const newIndex = allRows.indexOf(draggedElement);
+
+    // Clear visual states
+    document.querySelectorAll(`#${QUEUE_IDS.list} .over`).forEach((el) => {
+      el.classList.remove('over');
+    });
+    draggedElement.classList.remove('dragging');
+
+    if (newIndex >= 0) {
+      moveQueueItem(id, newIndex);
+      renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterActionFireAndForget();
+      showToast('已調整佇列順序');
     }
 
-    const idx = dropIndex(targetRow, e.clientY);
-    moveQueueItem(id, idx);
-    renderQueueView();
-    updateQueueBadge();
-    renderBookmarkCards();
-    persistAfterActionFireAndForget();
-    showToast('已調整佇列順序');
-
-    document.querySelectorAll('#queueList .drag-over').forEach((el) => {
-      el.classList.remove('drag-over');
-    });
-    // Clear any potential module-level draggedId (if still used elsewhere)
+    draggedElement = null;
   });
 }
