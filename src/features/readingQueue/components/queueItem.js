@@ -25,7 +25,7 @@ export function queueItemHtml({ bookmark, index, domain }) {
       data-open-reader="${b.id}"
       aria-roledescription="可拖曳排序項目">
       <!-- Drag handle -->
-      <span class="drag-handle text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 rounded transition-colors flex-shrink-0 select-none"
+      <span class="drag-handle text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 rounded transition-colors shrink-0 select-none"
         data-drag-handle="${b.id}"
         aria-label="拖曳排序"
         tabindex="-1"
