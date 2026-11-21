@@ -35,7 +35,7 @@ import { mountModals } from '../components/modals.js';
 import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';
 import {
-  persistAndRender,
+  persistAndRender as persistAndRenderCore,
   persistAfterAction,
   persistAfterActionFireAndForget,
 } from './persist.js';
@@ -64,6 +64,10 @@ import {
   ListClock,
   ListPlus,
 } from 'lucide';
+
+// Bind the central renderer so persist.js never imports shell.js (that edge
+// formed app/persist -> app/shell -> features/bookmarks -> app/persist).
+const persistAndRender = () => persistAndRenderCore(renderAll);
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {

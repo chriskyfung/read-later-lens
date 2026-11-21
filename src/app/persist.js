@@ -13,7 +13,6 @@ import { saveState } from '../core/persistence';
 import { updateStorageUsageUI } from '@/features/sidebar';
 import { showToast } from '../utils/dom';
 import { STALE_STATE_MESSAGE } from '../core/guard.js';
-import { renderAll } from './shell.js';
 
 /** Toast text when a post-action persist write fails for a reason other than a
  * cross-tab conflict (e.g. quota, transaction abort). The conflict case keeps
@@ -41,12 +40,12 @@ async function persistCore() {
   return { persisted, conflict };
 }
 
-async function persistAndRender() {
+async function persistAndRender(render) {
   const { persisted, conflict } = await persistCore();
 
   let rendered = false;
   try {
-    renderAll();
+    render();
     rendered = true;
   } catch (err) {
     console.warn('Render failed:', err);
