@@ -11,8 +11,7 @@ import { queueItemHtml } from '../components';
 import { getQueuedBookmarks } from './service.js';
 import { QUEUE_IDS } from './constants.js';
 import { getBookmarkDomain } from '@/utils/url.js';
-import { initializeLucideIcons } from '@/utils/lucide';
-import { GripVertical, Ellipsis, ListStart, ListEnd, ListX } from 'lucide';
+import { createIcons, GripVertical, Ellipsis, ListStart, ListEnd, ListX } from 'lucide';
 
 /**
  * Render the queue modal's list + summary + empty state.
@@ -50,7 +49,7 @@ export function renderQueueView() {
     )
     .join('');
 
-  initializeLucideIcons({ GripVertical, ListStart, ListEnd, ListX });
+  createIcons({ icons: { GripVertical, Ellipsis, ListStart, ListEnd, ListX }, list });
   return true;
 }
 
@@ -163,10 +162,7 @@ export function patchQueueRow(id, expectedDomRows, operation) {
     emptyState.classList.add('hidden');
   }
 
-  // Re-initialize Lucide icons for new elements
-  import('@/utils/lucide').then(({ initializeLucideIcons }) => {
-    initializeLucideIcons({ GripVertical, Ellipsis, ListStart, ListEnd, ListX });
-  });
+  createIcons({ icons: { GripVertical, Ellipsis, ListStart, ListEnd, ListX } });
 
   return true;
 }
