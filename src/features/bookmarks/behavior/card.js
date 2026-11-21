@@ -15,7 +15,7 @@ import { toggleSelectBookmark } from './selection.js';
 import { renderBookmarkCards } from './render.js'; // eslint-disable-line import/no-cycle
 import { isInQueue, addToQueue, removeFromQueue } from '@/features/readingQueue';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
-import { persistAfterActionFireAndForget } from '@/app/persist.js'; // eslint-disable-line import/no-cycle
+import { persistAfterBookmarkAction } from './deps.js';
 import { showToast } from '@/utils/dom';
 import {
   renderQueueView,
@@ -86,7 +86,7 @@ export function createBookmarkCard(bookmark) {
       }
       renderBookmarkCards();
       updateQueueBadge();
-      persistAfterActionFireAndForget();
+      persistAfterBookmarkAction();
     });
   }
 

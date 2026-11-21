@@ -10,6 +10,7 @@ import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
 import { initDomains } from '@/features/domains';
 import { initWordCloud } from '@/features/wordcloud';
+import { initBookmarks } from '@/features/bookmarks';
 import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
@@ -33,7 +34,11 @@ import {
 import { mountModals } from '../components/modals.js';
 import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';
-import { persistAndRender, persistAfterAction } from './persist.js';
+import {
+  persistAndRender,
+  persistAfterAction,
+  persistAfterActionFireAndForget,
+} from './persist.js';
 
 import {
   createIcons,
@@ -95,6 +100,10 @@ async function boot() {
   initSidebarActions({
     persist: persistAfterAction,
     render: renderAll,
+  });
+  initBookmarks({
+    persist: persistAfterActionFireAndForget,
+    rerender: renderAll,
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
