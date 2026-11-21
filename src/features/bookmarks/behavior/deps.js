@@ -42,3 +42,13 @@ export function getBookmarksDeps() {
 export function persistAfterBookmarkAction() {
   deps.persist();
 }
+
+/**
+ * Re-render the bookmark grid via the injected hook. Lets card.js refresh the
+ * grid after a queue toggle without importing render.js (that edge formed the
+ * intra-feature render.js <-> card.js cycle). No-op before injection.
+ * @returns {void}
+ */
+export function refreshBookmarkGrid() {
+  deps.rerender();
+}

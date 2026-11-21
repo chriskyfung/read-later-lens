@@ -12,10 +12,9 @@ import { openReaderModal } from '@/features/reader';
 import { openSimilarityModal } from '@/features/similarityModal';
 import { openLinkageForBookmark } from '@/features/linkage';
 import { toggleSelectBookmark } from './selection.js';
-import { renderBookmarkCards } from './render.js'; // eslint-disable-line import/no-cycle
 import { isInQueue, addToQueue, removeFromQueue } from '@/features/readingQueue';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
-import { persistAfterBookmarkAction } from './deps.js';
+import { persistAfterBookmarkAction, refreshBookmarkGrid } from './deps.js';
 import { showToast } from '@/utils/dom';
 import {
   renderQueueView,
@@ -84,7 +83,7 @@ export function createBookmarkCard(bookmark) {
         }
         showToast('已加入閱讀佇列');
       }
-      renderBookmarkCards();
+      refreshBookmarkGrid();
       updateQueueBadge();
       persistAfterBookmarkAction();
     });

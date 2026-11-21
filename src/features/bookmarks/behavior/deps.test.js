@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { initBookmarks, getBookmarksDeps, persistAfterBookmarkAction } from './deps.js';
+import {
+  initBookmarks,
+  getBookmarksDeps,
+  persistAfterBookmarkAction,
+  refreshBookmarkGrid,
+} from './deps.js';
 
 afterEach(() => {
   // Reset to the no-op defaults so tests never leak injected spies.
@@ -41,5 +46,13 @@ describe('bookmarks behavior deps', () => {
 
     expect(persist).toHaveBeenCalledExactlyOnceWith();
     expect(rerender).not.toHaveBeenCalled();
+  });
+  it('refreshBookmarkGrid invokes only the injected rerender hook', () => {
+    const persist = vi.fn();
+    const rerender = vi.fn();
+    initBookmarks({ persist: persist, rerender });
+    refreshBookmarkGrid();
+    expect(rerender).toHaveBeenCalledExactlyOnceWith();
+    expect(persist).not.toHaveBeenCalled();
   });
 });
