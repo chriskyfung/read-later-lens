@@ -59,5 +59,6 @@ export function renderBookmarkCards() {
       Layers2,
       BookOpen,
     },
+    root: grid,
   });
 }
