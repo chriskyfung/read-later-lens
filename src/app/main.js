@@ -5,8 +5,6 @@
  */
 import '../styles/main.css';
 
-import { lazyInitializeLucideIcons } from '@/utils/lucide.js';
-
 import * as state from '../core/state';
 import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
@@ -37,32 +35,58 @@ import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';
 import { persistAndRender, persistAfterAction } from './persist.js';
 
+import {
+  createIcons,
+  CircleQuestionMark,
+  GraphStar,
+  ChartBarDecreasing,
+  Letters,
+  Orbit,
+  ExternalLink,
+  Trash,
+  X,
+  Heart,
+  SquareBookmark,
+  Search,
+  FileInput,
+  FileOutput,
+  GalleryVerticalEnd,
+  ZoomIn,
+  ZoomOut,
+  Info,
+  TriangleExclamationPoint,
+  BookOpen,
+} from 'lucide';
+
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {
   mountHeader();
   mountSidebar();
   mountWorkspace();
   mountModals();
-  await lazyInitializeLucideIcons([
-    'CircleQuestionMark',
-    'GraphStar',
-    'ChartBarDecreasing',
-    'Letters',
-    'Orbit',
-    'ExternalLink',
-    'Trash',
-    'X',
-    'Heart',
-    'SquareBookmark',
-    'Search',
-    'FileInput',
-    'FileOutput',
-    'GalleryVerticalEnd',
-    'ZoomIn',
-    'ZoomOut',
-    'Info',
-    'TriangleExclamationPoint',
-  ]);
+  createIcons({
+    icons: {
+      CircleQuestionMark,
+      GraphStar,
+      ChartBarDecreasing,
+      Letters,
+      Orbit,
+      ExternalLink,
+      Trash,
+      X,
+      Heart,
+      SquareBookmark,
+      Search,
+      FileInput,
+      FileOutput,
+      GalleryVerticalEnd,
+      ZoomIn,
+      ZoomOut,
+      Info,
+      TriangleExclamationPoint,
+      BookOpen,
+    },
+  });
   initHeaderBehavior({ render: renderAll, persistAndRender });
   initSidebarActions({
     persist: persistAfterAction,

@@ -36,6 +36,9 @@ function makeEl() {
       if (!this._bySelector[sel]) this._bySelector[sel] = makeEl();
       return this._bySelector[sel];
     },
+    querySelectorAll(_sel) {
+      return [];
+    },
     style: {},
     inert: false,
     parentElement: null,

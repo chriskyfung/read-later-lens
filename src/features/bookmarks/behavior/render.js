@@ -7,8 +7,8 @@
 import { getFilteredBookmarks } from '@/core/filters.js';
 import { updateBookmarksHeader } from './header.js';
 import { createBookmarkCard } from './card.js';
-import { initializeLucideIcons } from '@/utils/lucide.js';
 import {
+  createIcons,
   GraphStar,
   Orbit,
   ExternalLink,
@@ -48,14 +48,17 @@ export function renderBookmarkCards() {
   // [data-lucide="trash"], [data-lucide="heart"], [data-lucide="layers-2"] and
   // [data-lucide="book-open"] elements render instead of staying inert <i>
   // placeholders.
-  initializeLucideIcons({
-    GraphStar,
-    Orbit,
-    ExternalLink,
-    SquareBookmark,
-    Trash,
-    Heart,
-    Layers2,
-    BookOpen,
+  createIcons({
+    icons: {
+      GraphStar,
+      Orbit,
+      ExternalLink,
+      SquareBookmark,
+      Trash,
+      Heart,
+      Layers2,
+      BookOpen,
+    },
+    root: grid,
   });
 }
