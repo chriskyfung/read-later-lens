@@ -42,23 +42,30 @@ export function queueItemHtml({ bookmark, index, domain }) {
         <h4 class="font-medium text-slate-100 truncate">${b.title}</h4>
       </div>
 
-      <!-- Hover actions -->
-      <div class="flex items-center gap-1.5 shrink-0">
-        <button class="move-top-btn hover:text-sky-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
-          data-move-top="${b.id}"
-          title="移至最上層">
-          <i class="size-4" data-lucide="list-start"></i>
+      <!-- Action menu (3-dot dropdown) -->
+      <div class="relative" data-queue-actions="${b.id}">
+        <button class="action-menu-trigger hover:text-slate-400 hover:bg-slate-700 p-1.5 rounded transition-colors"
+          aria-label="更多操作" aria-expanded="false" aria-haspopup="true">
+          <i class="size-4" data-lucide="ellipsis"></i>
         </button>
-        <button class="move-bottom-btn hover:text-sky-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
-          data-move-bottom="${b.id}"
-          title="移至最下層">
-          <i class="size-4" data-lucide="list-end"></i>
-        </button>
-        <button class="remove-queue-btn hover:text-rose-300 flex items-center gap-1 px-2 py-1 rounded-sm transition text-xs"
-          data-remove-queue="${b.id}"
-          title="移出佇列">
-          <i class="size-4" data-lucide="list-x"></i>
-        </button>
+        <div class="action-menu absolute right-0 top-full mt-1 min-w-30 bg-slate-800 border border-slate-700 rounded-lg shadow-lg opacity-0 invisible transform translate-y-1 transition-all duration-150 z-10" role="menu">
+          <button class="move-top-btn w-full text-left px-3 py-2 text-xs hover:bg-slate-700 flex items-center gap-2"
+            data-move-top="${b.id}" role="menuitem"
+            title="移至最上層">
+            <i class="size-3.5" data-lucide="list-start"></i> 移至最上層
+          </button>
+          <button class="move-bottom-btn w-full text-left px-3 py-2 text-xs hover:bg-slate-700 flex items-center gap-2"
+            data-move-bottom="${b.id}" role="menuitem"
+            title="移至最下層">
+            <i class="size-3.5" data-lucide="list-end"></i> 移至最下層
+          </button>
+          <hr class="border-slate-700 my-1">
+          <button class="remove-queue-btn w-full text-left px-3 py-2 text-xs hover:bg-rose-900/30 text-rose-300 flex items-center gap-2"
+            data-remove-queue="${b.id}" role="menuitem"
+            title="移出佇列">
+            <i class="size-3.5" data-lucide="list-x"></i> 移出佇列
+          </button>
+        </div>
       </div>
     </div>
   `;

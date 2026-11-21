@@ -119,6 +119,47 @@ export function registerQueueListeners() {
     }
   });
 
+  // --- Action menu dropdown toggle ---
+  list?.addEventListener('click', (_e) => {
+    const trigger = _e.target.closest('[data-queue-actions] > button');
+    if (!trigger) return;
+
+    const actionsContainer = trigger.closest('[data-queue-actions]');
+    const menu = actionsContainer?.querySelector('.action-menu');
+    if (!menu) return;
+
+    // Close all other open menus
+    document.querySelectorAll('#queueList .action-menu').forEach((m) => {
+      if (m !== menu) {
+        m.classList.add('opacity-0', 'invisible', 'translate-y-1');
+        m.classList.remove('opacity-100', 'visible', 'translate-y-0');
+      }
+    });
+
+    // Toggle this menu
+    const isOpen = menu.classList.contains('opacity-100');
+    if (isOpen) {
+      menu.classList.add('opacity-0', 'invisible', 'translate-y-1');
+      menu.classList.remove('opacity-100', 'visible', 'translate-y-0');
+      trigger.setAttribute('aria-expanded', 'false');
+    } else {
+      menu.classList.remove('opacity-0', 'invisible', 'translate-y-1');
+      menu.classList.add('opacity-100', 'visible', 'translate-y-0');
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  // Close action menus when clicking outside
+  document.addEventListener('click', (_e) => {
+    if (!_e.target.closest('[data-queue-actions]')) {
+      document.querySelectorAll('#queueList .action-menu').forEach((menu) => {
+        menu.classList.add('opacity-0', 'invisible', 'translate-y-1');
+        menu.classList.remove('opacity-100', 'visible', 'translate-y-0');
+        const trigger = menu.closest('[data-queue-actions]')?.querySelector('button');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
   // --- Drag-and-drop reorder ---
   list?.addEventListener('dragstart', (e) => {
     const handle = e.target.closest(`[${QUEUE_DATA_ATTRS.dragHandle}]`);
