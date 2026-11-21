@@ -42,7 +42,7 @@ function tagsHtml(tags) {
 function queuedIconHtml(isInQueue) {
   if (!isInQueue) return '';
   return `<div aria-hidden="true" class="text-amber-500">
-    <i class="size-3" fill="currentColor" data-lucide="list-plus"></i>
+    <i class="size-3" fill="currentColor" data-lucide="list-clock"></i>
   </div>`;
 }
 
