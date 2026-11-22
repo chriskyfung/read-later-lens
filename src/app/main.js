@@ -10,6 +10,7 @@ import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
 import { initDomains } from '@/features/domains';
 import { initWordCloud } from '@/features/wordcloud';
+import { initBookmarks, renderBookmarkCards } from '@/features/bookmarks';
 import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
@@ -33,7 +34,11 @@ import {
 import { mountModals } from '../components/modals.js';
 import { registerModalListeners } from './modalListeners.js';
 import { initTrash, registerTrashListeners } from '@/features/trash';
-import { persistAndRender, persistAfterAction } from './persist.js';
+import {
+  persistAndRender as persistAndRenderCore,
+  persistAfterAction,
+  persistAfterActionFireAndForget,
+} from './persist.js';
 
 import {
   createIcons,
@@ -59,6 +64,10 @@ import {
   ListClock,
   ListPlus,
 } from 'lucide';
+
+// Bind the central renderer so persist.js never imports shell.js (that edge
+// formed app/persist -> app/shell -> features/bookmarks -> app/persist).
+const persistAndRender = () => persistAndRenderCore(renderAll);
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
 async function boot() {
@@ -95,6 +104,10 @@ async function boot() {
   initSidebarActions({
     persist: persistAfterAction,
     render: renderAll,
+  });
+  initBookmarks({
+    persist: persistAfterActionFireAndForget,
+    rerender: renderBookmarkCards,
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });

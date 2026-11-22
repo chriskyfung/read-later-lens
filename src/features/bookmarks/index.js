@@ -16,5 +16,7 @@ export {
   createBookmarkCard,
   toggleSelectBookmark,
   updateBatchActionBar,
+  initBookmarks,
+  persistAfterBookmarkAction,
   getBookmarkDomain,
 } from './behavior';
