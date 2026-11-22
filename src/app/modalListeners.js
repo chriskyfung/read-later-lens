@@ -32,6 +32,9 @@ import { openSimilarityModal, closeSimilarityModal } from '@/features/similarity
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from '@/features/workspace';
 import { closeSaveModal } from '@/io/export';
 import { closeImportModal } from '@/io/import';
+// Deep import: registerQueueListeners is not re-exported from the behavior
+// barrel because that would close the sidebar <-> readingQueue cycle.
+// modalListeners is the app wiring layer, the sanctioned place for this.
 import { registerQueueListeners } from '@/features/readingQueue/behavior/listeners.js';
 import {
   closeQueueModal,
