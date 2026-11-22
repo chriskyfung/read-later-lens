@@ -6,7 +6,15 @@
  * Semantics match the original monolith exactly.
  */
 
-import { bookmarks, activeFolder, activeLang, activeTag, searchQuery, sortBy } from './state';
+import {
+  bookmarks,
+  activeFolder,
+  activeLang,
+  activeTag,
+  searchQuery,
+  sortBy,
+  readingQueue,
+} from './state';
 import { parseSearchQuery } from './searchParser.js';
 
 /**
@@ -45,10 +53,16 @@ export function applyFilters(list) {
     filtered = filtered.filter((b) => Boolean(b.is_favorite));
   }
 
+  // Queue filter — 'is:queue' narrows to bookmarks in the reading queue (AND-ed).
+  const queueTerms = parsed.filter((t) => t.isInQueue);
+  if (queueTerms.length > 0) {
+    filtered = filtered.filter((b) => readingQueue.includes(b.id));
+  }
+
   // Keyword search (with relevance scoring).
   // Multi-term support: bare terms are AND-ed keywords; quoted phrases are
   // exact matches. Order-independent ('term1 term2' ≡ 'term2 term1').
-  const keywordTerms = parsed.filter((t) => !t.isFav);
+  const keywordTerms = parsed.filter((t) => !t.isFav && !t.isInQueue);
   if (keywordTerms.length > 0) {
     filtered = filtered
       .map((b) => {
