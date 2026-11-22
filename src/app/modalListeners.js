@@ -32,12 +32,16 @@ import { openSimilarityModal, closeSimilarityModal } from '@/features/similarity
 import { confirmDeleteBookmark, toggleFavoriteBookmark } from '@/features/workspace';
 import { closeSaveModal } from '@/io/export';
 import { closeImportModal } from '@/io/import';
+// Deep import: registerQueueListeners is not re-exported from the behavior
+// barrel because that would close the sidebar <-> readingQueue cycle.
+// modalListeners is the app wiring layer, the sanctioned place for this.
+import { registerQueueListeners } from '@/features/readingQueue/behavior/listeners.js';
 import {
   closeQueueModal,
-  registerQueueListeners,
   addToQueue,
   removeFromQueue,
   renderQueueView,
+  persistAfterQueueAction,
 } from '@/features/readingQueue/behavior';
 import {
   closeLayer,
@@ -50,7 +54,6 @@ import {
 } from '@/utils/dom';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
 import { renderBookmarkCards } from '@/features/bookmarks';
-import { persistAfterActionFireAndForget } from '@/app/persist.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 
 /**
@@ -112,14 +115,14 @@ export function registerModalListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已加入閱讀佇列');
     } else if (await removeFromQueue(id)) {
       syncReaderQueueButton(id);
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已移出閱讀佇列');
     }
   });

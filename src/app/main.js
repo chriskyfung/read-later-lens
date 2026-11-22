@@ -11,6 +11,7 @@ import { showToast } from '../utils/dom';
 import { initDomains } from '@/features/domains';
 import { initWordCloud } from '@/features/wordcloud';
 import { initBookmarks, renderBookmarkCards } from '@/features/bookmarks';
+import { initReadingQueue } from '@/features/readingQueue';
 import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
@@ -109,6 +110,7 @@ async function boot() {
     persist: persistAfterActionFireAndForget,
     rerender: renderBookmarkCards,
   });
+  initReadingQueue({ persist: persistAfterActionFireAndForget });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });
   initImporter({ persistAndRender, render: renderAll });

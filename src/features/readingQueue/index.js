@@ -24,3 +24,4 @@ export { openQueueModal, closeQueueModal } from './behavior/controller.js';
 export { renderQueueView } from './behavior/view.js';
 export { queueModalHtml } from './components/queueModal.js';
 export { queueItemHtml } from './components/queueItem.js';
+export { initReadingQueue } from './behavior';
