@@ -7,6 +7,15 @@ import { findTrashedBookmark, collectTrashIds } from './service.js';
 import { renderTrashView, patchTrashRow, captureDomRowCount } from './view.js';
 import { restoreToast, PURGE_TOAST, emptyToast, purgeConfirm, emptyConfirm } from './constants.js';
 
+/** Remove purged IDs from the reading queue so the counter stays in sync. */
+function pruneQueueAfterPurge(purgedIds) {
+  const purgedSet = new Set(purgedIds);
+  const nextQueue = state.readingQueue.filter((id) => !purgedSet.has(id));
+  if (nextQueue.length !== state.readingQueue.length) {
+    state.setReadingQueue(nextQueue);
+  }
+}
+
 /**
  * Shared post-mutation sync: selection cleanup is done by callers (single id
  * vs. batch), then persist → render → trash re-render → toast, in the exact
@@ -83,6 +92,7 @@ export async function purgeBookmark(id) {
   const domRowsBefore = captureDomRowCount();
   state.purgeBookmarks([id]);
   state.selectedIds.delete(id);
+  pruneQueueAfterPurge([id]);
   syncAfterSingleRowMutation(PURGE_TOAST, id, domRowsBefore);
   return true;
 }
@@ -119,6 +129,7 @@ export async function emptyTrash() {
 
   state.purgeBookmarks(ids);
   ids.forEach((id) => state.selectedIds.delete(id));
+  pruneQueueAfterPurge(ids);
   syncAfterMutation(emptyToast(ids.length));
   return true;
 }
