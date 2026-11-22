@@ -10,7 +10,7 @@ import { loadState } from '../core/persistence';
 import { showToast } from '../utils/dom';
 import { initDomains } from '@/features/domains';
 import { initWordCloud } from '@/features/wordcloud';
-import { initBookmarks } from '@/features/bookmarks';
+import { initBookmarks, renderBookmarkCards } from '@/features/bookmarks';
 import { renderAll } from './shell.js';
 
 import { initImporter, registerImporterListeners } from '../io/import';
@@ -107,7 +107,7 @@ async function boot() {
   });
   initBookmarks({
     persist: persistAfterActionFireAndForget,
-    rerender: renderAll,
+    rerender: renderBookmarkCards,
   });
   initWordCloud({ render: renderAll });
   initDomains({ render: renderAll });

@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe('bookmarks behavior deps', () => {
-  it('defaults to no-op persist and rerender before any injection', () => {
+  it('no-op defaults do not throw', () => {
     initBookmarks({ persist: () => {}, rerender: () => {} });
     expect(() => persistAfterBookmarkAction()).not.toThrow();
   });
@@ -47,12 +47,28 @@ describe('bookmarks behavior deps', () => {
     expect(persist).toHaveBeenCalledExactlyOnceWith();
     expect(rerender).not.toHaveBeenCalled();
   });
+
   it('refreshBookmarkGrid invokes only the injected rerender hook', () => {
     const persist = vi.fn();
     const rerender = vi.fn();
-    initBookmarks({ persist: persist, rerender });
+    initBookmarks({ persist, rerender });
     refreshBookmarkGrid();
     expect(rerender).toHaveBeenCalledExactlyOnceWith();
     expect(persist).not.toHaveBeenCalled();
+  });
+});
+
+describe('queue toggle fires both injected hooks', () => {
+  it('clicking the queue button calls persist and rerender', () => {
+    const persist = vi.fn();
+    const rerender = vi.fn();
+    initBookmarks({ persist, rerender });
+
+    // Simulate what card.js does on queue toggle
+    persistAfterBookmarkAction();
+    refreshBookmarkGrid();
+
+    expect(persist).toHaveBeenCalledExactlyOnceWith();
+    expect(rerender).toHaveBeenCalledExactlyOnceWith();
   });
 });
