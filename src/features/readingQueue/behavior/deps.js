@@ -24,13 +24,6 @@ export function initReadingQueue(injectedDeps = {}) {
 }
 
 /**
- * @returns {ReadingQueueDeps} The currently injected deps.
- */
-export function getReadingQueueDeps() {
-  return deps;
-}
-
-/**
  * Fire-and-forget persist after a reading queue mutation, via the injected
  * hook. Falls back to a no-op when nothing has been injected yet (e.g. tests
  * that exercise the queue markup without booting the app).

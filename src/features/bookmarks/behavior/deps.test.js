@@ -1,10 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import {
-  initBookmarks,
-  getBookmarksDeps,
-  persistAfterBookmarkAction,
-  refreshBookmarkGrid,
-} from './deps.js';
+import { initBookmarks, persistAfterBookmarkAction, refreshBookmarkGrid } from './deps.js';
 
 afterEach(() => {
   // Reset to the no-op defaults so tests never leak injected spies.
@@ -24,7 +19,6 @@ describe('bookmarks behavior deps', () => {
 
     expect(deps.persist).toBe(persist);
     expect(deps.rerender).toBe(rerender);
-    expect(getBookmarksDeps().persist).toBe(persist);
   });
 
   it('merges partial injection without clobbering the other callback', () => {
@@ -58,8 +52,8 @@ describe('bookmarks behavior deps', () => {
   });
 });
 
-describe('queue toggle fires both injected hooks', () => {
-  it('clicking the queue button calls persist and rerender', () => {
+describe('queue toggle calls persist and rerender hooks', () => {
+  it('invokes both persist and rerender hooks', () => {
     const persist = vi.fn();
     const rerender = vi.fn();
     initBookmarks({ persist, rerender });
