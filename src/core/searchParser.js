@@ -56,15 +56,16 @@ export function parseSearchQuery(raw) {
   const terms = [];
   // Order matters: link:<value> (quoted or bare, case-insensitive),
   // then a quoted phrase, then any other run of non-space characters.
-  const re = /is:(fav|♥|queue)|link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
+  const re = /is:(fav|♥|queue|q)|link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
   let m;
   while ((m = re.exec(q)) !== null) {
     if (m[1] !== undefined) {
       // Favorite / reading-queue filter operator — value already restricted
       // to fav, ♥, or queue. Only set the flag that applies.
-      const isQueue = m[1].toLowerCase() === 'queue';
+      const rawValue = m[1].toLowerCase();
+      const isQueue = rawValue === 'queue' || rawValue === 'q';
       const term = {
-        terms: m[1].toLowerCase(),
+        terms: isQueue ? 'queue' : rawValue,
         exact: false,
         urlOnly: false,
       };

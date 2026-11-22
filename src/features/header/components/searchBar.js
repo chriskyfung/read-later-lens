@@ -45,7 +45,7 @@ export function headerSearchBarHtml() {
             <dd>僅顯示收藏書籤</dd>
           </div>
           <div>
-            <dt class="font-medium text-indigo-300">is:queue</dt>
+            <dt class="font-medium text-indigo-300">is:q / is:queue</dt>
             <dd>僅顯示閱讀佇列書籤</dd>
           </div>
         </dl>

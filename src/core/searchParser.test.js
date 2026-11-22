@@ -161,8 +161,17 @@ describe('is:fav / is:♥ favorite filter', () => {
       ]);
     });
 
+    it('parses is:q alias as a queue filter term', () => {
+      expect(parseSearchQuery('is:q')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+    });
+
     it('is case-insensitive for the operator', () => {
       expect(parseSearchQuery('IS:QUEUE')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+      expect(parseSearchQuery('IS:Q')).toEqual([
         { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
       ]);
     });
@@ -176,6 +185,13 @@ describe('is:fav / is:♥ favorite filter', () => {
         { terms: 'keyword', exact: false, urlOnly: false },
         { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
         { terms: 'google.com', exact: false, urlOnly: true },
+      ]);
+    });
+
+    it('combines is:q alias with keywords', () => {
+      expect(parseSearchQuery('is:q keyword')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+        { terms: 'keyword', exact: false, urlOnly: false },
       ]);
     });
   });

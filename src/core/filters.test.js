@@ -377,6 +377,27 @@ describe('is:queue reading queue filter', () => {
     setSearchQuery('IS:QUEUE');
     expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
   });
+
+  it('works with is:q alias', () => {
+    setBookmarks([mk(1), mk(2), mk(3)]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:q');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('is case-insensitive for is:q alias', () => {
+    setBookmarks([mk(1), mk(2)]);
+    setReadingQueue(['1']);
+    setSearchQuery('IS:Q');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('ANDs is:q alias with keywords', () => {
+    setBookmarks([mk(1, { title: 'alpha' }), mk(2, { title: 'alpha' }), mk(3, { title: 'beta' })]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:q alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
 });
 
 describe('is:fav and is:queue combined', () => {
