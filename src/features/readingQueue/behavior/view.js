@@ -40,10 +40,9 @@ export function renderQueueView() {
   emptyState.classList.add('hidden');
 
   list.innerHTML = queued
-    .map((bookmark, index) =>
+    .map((bookmark) =>
       queueItemHtml({
         bookmark,
-        index,
         domain: getBookmarkDomain(bookmark.url),
       }),
     )
@@ -97,7 +96,6 @@ export function patchQueueRow(id, expectedDomRows, operation) {
     const newRow = document.createElement('div');
     newRow.innerHTML = queueItemHtml({
       bookmark: queued[newIndex],
-      index: newIndex,
       domain: getBookmarkDomain(queued[newIndex].url),
     });
     const newElement = newRow.firstElementChild;
