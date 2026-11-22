@@ -58,9 +58,10 @@ export function renderSidebarFolders() {
   const allFolderBtn = document.getElementById(SIDEBAR_IDS.allFolderBtn);
   const totalSourceCount = document.getElementById(SIDEBAR_IDS.totalSourceCount);
   const allCountBadge = document.getElementById(SIDEBAR_IDS.allCountBadge);
+  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
+  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
   const trashFolderBtn = document.getElementById(SIDEBAR_IDS.trashFolderBtn);
   const trashCountBadge = document.getElementById(SIDEBAR_IDS.trashCountBadge);
-  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
 
   const { activeList, active, trashed } = partitionBookmarks();
 
@@ -68,14 +69,15 @@ export function renderSidebarFolders() {
 
   if (totalSourceCount) totalSourceCount.innerText = String(sourceFiles.size);
   if (allCountBadge) allCountBadge.innerText = String(active);
-  if (trashCountBadge) trashCountBadge.innerText = String(trashed);
   if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
-  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
-  if (queueFolderBtn) queueFolderBtn.classList.toggle('hidden', getQueueLength() === 0);
+  if (trashCountBadge) trashCountBadge.innerText = String(trashed);
 
   const isAllActive = activeFolder === FOLDER_ALL;
   if (allFolderBtn) {
     allFolderBtn.className = sidebarAllFolderBtnClass(isAllActive);
+  }
+  if (queueFolderBtn) {
+    queueFolderBtn.classList.toggle('hidden', getQueueLength() === 0);
   }
   if (trashFolderBtn) {
     trashFolderBtn.className = sidebarTrashBtnClass(activeFolder === FOLDER_TRASH);
