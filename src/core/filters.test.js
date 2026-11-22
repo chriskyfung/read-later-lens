@@ -6,6 +6,7 @@ import {
   setActiveTag,
   setSearchQuery,
   setSortBy,
+  setReadingQueue,
 } from './state';
 import {
   applyFilters,
@@ -327,5 +328,87 @@ describe('is:fav favorite filter', () => {
     setBookmarks([mk(1), mk(2)]);
     setSearchQuery('is:fav');
     expect(getFilteredBookmarks()).toEqual([]);
+  });
+});
+
+describe('is:queue reading queue filter', () => {
+  it('narrows to queued bookmarks with is:queue', () => {
+    setBookmarks([mk(1), mk(2), mk(3)]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:queue');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('ANDs is:queue with keywords', () => {
+    setBookmarks([mk(1, { title: 'alpha' }), mk(2, { title: 'alpha' }), mk(3, { title: 'beta' })]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:queue alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('ANDs is:queue with link:', () => {
+    setBookmarks([
+      mk(1, { url: 'https://github.com/a' }),
+      mk(2, { url: 'https://github.com/b' }),
+      mk(3, { url: 'https://other.org' }),
+    ]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:queue link:github.com');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('excludes trashed bookmarks even when queued', () => {
+    setBookmarks([mk(1, { deleted_at: '2026-01-01T00:00:00.000Z' }), mk(2)]);
+    setReadingQueue(['1', '2']);
+    setSearchQuery('is:queue');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['2']);
+  });
+
+  it('returns empty when no bookmarks are queued', () => {
+    setBookmarks([mk(1), mk(2)]);
+    setReadingQueue(['9']);
+    setSearchQuery('is:queue');
+    expect(getFilteredBookmarks()).toEqual([]);
+  });
+
+  it('is case-insensitive for the operator', () => {
+    setBookmarks([mk(1), mk(2)]);
+    setReadingQueue(['1']);
+    setSearchQuery('IS:QUEUE');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('works with is:q alias', () => {
+    setBookmarks([mk(1), mk(2), mk(3)]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:q');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '3']);
+  });
+
+  it('is case-insensitive for is:q alias', () => {
+    setBookmarks([mk(1), mk(2)]);
+    setReadingQueue(['1']);
+    setSearchQuery('IS:Q');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('ANDs is:q alias with keywords', () => {
+    setBookmarks([mk(1, { title: 'alpha' }), mk(2, { title: 'alpha' }), mk(3, { title: 'beta' })]);
+    setReadingQueue(['1', '3']);
+    setSearchQuery('is:q alpha');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1']);
+  });
+});
+
+describe('is:fav and is:queue combined', () => {
+  it('ANDs is:fav and is:queue together', () => {
+    setBookmarks([
+      mk(1, { is_favorite: true }),
+      mk(2, { is_favorite: true }),
+      mk(3, { is_favorite: true }),
+    ]);
+    setReadingQueue(['1', '2']);
+    setSearchQuery('is:fav is:queue');
+    expect(getFilteredBookmarks().map((b) => b.id)).toEqual(['1', '2']);
   });
 });

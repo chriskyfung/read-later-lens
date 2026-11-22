@@ -154,6 +154,48 @@ describe('is:fav / is:♥ favorite filter', () => {
     ]);
   });
 
+  describe('is:queue reading-queue filter', () => {
+    it('parses is:queue as a queue filter term', () => {
+      expect(parseSearchQuery('is:queue')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+    });
+
+    it('parses is:q alias as a queue filter term', () => {
+      expect(parseSearchQuery('is:q')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+    });
+
+    it('is case-insensitive for the operator', () => {
+      expect(parseSearchQuery('IS:QUEUE')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+      expect(parseSearchQuery('IS:Q')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+      ]);
+    });
+
+    it('combines is:queue with keywords and link:', () => {
+      expect(parseSearchQuery('is:queue keyword')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+        { terms: 'keyword', exact: false, urlOnly: false },
+      ]);
+      expect(parseSearchQuery('keyword is:queue link:google.com')).toEqual([
+        { terms: 'keyword', exact: false, urlOnly: false },
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+        { terms: 'google.com', exact: false, urlOnly: true },
+      ]);
+    });
+
+    it('combines is:q alias with keywords', () => {
+      expect(parseSearchQuery('is:q keyword')).toEqual([
+        { terms: 'queue', exact: false, urlOnly: false, isInQueue: true },
+        { terms: 'keyword', exact: false, urlOnly: false },
+      ]);
+    });
+  });
+
   it('treats a bare is: with no value as a literal keyword', () => {
     expect(parseSearchQuery('is:')).toEqual([{ terms: 'is:', exact: false, urlOnly: false }]);
     expect(parseSearchQuery('is: keyword')).toEqual([

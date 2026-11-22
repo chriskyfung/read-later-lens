@@ -22,6 +22,13 @@
  *    The operator is case-insensitive ('IS:FAV' / 'IS:♥' work too). Only
  *    'fav' and '♥' are recognized values; any other 'is:<value>' (or a bare
  *    'is:' with no value) is kept as a literal keyword.
+ *  - 'is:queue' is a reading-queue filter — the term narrows the result set
+ *    to bookmarks in the reading queue (AND-ed with the rest of the query):
+ *      'is:queue keyword' -> [{ terms: 'queue', isInQueue: true },
+ *                             { terms: 'keyword', urlOnly: false }]
+ *    The operator is case-insensitive ('IS:QUEUE' works too). 'queue' is the
+ *    only recognized value; any other 'is:<value>' (or a bare 'is:' with no
+ *    value) is kept as a literal keyword.
  *  - An unbalanced trailing quote is treated literally (graceful degradation);
  *    a bare 'link:' with no value is kept as a literal keyword.
  */
@@ -32,7 +39,8 @@
  * @property {string} terms - Lowercased term text.
  * @property {boolean} exact - True when the term was quoted (exact phrase).
  * @property {boolean} urlOnly - True for 'link:' terms (URL field operator).
- * @property {boolean} [isFav] - True for 'is:fav' / 'is:♥' favorite filters.
+ * @property {boolean} [isFav]    - True for 'is:fav' / 'is:♥' favorite filters.
+ * @property {boolean} [isInQueue] - True for 'is:queue' reading-queue filters.
  */
 
 /**
@@ -48,12 +56,25 @@ export function parseSearchQuery(raw) {
   const terms = [];
   // Order matters: link:<value> (quoted or bare, case-insensitive),
   // then a quoted phrase, then any other run of non-space characters.
-  const re = /is:(fav|♥)|link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
+  const re = /is:(fav|♥|queue|q)|link:(?:"([^"]*)"|(\S+))|"([^"]*)"|(\S+)/gi;
   let m;
   while ((m = re.exec(q)) !== null) {
     if (m[1] !== undefined) {
-      // Favorite filter operator — value is already restricted to fav/♥.
-      terms.push({ terms: m[1].toLowerCase(), exact: false, urlOnly: false, isFav: true });
+      // Favorite / reading-queue filter operator — value already restricted
+      // to fav, ♥, or queue. Only set the flag that applies.
+      const rawValue = m[1].toLowerCase();
+      const isQueue = rawValue === 'queue' || rawValue === 'q';
+      const term = {
+        terms: isQueue ? 'queue' : rawValue,
+        exact: false,
+        urlOnly: false,
+      };
+      if (isQueue) {
+        term.isInQueue = true;
+      } else {
+        term.isFav = true;
+      }
+      terms.push(term);
     } else if (m[2] !== undefined || m[3] !== undefined) {
       // link: operator — value may be quoted or bare.
       const value = (m[2] !== undefined ? m[2] : m[3]).trim();
