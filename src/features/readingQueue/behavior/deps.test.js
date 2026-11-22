@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { initReadingQueue, getReadingQueueDeps, persistAfterQueueAction } from './deps.js';
+import { initReadingQueue, persistAfterQueueAction } from './deps.js';
 
 afterEach(() => {
   // Reset to the no-op defaults so tests never leak injected spies.
@@ -17,7 +17,6 @@ describe('readingQueue behavior deps', () => {
     const deps = initReadingQueue({ persist });
 
     expect(deps.persist).toBe(persist);
-    expect(getReadingQueueDeps().persist).toBe(persist);
   });
 
   it('persistAfterQueueAction invokes only the injected persist hook', () => {

@@ -27,13 +27,6 @@ export function initBookmarks(injectedDeps = {}) {
 }
 
 /**
- * @returns {BookmarksDeps} The currently injected deps.
- */
-export function getBookmarksDeps() {
-  return deps;
-}
-
-/**
  * Fire-and-forget persist after a bookmark/queue mutation, via the injected
  * hook. Falls back to a no-op when nothing has been injected yet (e.g. tests
  * that exercise the card markup without booting the app).
