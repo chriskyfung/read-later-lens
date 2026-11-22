@@ -1,1 +1,23 @@
 @import 'tailwindcss';
+
+/* Reading queue drag-and-drop visual feedback */
+.queue-item.dragging {
+  opacity: 0.5;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: #f59e0b;
+}
+
+.queue-item.drag-over {
+  border-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}

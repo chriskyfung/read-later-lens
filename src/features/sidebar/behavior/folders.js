@@ -25,6 +25,7 @@ import {
   FOLDER_TRASH,
 } from './constants.js';
 import { partitionBookmarks, countActiveByFolder } from './service.js';
+import { getQueueLength } from '@/features/readingQueue';
 
 /**
  * Fallback policy: with an empty trash, the TRASH pseudo-row shows nothing, so
@@ -57,6 +58,8 @@ export function renderSidebarFolders() {
   const allFolderBtn = document.getElementById(SIDEBAR_IDS.allFolderBtn);
   const totalSourceCount = document.getElementById(SIDEBAR_IDS.totalSourceCount);
   const allCountBadge = document.getElementById(SIDEBAR_IDS.allCountBadge);
+  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
+  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
   const trashFolderBtn = document.getElementById(SIDEBAR_IDS.trashFolderBtn);
   const trashCountBadge = document.getElementById(SIDEBAR_IDS.trashCountBadge);
 
@@ -66,11 +69,15 @@ export function renderSidebarFolders() {
 
   if (totalSourceCount) totalSourceCount.innerText = String(sourceFiles.size);
   if (allCountBadge) allCountBadge.innerText = String(active);
+  if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
   if (trashCountBadge) trashCountBadge.innerText = String(trashed);
 
   const isAllActive = activeFolder === FOLDER_ALL;
   if (allFolderBtn) {
     allFolderBtn.className = sidebarAllFolderBtnClass(isAllActive);
+  }
+  if (queueFolderBtn) {
+    queueFolderBtn.classList.toggle('hidden', getQueueLength() === 0);
   }
   if (trashFolderBtn) {
     trashFolderBtn.className = sidebarTrashBtnClass(activeFolder === FOLDER_TRASH);
@@ -95,4 +102,16 @@ export function renderSidebarFolders() {
       folderList.appendChild(btn);
     });
   }
+}
+
+/**
+ * Update only the queue count badge — used after queue mutations so the
+ * sidebar counter stays in sync without a full re-render.
+ */
+export function updateQueueBadge() {
+  const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
+  const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
+  const length = getQueueLength();
+  if (queueCountBadge) queueCountBadge.innerText = String(length);
+  if (queueFolderBtn) queueFolderBtn.classList.toggle('hidden', length === 0);
 }

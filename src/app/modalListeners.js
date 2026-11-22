@@ -20,7 +20,12 @@
  * the two never overlap.
  */
 
-import { closeReaderModal, getReaderBookmarkId, syncReaderFavoriteButton } from '@/features/reader';
+import {
+  closeReaderModal,
+  getReaderBookmarkId,
+  syncReaderFavoriteButton,
+  syncReaderQueueButton,
+} from '@/features/reader';
 
 import { closeTrashModal } from '@/features/trash';
 import { openSimilarityModal, closeSimilarityModal } from '@/features/similarityModal';
@@ -28,13 +33,24 @@ import { confirmDeleteBookmark, toggleFavoriteBookmark } from '@/features/worksp
 import { closeSaveModal } from '@/io/export';
 import { closeImportModal } from '@/io/import';
 import {
+  closeQueueModal,
+  registerQueueListeners,
+  addToQueue,
+  removeFromQueue,
+  renderQueueView,
+} from '@/features/readingQueue/behavior';
+import {
   closeLayer,
   registerModalLayer,
   resetLayers,
   topLayer,
   topLayerId,
   trapFocus,
+  showToast,
 } from '@/utils/dom';
+import { updateQueueBadge } from '@/features/sidebar/behavior';
+import { renderBookmarkCards } from '@/features/bookmarks';
+import { persistAfterActionFireAndForget } from '@/app/persist.js';
 import { openLinkageForBookmark } from '@/features/linkage';
 
 /**
@@ -63,10 +79,15 @@ export function registerModalListeners() {
   registerModalLayer('similarityModal', { close: closeSimilarityModal });
   registerModalLayer('saveModal', { close: closeSaveModal });
   registerModalLayer('importModal', { close: closeImportModal });
+  registerModalLayer('queueModal', { close: closeQueueModal });
 
   document.getElementById('closeReaderBtn')?.addEventListener('click', closeReaderModal);
   document.getElementById('closeSimilarityBtn')?.addEventListener('click', closeSimilarityModal);
   document.getElementById('closeTrashBtn')?.addEventListener('click', closeTrashModal);
+  document.getElementById('closeQueueBtn')?.addEventListener('click', closeQueueModal);
+
+  // Queue modal internal listeners (drag-and-drop, row click, actions).
+  registerQueueListeners();
 
   registerModalLayer('trashModal', { close: closeTrashModal });
 
@@ -82,6 +103,25 @@ export function registerModalListeners() {
   document.getElementById('readerFavoriteBtn')?.addEventListener('click', async () => {
     const id = getReaderBookmarkId();
     if (id && (await toggleFavoriteBookmark(id))) syncReaderFavoriteButton(id);
+  });
+  document.getElementById('readerQueueBtn')?.addEventListener('click', async () => {
+    const id = getReaderBookmarkId();
+    if (!id) return;
+    if (await addToQueue(id)) {
+      syncReaderQueueButton(id);
+      renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterActionFireAndForget();
+      showToast('已加入閱讀佇列');
+    } else if (await removeFromQueue(id)) {
+      syncReaderQueueButton(id);
+      renderQueueView();
+      updateQueueBadge();
+      renderBookmarkCards();
+      persistAfterActionFireAndForget();
+      showToast('已移出閱讀佇列');
+    }
   });
   document.getElementById('readerSimilarityBtn')?.addEventListener('click', () => {
     const id = getReaderBookmarkId();

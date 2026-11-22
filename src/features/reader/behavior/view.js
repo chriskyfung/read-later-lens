@@ -9,7 +9,9 @@
 
 import { getBookmarkById } from '@/core/state';
 import { safeUrl } from '@/utils/dom';
+import { isInQueue } from '@/features/readingQueue/behavior/service.js';
 import { applyFavoriteVariant } from './favorite.js';
+import { applyQueueVariant } from './queue.js';
 import { setReaderBookmarkId } from './state.js';
 
 /**
@@ -41,6 +43,10 @@ export function renderReaderModal(bookmarkId) {
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
   if (favoriteBtn) applyFavoriteVariant(favoriteBtn, Boolean(bookmark.is_favorite));
 
+  const queueBtn = document.getElementById('readerQueueBtn');
+  console.log();
+  if (queueBtn) applyQueueVariant(queueBtn, isInQueue(bookmarkId));
+
   return true;
 }
 
@@ -57,5 +63,19 @@ export function syncReaderFavoriteButton(bookmarkId) {
   const favoriteBtn = document.getElementById('readerFavoriteBtn');
   if (!bookmark || !favoriteBtn) return false;
   applyFavoriteVariant(favoriteBtn, Boolean(bookmark.is_favorite));
+  return true;
+}
+
+/**
+ * Sync only the queue button for an already-open reader (toggle icon/text).
+ * Cheaper than renderReaderModal(): one O(1) lookup + one button write.
+ *
+ * @param {string} bookmarkId
+ * @returns {boolean} Whether the button was synced.
+ */
+export function syncReaderQueueButton(bookmarkId) {
+  const queueBtn = document.getElementById('readerQueueBtn');
+  if (!queueBtn) return false;
+  applyQueueVariant(queueBtn, isInQueue(bookmarkId));
   return true;
 }

@@ -24,6 +24,7 @@ import { saveModalHtml } from '@/io/components/saveModal.js';
 import { importModalHtml } from '@/io/components/importModal.js';
 import { duplicateModalHtml } from '@/io/components/duplicateModal.js';
 import { trashModalHtml } from '@/features/trash';
+import { queueModalHtml } from '@/features/readingQueue';
 import { toastHtml } from './toast';
 
 /**
@@ -38,6 +39,7 @@ export function mountModals() {
       importModalHtml() +
       duplicateModalHtml() +
       trashModalHtml() +
+      queueModalHtml() +
       toastHtml(),
   );
 }

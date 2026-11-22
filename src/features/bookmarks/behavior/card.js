@@ -12,11 +12,22 @@ import { openReaderModal } from '@/features/reader';
 import { openSimilarityModal } from '@/features/similarityModal';
 import { openLinkageForBookmark } from '@/features/linkage';
 import { toggleSelectBookmark } from './selection.js';
+import { renderBookmarkCards } from './render.js'; // eslint-disable-line import/no-cycle
+import { isInQueue, addToQueue, removeFromQueue } from '@/features/readingQueue';
+import { updateQueueBadge } from '@/features/sidebar/behavior';
+import { persistAfterActionFireAndForget } from '@/app/persist.js'; // eslint-disable-line import/no-cycle
+import { showToast } from '@/utils/dom';
+import {
+  renderQueueView,
+  patchQueueRow,
+  captureDomRowCount,
+} from '@/features/readingQueue/behavior/view.js';
+import { QUEUE_IDS } from '@/features/readingQueue/behavior/constants.js';
 
 // Descendants that own their own click behaviour; clicking them must NOT
 // trigger the card's "open reader" handler. Delete is delegated at the grid
 // level (see src/features/workspace/actions/behavior/), so it bails here as well.
-const CARD_INTERACTIVE = 'a, button, input, label, [data-delete-bookmark]';
+const CARD_INTERACTIVE = 'a, button, input, label, [data-delete-bookmark], [data-add-queue]';
 
 /**
  * Build a single bookmark card element and wire its per-card listeners.
@@ -48,6 +59,36 @@ export function createBookmarkCard(bookmark) {
     .querySelector('.open-linkage-btn')
     .addEventListener('click', () => openLinkageForBookmark(bookmark.id));
   card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = bookmark.id;
+
+  // Queue toggle button
+  const queueBtn = card.querySelector('[data-add-queue]');
+  if (queueBtn) {
+    queueBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wasInQueue = isInQueue(bookmark.id);
+      const modalOpen = !document.getElementById(QUEUE_IDS.modal)?.classList.contains('hidden');
+
+      if (wasInQueue) {
+        const expectedRows = modalOpen ? captureDomRowCount() : 0;
+        removeFromQueue(bookmark.id);
+        if (modalOpen) {
+          const patched = patchQueueRow(bookmark.id, expectedRows, 'remove');
+          if (!patched) renderQueueView();
+        }
+        showToast('已移出閱讀佇列');
+      } else {
+        addToQueue(bookmark.id);
+        if (modalOpen) {
+          const patched = patchQueueRow(bookmark.id, 0, 'add');
+          if (!patched) renderQueueView();
+        }
+        showToast('已加入閱讀佇列');
+      }
+      renderBookmarkCards();
+      updateQueueBadge();
+      persistAfterActionFireAndForget();
+    });
+  }
 
   card.tabIndex = 0;
   card.addEventListener('click', (e) => {

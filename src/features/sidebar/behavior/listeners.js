@@ -10,6 +10,7 @@
 
 import * as state from '@/core/state';
 import { openTrashModal } from '@/features/trash';
+import { openQueueModal } from '@/features/readingQueue';
 import { getDeps } from './deps.js';
 import { SIDEBAR_IDS, SIDEBAR_DATA_ATTRS, FOLDER_ALL } from './constants.js';
 import { selectFolder, confirmDeleteFolder } from './actions.js';
@@ -49,6 +50,11 @@ export function registerSidebarListeners() {
   document.getElementById(SIDEBAR_IDS.trashFolderBtn)?.addEventListener('click', () => {
     // The modal opens on top of whatever is on screen.
     openTrashModal();
+  });
+
+  // Reading Queue (閱讀佇列) row — opens the dedicated queue modal.
+  document.getElementById(SIDEBAR_IDS.queueFolderBtn)?.addEventListener('click', () => {
+    openQueueModal();
   });
 
   // Language filter pill click delegation

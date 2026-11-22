@@ -56,6 +56,8 @@ import {
   Info,
   TriangleExclamationPoint,
   BookOpen,
+  ListClock,
+  ListPlus,
 } from 'lucide';
 
 // Boot sequence — mount UI, wire listeners, restore persisted state, render.
@@ -85,6 +87,8 @@ async function boot() {
       Info,
       TriangleExclamationPoint,
       BookOpen,
+      ListClock,
+      ListPlus,
     },
   });
   initHeaderBehavior({ render: renderAll, persistAndRender });
