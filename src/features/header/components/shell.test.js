@@ -53,6 +53,8 @@ describe('mountHeader — markup parity', () => {
     expect(html()).toContain('link:網址');
     expect(html()).toContain('is:fav');
     expect(html()).toContain('is:♥');
+    expect(html()).toContain('is:queue');
+    expect(html()).toContain('僅顯示閱讀佇列書籤');
     expect(html()).toContain('data-lucide="search"'); // search svg
   });
 

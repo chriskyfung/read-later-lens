@@ -44,6 +44,10 @@ export function headerSearchBarHtml() {
             <dt class="font-medium text-indigo-300">is:♥ / is:fav</dt>
             <dd>僅顯示收藏書籤</dd>
           </div>
+          <div>
+            <dt class="font-medium text-indigo-300">is:queue</dt>
+            <dd>僅顯示閱讀佇列書籤</dd>
+          </div>
         </dl>
         <div class="mt-2 pt-2 border-t border-slate-700 text-slate-500 text-xs">
           Enter 立即搜尋  •  Esc 關閉提示
