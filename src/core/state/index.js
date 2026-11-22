@@ -21,6 +21,7 @@ export {
   sortBy,
   readingQueue,
   selectedIds,
+  persistError,
   setActiveFolder,
   setActiveLang,
   setActiveTag,
@@ -29,4 +30,5 @@ export {
   setSortBy,
   setReadingQueue,
   setSelectedIds,
+  setPersistError,
 } from './session.js';

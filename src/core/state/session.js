@@ -13,6 +13,9 @@ export let readingQueue = [];
 /** @type {Set<string>} */
 export let selectedIds = new Set();
 
+/** Whether the last fire-and-forget persist failed (for queue badge UX). */
+export let persistError = false;
+
 export function setReadingQueue(v) {
   readingQueue = v;
 }
@@ -37,4 +40,7 @@ export function setSortBy(v) {
 }
 export function setSelectedIds(v) {
   selectedIds = v;
+}
+export function setPersistError(v) {
+  persistError = Boolean(v);
 }
