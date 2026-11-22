@@ -10,7 +10,7 @@
  * @returns {Promise<{persisted: boolean, conflict: boolean}>}
  */
 import { saveState } from '../core/persistence';
-import { updateStorageUsageUI } from '@/features/sidebar';
+import { updateStorageUsageUI, updateQueueBadge } from '@/features/sidebar';
 import { showToast } from '../utils/dom';
 import { STALE_STATE_MESSAGE } from '../core/guard.js';
 import { setPersistError } from '@/core/state';
@@ -81,17 +81,21 @@ export async function persistAfterActionFireAndForget() {
       if (!persisted && !conflict) {
         showToast(PERSIST_WRITE_FAILED_MESSAGE);
         setPersistError(true);
+        updateQueueBadge();
       } else if (conflict) {
         showToast(STALE_STATE_MESSAGE);
         setPersistError(true);
+        updateQueueBadge();
       } else {
         // Success — clear any previous error
         setPersistError(false);
+        updateQueueBadge();
       }
     })
     .catch((err) => {
       console.warn('Persist after action failed:', err);
       setPersistError(true);
+      updateQueueBadge();
     });
 
   // Return immediately with optimistic success
