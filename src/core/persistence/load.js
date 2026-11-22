@@ -37,7 +37,11 @@ export async function loadState() {
     const sources = sourcesRow.data || [];
     setSourceFiles(new Map(sources.map((s) => [s.id, s])));
     if (queueRow) {
-      setReadingQueue(queueRow.data || []);
+      // Prune stale IDs (bookmarks that no longer exist — purged).
+      // Keep trashed IDs so a restore brings them back into the queue.
+      const bookmarkIds = new Set((bookmarksRow.data || []).map((b) => b.id));
+      const prunedQueue = (queueRow.data || []).filter((id) => bookmarkIds.has(id));
+      setReadingQueue(prunedQueue);
     }
     return true;
   }

@@ -4,9 +4,9 @@
 
 import { bookmarks, readingQueue } from '@/core/state';
 
-/** @returns {number} Current number of items in the queue. */
+/** @returns {number} Current number of items in the queue (visible only: non-trashed, existing bookmarks). */
 export function getQueueLength() {
-  return readingQueue.length;
+  return getQueuedBookmarks().length;
 }
 
 /**
