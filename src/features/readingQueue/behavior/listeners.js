@@ -19,7 +19,7 @@ import { QUEUE_IDS, QUEUE_DATA_ATTRS } from './constants.js';
 import { closeQueueModal } from './controller.js';
 import { updateQueueBadge } from '@/features/sidebar/behavior';
 import { renderBookmarkCards } from '@/features/bookmarks';
-import { persistAfterActionFireAndForget } from '@/app/persist.js';
+import { persistAfterQueueAction } from './deps.js';
 import { showToast } from '@/utils/dom';
 
 /**
@@ -70,7 +70,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       if (countBefore > 0) showToast(`已清空閱讀佇列（${countBefore} 項）`);
     }
   });
@@ -85,7 +85,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已移至最上層');
       return;
     }
@@ -98,7 +98,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已移至最下層');
       return;
     }
@@ -114,7 +114,7 @@ export function registerQueueListeners() {
       if (!patched) renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已移出閱讀佇列');
       return;
     }
@@ -248,7 +248,7 @@ export function registerQueueListeners() {
       renderQueueView();
       updateQueueBadge();
       renderBookmarkCards();
-      persistAfterActionFireAndForget();
+      persistAfterQueueAction();
       showToast('已調整佇列順序');
     }
 

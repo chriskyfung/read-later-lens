@@ -25,7 +25,7 @@ vi.mock('@/features/reader/behavior/controller.js', () => ({
 }));
 vi.mock('@/features/sidebar/behavior', () => ({ updateQueueBadge: vi.fn() }));
 vi.mock('@/features/bookmarks', () => ({ renderBookmarkCards: vi.fn() }));
-vi.mock('@/app/persist.js', () => ({ persistAfterActionFireAndForget: vi.fn() }));
+vi.mock('./deps.js', () => ({ persistAfterQueueAction: vi.fn() }));
 import { renderQueueView } from './view.js';
 import { registerQueueListeners } from './listeners.js';
 import { queueModalHtml } from '../components/queueModal.js';
