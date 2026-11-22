@@ -14,4 +14,4 @@ export {
 } from './actions.js';
 export { openQueueModal, closeQueueModal } from './controller.js';
 export { renderQueueView } from './view.js';
-export { initReadingQueue, getReadingQueueDeps, persistAfterQueueAction } from './deps.js';
+export { initReadingQueue, persistAfterQueueAction } from './deps.js';
