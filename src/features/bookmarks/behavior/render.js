@@ -17,7 +17,7 @@ import {
   Heart,
   Layers2,
   BookOpen,
-  ListClock,
+  ListPlus,
   Plus,
   Minus,
 } from 'lucide';
@@ -61,7 +61,7 @@ export function renderBookmarkCards() {
       Heart,
       Layers2,
       BookOpen,
-      ListClock,
+      ListPlus,
       Plus,
       Minus,
     },
