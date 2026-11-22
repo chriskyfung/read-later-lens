@@ -15,6 +15,7 @@ vi.mock('@/core/persistence', () => ({
 }));
 vi.mock('@/features/sidebar', () => ({
   updateStorageUsageUI: vi.fn(async () => {}),
+  updateQueueBadge: vi.fn(() => {}),
 }));
 vi.mock('@/utils/dom', () => ({
   showToast: vi.fn(),

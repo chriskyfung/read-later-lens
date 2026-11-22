@@ -19,4 +19,5 @@ export {
   renderSidebar,
   registerSidebarListeners,
   updateStorageUsageUI,
+  updateQueueBadge,
 } from './behavior';

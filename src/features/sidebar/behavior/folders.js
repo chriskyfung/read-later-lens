@@ -10,7 +10,7 @@
  * converted to strings to match browser innerText coercion.
  */
 
-import { activeFolder, setActiveFolder, sourceFiles } from '@/core/state';
+import { activeFolder, setActiveFolder, sourceFiles, persistError } from '@/core/state';
 import {
   sidebarAllFolderBtnClass,
   sidebarFolderItemClass,
@@ -69,7 +69,13 @@ export function renderSidebarFolders() {
 
   if (totalSourceCount) totalSourceCount.innerText = String(sourceFiles.size);
   if (allCountBadge) allCountBadge.innerText = String(active);
-  if (queueCountBadge) queueCountBadge.innerText = String(getQueueLength());
+  if (queueCountBadge) {
+    queueCountBadge.innerText = String(getQueueLength());
+    queueCountBadge.classList.toggle('bg-red-900/50', persistError);
+    queueCountBadge.classList.toggle('text-red-200', persistError);
+    queueCountBadge.classList.toggle('bg-amber-900/50', !persistError);
+    queueCountBadge.classList.toggle('text-amber-200', !persistError);
+  }
   if (trashCountBadge) trashCountBadge.innerText = String(trashed);
 
   const isAllActive = activeFolder === FOLDER_ALL;
@@ -107,11 +113,18 @@ export function renderSidebarFolders() {
 /**
  * Update only the queue count badge — used after queue mutations so the
  * sidebar counter stays in sync without a full re-render.
+ * If a fire-and-forget persist failed, show a warning indicator.
  */
 export function updateQueueBadge() {
   const queueCountBadge = document.getElementById(SIDEBAR_IDS.queueCountBadge);
   const queueFolderBtn = document.getElementById(SIDEBAR_IDS.queueFolderBtn);
   const length = getQueueLength();
-  if (queueCountBadge) queueCountBadge.innerText = String(length);
+  if (queueCountBadge) {
+    queueCountBadge.innerText = String(length);
+    queueCountBadge.classList.toggle('bg-red-900/50', persistError);
+    queueCountBadge.classList.toggle('text-red-200', persistError);
+    queueCountBadge.classList.toggle('bg-amber-900/50', !persistError);
+    queueCountBadge.classList.toggle('text-amber-200', !persistError);
+  }
   if (queueFolderBtn) queueFolderBtn.classList.toggle('hidden', length === 0);
 }
