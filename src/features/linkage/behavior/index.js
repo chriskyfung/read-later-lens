@@ -52,7 +52,13 @@ export {
   resolveFocusTarget,
   prepareFocusedTopology,
 } from './topology.js';
-export { LINKAGE_LIMIT, LinkageGraph, linkageGraph, openLinkageForBookmark } from './graph.js';
+export {
+  LINKAGE_LIMIT,
+  LinkageGraph,
+  linkageGraph,
+  resize,
+  openLinkageForBookmark,
+} from './graph.js';
 export {
   renderConceptLinkageGraph,
   setLinkageWeighting,

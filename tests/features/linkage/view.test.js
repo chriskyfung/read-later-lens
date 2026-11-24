@@ -40,6 +40,79 @@ describe('zoom helpers', () => {
   });
 });
 
+describe('resize', () => {
+  it('re-measures the container and updates the SVG viewBox and state dimensions', () => {
+    const canvas = createCanvas();
+    // jsdom has no layout, so stub the client dimensions a real browser would report.
+    Object.defineProperty(canvas, 'clientWidth', { value: 640, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 480, configurable: true });
+    setBookmarks([BM(1, 'alpha beta gamma'), BM(2, 'alpha beta gamma')]);
+    renderConceptLinkageGraph();
+
+    const svg = linkageGraph.state.svg;
+    expect(svg).not.toBeNull();
+    expect(svg.attr('viewBox')).toBe('0 0 640 480');
+    expect(linkageGraph.state.width).toBe(640);
+    expect(linkageGraph.state.height).toBe(480);
+
+    // Resize to a different size.
+    Object.defineProperty(canvas, 'clientWidth', { value: 320, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 240, configurable: true });
+    linkageGraph.resize();
+    expect(svg.attr('viewBox')).toBe('0 0 320 240');
+    expect(linkageGraph.state.width).toBe(320);
+    expect(linkageGraph.state.height).toBe(240);
+  });
+
+  it('is a safe no-op when no container is mounted', () => {
+    expect(() => linkageGraph.resize()).not.toThrow();
+  });
+});
+
+describe('resetGraphZoom', () => {
+  it('re-renders and re-wires the graph', () => {
+    const canvas = createCanvas();
+    setBookmarks([BM(1)]);
+    renderConceptLinkageGraph();
+
+    resetGraphZoom();
+
+    expect(canvas.querySelector('svg')).not.toBeNull();
+  });
+
+  it('flushes focus and rebuilds the graph entirely', () => {
+    const canvas = createCanvas();
+    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
+
+    // Focus a node first so there is something to flush.
+    renderConceptLinkageGraph();
+    focusLinkageNode('10');
+
+    // Confirm focus is established before reset.
+    const nodesBefore = nodesByLabel(canvas);
+    expect(nodesBefore.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
+
+    resetGraphZoom();
+
+    // After reset, no focus highlight remains — the graph is rebuilt fresh.
+    const nodesAfter = nodesByLabel(canvas);
+    expect(nodesAfter.get('alpha zeta')).toEqual({ stroke: '#0f172a', opacity: null });
+    expect(linkageGraph.state.focusedNodeId).toBeNull();
+  });
+
+  it('resets to an empty state for an empty library', () => {
+    const canvas = createCanvas();
+    setBookmarks([BM(1)]);
+    renderConceptLinkageGraph();
+
+    setBookmarks([]);
+    resetGraphZoom();
+
+    expect(canvas.querySelector('svg')).toBeNull();
+    expect(canvas.textContent).toContain('尚無書籤可構建關聯網絡拓撲圖');
+  });
+});
+
 describe('renderConceptLinkageGraph guards and render path', () => {
   it('renders a single node graph when exactly one bookmark matches', () => {
     const canvas = createCanvas();
@@ -147,49 +220,5 @@ describe('link stroke-width encoding', () => {
     renderConceptLinkageGraph();
 
     expect(canvas.querySelectorAll('line')).toHaveLength(0);
-  });
-});
-
-describe('resetGraphZoom', () => {
-  it('re-renders and re-wires the graph', () => {
-    const canvas = createCanvas();
-    setBookmarks([BM(1)]);
-    renderConceptLinkageGraph();
-
-    resetGraphZoom();
-
-    expect(canvas.querySelector('svg')).not.toBeNull();
-  });
-
-  it('flushes focus and rebuilds the graph entirely', () => {
-    const canvas = createCanvas();
-    setBookmarks([BM(10, 'alpha zeta'), BM(20, 'gamma beta')]);
-
-    // Focus a node first so there is something to flush.
-    renderConceptLinkageGraph();
-    focusLinkageNode('10');
-
-    // Confirm focus is established before reset.
-    const nodesBefore = nodesByLabel(canvas);
-    expect(nodesBefore.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
-
-    resetGraphZoom();
-
-    // After reset, no focus highlight remains — the graph is rebuilt fresh.
-    const nodesAfter = nodesByLabel(canvas);
-    expect(nodesAfter.get('alpha zeta')).toEqual({ stroke: '#0f172a', opacity: null });
-    expect(linkageGraph.state.focusedNodeId).toBeNull();
-  });
-
-  it('resets to an empty state for an empty library', () => {
-    const canvas = createCanvas();
-    setBookmarks([BM(1)]);
-    renderConceptLinkageGraph();
-
-    setBookmarks([]);
-    resetGraphZoom();
-
-    expect(canvas.querySelector('svg')).toBeNull();
-    expect(canvas.textContent).toContain('尚無書籤可構建關聯網絡拓撲圖');
   });
 });

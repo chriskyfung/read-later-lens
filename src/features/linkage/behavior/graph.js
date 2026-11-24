@@ -345,6 +345,32 @@ export class LinkageGraph {
     }
     return true;
   }
+
+  /**
+   * Re-measure the canvas container and update the SVG `viewBox` plus the
+   * state dimensions. Call when the container's size changes — for example
+   * when the linkage tab becomes visible, or the window is resized — so the
+   * force layout's centre and the SVG coordinate system stay correct.
+   *
+   * If a simulation is running, its centring force is re-targeted to the new
+   * centre and the simulation is reheated so nodes settle into the new bounds.
+   */
+  resize() {
+    const container = document.getElementById('d3GraphCanvas');
+    if (!container) return;
+    const { width, height } = resolveCanvasSize(container);
+    this.#state.width = width;
+    this.#state.height = height;
+    const { svg } = this.#state;
+    if (svg) {
+      svg.attr('viewBox', `0 0 ${width} ${height}`);
+    }
+    const { simulation } = this.#state;
+    if (simulation) {
+      simulation.force('center', d3.forceCenter(width / 2, height / 2));
+      simulation.alpha(0.3).restart();
+    }
+  }
 }
 
 /** Default app-wide instance. External consumers import this from the barrel. */

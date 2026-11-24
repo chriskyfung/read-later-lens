@@ -34,6 +34,7 @@ export {
   linkStrokeWidth,
   LinkageGraph,
   linkageGraph,
+  resize,
   createForceSimulation,
   createLinkSelection,
   refreshNodeRadii,
