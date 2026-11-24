@@ -1,11 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { linkStrokeWidth } from './simulation.js';
+import {
+  linkStrokeWidth,
+  LINK_STROKE_MIN,
+  LINK_STROKE_MAX,
+  LINK_STROKE_RANGE,
+} from './simulation.js';
 
 /**
  * Tests for linkStrokeWidth, the pure function that maps link similarity to
  * rendered stroke width. Extracted so the geometry rule is testable without a
  * canvas or d3 simulation.
  */
+
+describe('link stroke width constants', () => {
+  it('exports the stroke width range constants', () => {
+    expect(LINK_STROKE_MIN).toBe(1);
+    expect(LINK_STROKE_MAX).toBe(4);
+    expect(LINK_STROKE_RANGE).toBe(LINK_STROKE_MAX - LINK_STROKE_MIN);
+  });
+});
 
 describe('linkStrokeWidth', () => {
   it('maps cosine 0 to the minimum stroke width', () => {

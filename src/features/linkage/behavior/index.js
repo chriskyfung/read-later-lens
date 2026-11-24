@@ -26,6 +26,9 @@ export {
 } from './nodes.js';
 export { afterPaint, gatherTooltipRefs, createScene, createNodeLayer } from './scene.js';
 export {
+  LINK_STROKE_MIN,
+  LINK_STROKE_MAX,
+  LINK_STROKE_RANGE,
   linkStrokeWidth,
   createForceSimulation,
   createLinkSelection,

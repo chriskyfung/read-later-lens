@@ -23,9 +23,17 @@ const COLLIDE_BASE = 12;
 /** Scale applied to degree for forceCollide. */
 const COLLIDE_PER_DEGREE = 6;
 
+/** Minimum rendered link stroke width (cosine 0). */
+export const LINK_STROKE_MIN = 1;
+/** Maximum rendered link stroke width (cosine 1). Adjust once to re-scale all links. */
+export const LINK_STROKE_MAX = 4;
+/** Span between min and max stroke width, i.e. the similarity-to-width scale factor. */
+export const LINK_STROKE_RANGE = LINK_STROKE_MAX - LINK_STROKE_MIN;
+
 /**
  * Map a link's similarity `value` (cosine in `[0, 1]`) onto a rendered
- * stroke-width in `[1, 4]`, so stronger similarity draws a thicker line.
+ * stroke-width in `[LINK_STROKE_MIN, LINK_STROKE_MAX]`, so stronger
+ * similarity draws a thicker line.
  *
  * The link records produced by src/analytics/linkage.js carry `value`, not
  * `weight`. The previous code read the nonexistent `weight` field (undefined
@@ -36,11 +44,11 @@ const COLLIDE_PER_DEGREE = 6;
  * stays robust for any caller.
  *
  * @param {number} value link similarity, expected in [0, 1]
- * @returns {number} stroke width in [1, 4]
+ * @returns {number} stroke width in [LINK_STROKE_MIN, LINK_STROKE_MAX]
  */
 export function linkStrokeWidth(value) {
-  const width = 1 + (value ?? 0) * 3;
-  return Math.min(4, Math.max(1, width));
+  const width = LINK_STROKE_MIN + (value ?? 0) * LINK_STROKE_RANGE;
+  return Math.min(LINK_STROKE_MAX, Math.max(LINK_STROKE_MIN, width));
 }
 
 /**
