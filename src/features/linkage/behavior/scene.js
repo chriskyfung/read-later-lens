@@ -88,7 +88,7 @@ export function gatherTooltipRefs() {
 }
 
 /**
- * Create the zoomable `<svg>` scene for one render and store it on graphState
+ * Create the zoomable `<svg>` scene for one render and store it on `state`
  * (the toolbar zoom helpers and the focus camera both read it from there).
  *
  * The zoomable `<g>` is the single transform root: the zoom behaviour rewrites
@@ -96,11 +96,12 @@ export function gatherTooltipRefs() {
  *
  * @param {number} width
  * @param {number} height
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
  * @returns {{ svg: import('d3').Selection, g: import('d3').Selection,
  *   zoom: import('d3').ZoomBehavior, linkWrapper: import('d3').Selection,
  *   nodeWrapper: import('d3').Selection }}
  */
-export function createScene(width, height) {
+export function createScene(width, height, state = graphState) {
   const svg = d3
     .select('#d3GraphCanvas')
     .append('svg')
@@ -117,8 +118,8 @@ export function createScene(width, height) {
 
   svg.call(zoom);
 
-  graphState.svg = svg;
-  graphState.zoom = zoom;
+  state.svg = svg;
+  state.zoom = zoom;
 
   /**
    * Layer wrappers for one render, in PAINT ORDER: SVG stacks siblings in

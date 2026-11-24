@@ -48,28 +48,30 @@ export function focusCameraTransform(node, width, height) {
   return d3.zoomIdentity.translate(dx, dy).scale(FOCUS_ZOOM);
 }
 
-/** Look up the node currently being focused, or null when nothing is rendered. */
-function focusedNode() {
-  return graphState.nodes ? graphState.nodes.find((d) => d.id === graphState.focusedNodeId) : null;
+/** Look up the node currently being focused, or null when nothing is rendered.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
+ */
+function focusedNode(state = graphState) {
+  return state.nodes ? state.nodes.find((d) => d.id === state.focusedNodeId) : null;
 }
 
-/** True when a camera can be moved at all. */
-function cameraReady() {
-  return graphState.svg != null && graphState.zoom != null;
+/** True when a camera can be moved at all.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
+ */
+function cameraReady(state = graphState) {
+  return state.svg != null && state.zoom != null;
 }
 
 /**
  * Place the camera on the focused node with NO transition — used when the
  * node is already pinned (i.e. by the render that requested the focus), where
  * a first paint that is already centred is the whole point.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
  */
-export function setFocusCamera() {
-  const node = focusedNode();
-  if (!node || !cameraReady()) return;
-  graphState.svg.call(
-    graphState.zoom.transform,
-    focusCameraTransform(node, graphState.width, graphState.height),
-  );
+export function setFocusCamera(state = graphState) {
+  const node = focusedNode(state);
+  if (!node || !cameraReady(state)) return;
+  state.svg.call(state.zoom.transform, focusCameraTransform(node, state.width, state.height));
 }
 
 /**
@@ -77,47 +79,46 @@ export function setFocusCamera() {
  * the user always sees exactly which node is highlighted. Idempotent — repeated
  * calls mid-animation are ignored; the centering is re-applied when the
  * simulation settles (the 'end' event).
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
  */
-export function centerFocusedNode() {
-  if (graphState.focusedNodeId == null || graphState.pendingFocusCenter === false) return;
-  const node = focusedNode();
-  if (!node || !cameraReady()) {
-    graphState.pendingFocusCenter = false;
+export function centerFocusedNode(state = graphState) {
+  if (state.focusedNodeId == null || state.pendingFocusCenter === false) return;
+  const node = focusedNode(state);
+  if (!node || !cameraReady(state)) {
+    state.pendingFocusCenter = false;
     return;
   }
-  graphState.svg
+  state.svg
     .transition()
     .duration(CENTER_DURATION_MS)
-    .call(
-      graphState.zoom.transform,
-      focusCameraTransform(node, graphState.width, graphState.height),
-    );
-  graphState.pendingFocusCenter = false;
+    .call(state.zoom.transform, focusCameraTransform(node, state.width, state.height));
+  state.pendingFocusCenter = false;
 }
 
 /**
  * Apply the current node emphasis to the rendered selection: the focused
  * bookmark's circle gains an indigo ring (stroke-width 4) and every other node
  * dims to 40% opacity. No-op when nothing is focused.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
  */
-export function applyFocusStyles() {
-  if (graphState.nodeSelection == null || graphState.focusedNodeId == null) return;
-  graphState.nodeSelection.attr('opacity', (d) =>
-    d.id === graphState.focusedNodeId ? 1 : DIMMED_OPACITY,
-  );
-  graphState.nodeSelection
+export function applyFocusStyles(state = graphState) {
+  if (state.nodeSelection == null || state.focusedNodeId == null) return;
+  state.nodeSelection.attr('opacity', (d) => (d.id === state.focusedNodeId ? 1 : DIMMED_OPACITY));
+  state.nodeSelection
     .select('circle')
-    .attr('stroke', (d) => (d.id === graphState.focusedNodeId ? FOCUS_RING_STROKE : REST_STROKE))
+    .attr('stroke', (d) => (d.id === state.focusedNodeId ? FOCUS_RING_STROKE : REST_STROKE))
     .attr('stroke-width', (d) =>
-      d.id === graphState.focusedNodeId ? FOCUS_RING_WIDTH : REST_STROKE_WIDTH,
+      d.id === state.focusedNodeId ? FOCUS_RING_WIDTH : REST_STROKE_WIDTH,
     );
 }
 
-/** Remove any emphasis, restoring every node to its default appearance. */
-export function clearFocusStyles() {
-  if (graphState.nodeSelection == null) return;
-  graphState.nodeSelection.attr('opacity', 1);
-  graphState.nodeSelection
+/** Remove any emphasis, restoring every node to its default appearance.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
+ */
+export function clearFocusStyles(state = graphState) {
+  if (state.nodeSelection == null) return;
+  state.nodeSelection.attr('opacity', 1);
+  state.nodeSelection
     .select('circle')
     .attr('stroke', REST_STROKE)
     .attr('stroke-width', REST_STROKE_WIDTH);
@@ -131,14 +132,15 @@ export function clearFocusStyles() {
  * reset cannot leave a node frozen in place with nothing highlighted. A
  * no-op when nothing is rendered — which is the render-start case, where
  * clearRenderState has already dropped `nodes`.
+ * @param {import('./state.js').GraphState} [state] defaults to the module `graphState`
  */
-export function resetFocus() {
-  clearFocusStyles();
-  if (graphState.focusedNodeId != null && graphState.nodes) {
-    unpinNode(graphState.nodes.find((d) => d.id === graphState.focusedNodeId));
+export function resetFocus(state = graphState) {
+  clearFocusStyles(state);
+  if (state.focusedNodeId != null && state.nodes) {
+    unpinNode(state.nodes.find((d) => d.id === state.focusedNodeId));
   }
-  graphState.focusedNodeId = null;
-  graphState.pendingFocusCenter = false;
+  state.focusedNodeId = null;
+  state.pendingFocusCenter = false;
 }
 
 /**
@@ -151,20 +153,20 @@ export function resetFocus() {
  *
  * @returns {{ onTick: () => void, onSettled: () => void }}
  */
-export function focusSimulationHooks(preserveZoom = false) {
+export function focusSimulationHooks(preserveZoom = false, state = graphState) {
   return {
     onTick: () => {
       // When zoom is being preserved (e.g. after a deletion-driven re-render),
       // the camera was already centred in Frame A at the user's saved zoom
       // level. Re-centering on every tick would override it with FOCUS_ZOOM.
       if (preserveZoom) return;
-      centerFocusedNode();
+      centerFocusedNode(state);
     },
     onSettled: () => {
-      if (graphState.focusedNodeId != null) {
+      if (state.focusedNodeId != null) {
         if (preserveZoom) return;
-        graphState.pendingFocusCenter = true;
-        centerFocusedNode();
+        state.pendingFocusCenter = true;
+        centerFocusedNode(state);
       }
     },
   };

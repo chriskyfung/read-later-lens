@@ -4,9 +4,7 @@
  * The zoomable SVG, the running simulation and the current focus are all
  * view-scoped, so they cannot live in src/core/state — but they are read
  * from every module in this directory, so they live here instead of in
- * ../views/linkage.js. One exported object, mutated in place: the object is
- * private to the feature by convention, never imported outside the linkage
- * view and its submodules.
+ * ../views/linkage.js.
  *
  * `focusedNodeId` and `pendingFocusCenter` belong with the camera that uses
  * them (./focus.js), but they must survive a re-render that replaces the
@@ -16,6 +14,11 @@
  * checkbox. Session-scoped like everything else in this file: this app has
  * no UI-preference persistence layer (IndexedDB holds bookmarks only), so
  * the toggle resets to 'tf' on reload.
+ *
+ * State is created by `createGraphState()` so the `LinkageGraph` class can
+ * own its own instance instead of reaching into a module-global singleton.
+ * The `graphState` export below is the default module instance used by the
+ * legacy render path; new code should use the class instance's state.
  */
 
 /**
@@ -36,21 +39,30 @@
  * @property {'tf'|'tfidf'} weighting Link scoring mode (panel checkbox).
  */
 
-/** @type {GraphState} */
-export const graphState = {
-  svg: null,
-  zoom: null,
-  simulation: null,
-  nodes: null,
-  nodeSelection: null,
-  width: 0,
-  height: 0,
-  focusedNodeId: null,
-  pendingFocusCenter: false,
-  renderGeneration: 0,
-  pendingTopologyTimer: null,
-  weighting: 'tf',
-};
+/**
+ * Create a fresh GraphState instance. Each LinkageGraph instance owns its own
+ * state so multiple graphs (or tests) cannot leak into each other.
+ * @returns {GraphState}
+ */
+export function createGraphState() {
+  return {
+    svg: null,
+    zoom: null,
+    simulation: null,
+    nodes: null,
+    nodeSelection: null,
+    width: 0,
+    height: 0,
+    focusedNodeId: null,
+    pendingFocusCenter: false,
+    renderGeneration: 0,
+    pendingTopologyTimer: null,
+    weighting: 'tf',
+  };
+}
+
+/** Default module instance used by the legacy render path. */
+export const graphState = createGraphState();
 
 /** Resting width/height used when the canvas reports zero (jsdom, or a hidden panel). */
 export const FALLBACK_WIDTH = 800;
@@ -69,29 +81,38 @@ export function resolveCanvasSize(container) {
  * Drop every reference a render owned, so an early return (no container, or an
  * empty library) cannot leave a stale selection behind for the focus API.
  * The generation is NOT reset here — see nextRenderGeneration.
+ * @param {GraphState} [state] defaults to the module `graphState`
  */
-export function clearRenderState() {
-  graphState.simulation = null;
-  graphState.svg = null;
-  graphState.zoom = null;
-  graphState.nodes = null;
-  graphState.nodeSelection = null;
+export function clearRenderState(state = graphState) {
+  state.simulation = null;
+  state.svg = null;
+  state.zoom = null;
+  state.nodes = null;
+  state.nodeSelection = null;
 }
 
-/** Cancel a deferred topology build, if one is outstanding. */
-export function cancelPendingTopology() {
-  if (graphState.pendingTopologyTimer == null) return;
-  graphState.pendingTopologyTimer.cancel();
-  graphState.pendingTopologyTimer = null;
+/** Cancel a deferred topology build, if one is outstanding.
+ * @param {GraphState} [state] defaults to the module `graphState`
+ */
+export function cancelPendingTopology(state = graphState) {
+  if (state.pendingTopologyTimer == null) return;
+  state.pendingTopologyTimer.cancel();
+  state.pendingTopologyTimer = null;
 }
 
-/** True when this render is still the latest one, so its deferred work is wanted. */
-export function isCurrentGeneration(generation) {
-  return generation === graphState.renderGeneration;
+/** True when this render is still the latest one, so its deferred work is wanted.
+ * @param {number} generation
+ * @param {GraphState} [state] defaults to the module `graphState`
+ */
+export function isCurrentGeneration(generation, state = graphState) {
+  return generation === state.renderGeneration;
 }
 
-/** Bump and return the generation for a new render, superseding any earlier one. */
-export function nextRenderGeneration() {
-  graphState.renderGeneration += 1;
-  return graphState.renderGeneration;
+/** Bump and return the generation for a new render, superseding any earlier one.
+ * @param {GraphState} [state] defaults to the module `graphState`
+ * @returns {number}
+ */
+export function nextRenderGeneration(state = graphState) {
+  state.renderGeneration += 1;
+  return state.renderGeneration;
 }
