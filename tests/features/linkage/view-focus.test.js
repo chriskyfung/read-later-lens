@@ -23,7 +23,7 @@ import {
   renderConceptLinkageGraph,
   setLinkageWeighting,
   FOCUS_ZOOM,
-  graphState,
+  linkageGraph,
 } from '@/features/linkage';
 import { setBookmarks } from '@/core/state';
 import {
@@ -266,7 +266,7 @@ describe('focus & camera API', () => {
     // cannot invalidate the camera by moving it after the pan lands.
     expect(focusLinkageNode('10')).toBe(true);
 
-    const nodes = graphState.nodes;
+    const nodes = linkageGraph.state.nodes;
     const focused = nodes.find((d) => d.id === '10');
     expect(focused.fx).toBe(focused.x);
     expect(focused.fy).toBe(focused.y);
@@ -288,7 +288,7 @@ describe('focus & camera API', () => {
     focusLinkageNode('10');
     focusLinkageNode('20');
 
-    const nodes = graphState.nodes;
+    const nodes = linkageGraph.state.nodes;
     expect(nodes.find((d) => d.id === '10').fx).toBeUndefined();
     expect(nodes.find((d) => d.id === '10').fy).toBeUndefined();
     const focused = nodes.find((d) => d.id === '20');
@@ -304,7 +304,7 @@ describe('focus & camera API', () => {
     expect(focusLinkageNode('zzz')).toBe(false);
 
     // The stale pin must not outlive the stale highlight it belonged to.
-    const previous = graphState.nodes.find((d) => d.id === '10');
+    const previous = linkageGraph.state.nodes.find((d) => d.id === '10');
     expect(previous.fx).toBeUndefined();
     expect(previous.fy).toBeUndefined();
   });
@@ -314,11 +314,11 @@ describe('focus & camera API', () => {
     // entry point succeeds, the focused node is pinned at its current spot.
     setBookmarks([BM(1, 'lone node')]);
     openLinkageForBookmark('1');
-    expect(graphState.nodes.find((d) => d.id === '1').fx).not.toBeUndefined();
+    expect(linkageGraph.state.nodes.find((d) => d.id === '1').fx).not.toBeUndefined();
 
     renderConceptLinkageGraph();
     focusLinkageNode('1');
-    const node = graphState.nodes.find((d) => d.id === '1');
+    const node = linkageGraph.state.nodes.find((d) => d.id === '1');
     expect(node.fx).toBe(node.x);
     expect(node.fy).toBe(node.y);
   });
@@ -364,7 +364,7 @@ describe('focus & camera API', () => {
       await waitForTopology(canvas, 3);
 
       // Confirm focus is established before the deletion.
-      expect(graphState.focusedNodeId).toBe('10');
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
 
       // Simulate deletion: remove bookmark 20 from the live set and re-render.
       setBookmarks([BM(10, 'alpha zeta'), BM(30, 'delta epsilon')]);
@@ -374,8 +374,8 @@ describe('focus & camera API', () => {
       // Focus should still be on node 10.
       const nodes = nodesByLabel(canvas);
       expect(nodes.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
-      expect(graphState.focusedNodeId).toBe('10');
-      const focused = graphState.nodes.find((d) => d.id === '10');
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
+      const focused = linkageGraph.state.nodes.find((d) => d.id === '10');
       expect(focused.fx).toBe(focused.x);
       expect(focused.fy).toBe(focused.y);
     });
@@ -394,7 +394,7 @@ describe('focus & camera API', () => {
 
       const nodes = nodesByLabel(canvas);
       expect(nodes.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: null });
-      expect(graphState.focusedNodeId).toBeNull();
+      expect(linkageGraph.state.focusedNodeId).toBeNull();
     });
 
     it('renders empty state when all nodes are deleted', () => {
@@ -420,7 +420,7 @@ describe('focus & camera API', () => {
 
       // Simulate user zooming to 2.0× after the initial focused render.
       const svg = d3.select(canvas.querySelector('svg'));
-      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      svg.call(linkageGraph.state.zoom.transform, d3.zoomIdentity.scale(2.0));
       await waitForTransform(canvas, /scale\(2/);
 
       // Confirm zoom was applied.
@@ -434,7 +434,7 @@ describe('focus & camera API', () => {
       await waitForTopology(canvas, 1);
 
       // Focus still on '10'.
-      expect(graphState.focusedNodeId).toBe('10');
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
       const nodes = nodesByLabel(canvas);
       expect(nodes.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
 
@@ -453,7 +453,7 @@ describe('focus & camera API', () => {
 
       // Simulate user zooming to 2.0×.
       const svg = d3.select(canvas.querySelector('svg'));
-      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      svg.call(linkageGraph.state.zoom.transform, d3.zoomIdentity.scale(2.0));
       await waitForTransform(canvas, /scale\(2/);
 
       // Delete '10' (the focused node).
@@ -462,7 +462,7 @@ describe('focus & camera API', () => {
       await waitForTopology(canvas, 1);
 
       // Focus cleared.
-      expect(graphState.focusedNodeId).toBeNull();
+      expect(linkageGraph.state.focusedNodeId).toBeNull();
       const nodes = nodesByLabel(canvas);
       expect(nodes.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: null });
 
@@ -480,11 +480,11 @@ describe('focus & camera API', () => {
       await waitForTopology(canvas, 2);
 
       // No focus.
-      expect(graphState.focusedNodeId).toBeNull();
+      expect(linkageGraph.state.focusedNodeId).toBeNull();
 
       // Set a non-default camera transform.
       const svg = d3.select(canvas.querySelector('svg'));
-      svg.call(graphState.zoom.transform, d3.zoomIdentity.scale(2.0));
+      svg.call(linkageGraph.state.zoom.transform, d3.zoomIdentity.scale(2.0));
       await waitForTransform(canvas, /scale\(2/);
 
       // Delete '20'.
@@ -493,7 +493,7 @@ describe('focus & camera API', () => {
       await waitForTopology(canvas, 1);
 
       // No focus.
-      expect(graphState.focusedNodeId).toBeNull();
+      expect(linkageGraph.state.focusedNodeId).toBeNull();
 
       // Camera preserved at 2.0×.
       const t = parseTransform(canvas.querySelector('svg > g').getAttribute('transform'));
@@ -518,8 +518,8 @@ describe('focus & camera API', () => {
       // Confirm focus is established before the toggle.
       const before = nodesByLabel(canvas);
       expect(before.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
-      expect(graphState.focusedNodeId).toBe('10');
-      expect(graphState.nodes.find((d) => d.id === '10').fx).not.toBeUndefined();
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
+      expect(linkageGraph.state.nodes.find((d) => d.id === '10').fx).not.toBeUndefined();
 
       // Toggle TF ⇄ TF-IDF (the panel checkbox path).
       setLinkageWeighting('tfidf');
@@ -529,8 +529,8 @@ describe('focus & camera API', () => {
       const after = nodesByLabel(canvas2);
       expect(after.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
       expect(after.get('gamma beta')).toEqual({ stroke: '#0f172a', opacity: '0.4' });
-      expect(graphState.focusedNodeId).toBe('10');
-      const focused = graphState.nodes.find((d) => d.id === '10');
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
+      const focused = linkageGraph.state.nodes.find((d) => d.id === '10');
       expect(focused.fx).toBe(focused.x);
       expect(focused.fy).toBe(focused.y);
 
@@ -556,7 +556,7 @@ describe('focus & camera API', () => {
 
       const after = nodesByLabel(canvas2);
       expect(after.get('alpha zeta')).toEqual({ stroke: '#6366f1', opacity: '1' });
-      expect(graphState.focusedNodeId).toBe('10');
+      expect(linkageGraph.state.focusedNodeId).toBe('10');
     });
   });
 });

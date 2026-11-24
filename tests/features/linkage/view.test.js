@@ -20,7 +20,7 @@ import {
   zoomGraphBy,
   resetGraphZoom,
   focusLinkageNode,
-  graphState,
+  linkageGraph,
 } from '@/features/linkage';
 import { setBookmarks } from '@/core/state';
 import { BM, createCanvas, resetModuleState, nodesByLabel } from './helpers/linkage.js';
@@ -178,7 +178,7 @@ describe('resetGraphZoom', () => {
     // After reset, no focus highlight remains — the graph is rebuilt fresh.
     const nodesAfter = nodesByLabel(canvas);
     expect(nodesAfter.get('alpha zeta')).toEqual({ stroke: '#0f172a', opacity: null });
-    expect(graphState.focusedNodeId).toBeNull();
+    expect(linkageGraph.state.focusedNodeId).toBeNull();
   });
 
   it('resets to an empty state for an empty library', () => {

@@ -17,7 +17,11 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import * as d3 from 'd3';
-import { renderConceptLinkageGraph, openLinkageForBookmark, graphState } from '@/features/linkage';
+import {
+  renderConceptLinkageGraph,
+  openLinkageForBookmark,
+  linkageGraph,
+} from '@/features/linkage';
 import { setBookmarks } from '@/core/state';
 import {
   BM,
@@ -108,7 +112,7 @@ describe('node dragging', () => {
     setBookmarks([BM(1, 'alpha zeta'), BM(2, 'gamma beta')]);
     renderConceptLinkageGraph();
 
-    const sim = graphState.simulation;
+    const sim = linkageGraph.state.simulation;
     expect(sim).not.toBeNull();
     settle(sim);
 
@@ -132,7 +136,7 @@ describe('node dragging', () => {
     setBookmarks([BM(1, 'alpha zeta'), BM(2, 'gamma beta')]);
     renderConceptLinkageGraph();
 
-    const sim = graphState.simulation;
+    const sim = linkageGraph.state.simulation;
     settle(sim);
     const nodeG = canvas.querySelector('g.nodes > g');
     const datum = d3.select(nodeG).datum();
@@ -151,7 +155,7 @@ describe('node dragging', () => {
     setBookmarks([BM(1, 'alpha zeta'), BM(2, 'gamma beta')]);
     renderConceptLinkageGraph();
 
-    const sim = graphState.simulation;
+    const sim = linkageGraph.state.simulation;
     settle(sim);
     const nodeG = canvas.querySelector('g.nodes > g');
     const datum = d3.select(nodeG).datum();
@@ -175,10 +179,10 @@ describe('node dragging', () => {
 
     expect(openLinkageForBookmark('1')).toBe(true);
     // Frame B builds the rest of the graph in a later macrotask; wait for it so
-    // graphState.simulation is the Frame B simulation the drag must re-heat.
+    // linkageGraph.state.simulation is the Frame B simulation the drag must re-heat.
     await waitForTopology(document.getElementById('d3GraphCanvas'), 2);
 
-    const sim = graphState.simulation;
+    const sim = linkageGraph.state.simulation;
     expect(sim).not.toBeNull();
     settle(sim);
 
