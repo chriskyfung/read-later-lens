@@ -391,5 +391,13 @@ export function openLinkageForBookmark(id) {
   return focused;
 }
 
+/**
+ * Re-measure the linkage canvas and update the SVG viewBox / state dimensions.
+ * Delegates to the default instance's resize().
+ */
+export function resize() {
+  linkageGraph.resize();
+}
+
 /** Re-export FOCUS_ZOOM for callers that imported it from ./linkage/focus.js. */
 export { FOCUS_ZOOM } from './focus.js';
