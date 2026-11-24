@@ -24,20 +24,23 @@ const COLLIDE_BASE = 12;
 const COLLIDE_PER_DEGREE = 6;
 
 /**
- * Clamp a link's weight into the rendered stroke-width range `[1, 4]`.
+ * Map a link's similarity `value` (cosine in `[0, 1]`) onto a rendered
+ * stroke-width in `[1, 4]`, so stronger similarity draws a thicker line.
  *
- * NOTE: the link records carry `value`, not `weight`, so every call site
- * currently passes undefined and this yields NaN — SVG ignores an unparseable
- * stroke-width and falls back to its default of 1, which is why the omission
- * has gone unnoticed. The formula is preserved verbatim rather than corrected
- * here, because correcting it changes rendered line weights; see the follow-up
- * note in the decomposition report.
+ * The link records produced by src/analytics/linkage.js carry `value`, not
+ * `weight`. The previous code read the nonexistent `weight` field (undefined
+ * → NaN → SVG default 1), so every link painted at width 1 regardless of
+ * similarity and the link weighting was visually invisible.
  *
- * @param {number} weight
- * @returns {number}
+ * Values outside `[0, 1]` are clamped into the stroke range so the function
+ * stays robust for any caller.
+ *
+ * @param {number} value link similarity, expected in [0, 1]
+ * @returns {number} stroke width in [1, 4]
  */
-export function linkStrokeWidth(weight) {
-  return Math.min(4, Math.max(1, weight));
+export function linkStrokeWidth(value) {
+  const width = 1 + (value ?? 0) * 3;
+  return Math.min(4, Math.max(1, width));
 }
 
 /**
@@ -87,7 +90,7 @@ export function createLinkSelection(parent, links) {
     .append('line')
     .attr('stroke', LINK_REST_STROKE)
     .attr('stroke-opacity', LINK_REST_STROKE_OPACITY)
-    .attr('stroke-width', (d) => linkStrokeWidth(d.weight));
+    .attr('stroke-width', (d) => linkStrokeWidth(d.value));
 }
 
 /**

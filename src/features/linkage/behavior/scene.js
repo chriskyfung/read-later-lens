@@ -229,7 +229,7 @@ export function createNodeLayer({ nodeWrapper, colorScale, linkRef, simRef, tool
         linkRef.current
           .style('stroke', '#334155')
           .style('stroke-opacity', 0.6)
-          .style('stroke-width', (l) => linkStrokeWidth(l.weight));
+          .style('stroke-width', (l) => linkStrokeWidth(l.value));
       })
       .on('click', (event, d) => {
         openReaderModal(d.id);

@@ -61,12 +61,13 @@ describe('node sizing', () => {
 });
 
 describe('link stroke width', () => {
-  it('clamps weight into the rendered range [1, 4]', () => {
-    // The clamp, not the current values, is the contract: pinning 1..4 keeps
-    // the rule honest even though every caller today passes undefined.
+  it('maps link similarity into the rendered range [1, 4]', () => {
+    // Link records carry `value` (cosine in [0, 1]); 0 maps to the floor 1,
+    // 1 maps to the ceiling 4, and out-of-range values are clamped. Callers
+    // now pass `d.value` / `l.value` instead of the nonexistent `weight`.
     expect(linkStrokeWidth(0)).toBe(1);
-    expect(linkStrokeWidth(0.5)).toBe(1);
-    expect(linkStrokeWidth(2.5)).toBe(2.5);
+    expect(linkStrokeWidth(0.5)).toBeCloseTo(2.5);
+    expect(linkStrokeWidth(1)).toBe(4);
     expect(linkStrokeWidth(4)).toBe(4);
     expect(linkStrokeWidth(99)).toBe(4);
   });

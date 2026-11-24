@@ -115,6 +115,41 @@ describe('renderConceptLinkageGraph guards and render path', () => {
   });
 });
 
+describe('link stroke-width encoding', () => {
+  it('renders identical docs at the maximum stroke width', () => {
+    const canvas = createCanvas();
+    // Cosine of identical token sets is 1 → stroke width 4.
+    setBookmarks([BM(1, 'alpha beta gamma'), BM(2, 'alpha beta gamma')]);
+    renderConceptLinkageGraph();
+
+    const line = canvas.querySelector('line');
+    expect(line).not.toBeNull();
+    expect(line.getAttribute('stroke-width')).toBe('4');
+  });
+
+  it('scales stroke width below the maximum for partial similarity', () => {
+    const canvas = createCanvas();
+    // Share only 'alpha' → cosine 0.5 → stroke width 2.5.
+    setBookmarks([BM(1, 'alpha beta'), BM(2, 'alpha gamma')]);
+    renderConceptLinkageGraph();
+
+    const line = canvas.querySelector('line');
+    expect(line).not.toBeNull();
+    const width = Number(line.getAttribute('stroke-width'));
+    expect(width).toBeCloseTo(2.5);
+    expect(width).toBeGreaterThan(1);
+    expect(width).toBeLessThan(4);
+  });
+
+  it('leaves dissimilar pairs unlinked', () => {
+    const canvas = createCanvas();
+    setBookmarks([BM(1, 'alpha beta gamma delta'), BM(2, 'deep fur fast hat')]);
+    renderConceptLinkageGraph();
+
+    expect(canvas.querySelectorAll('line')).toHaveLength(0);
+  });
+});
+
 describe('resetGraphZoom', () => {
   it('re-renders and re-wires the graph', () => {
     const canvas = createCanvas();
