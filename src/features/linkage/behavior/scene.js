@@ -208,6 +208,9 @@ export function createNodeLayer({ nodeWrapper, colorScale, linkRef, simRef, tool
 
     node
       .on('mouseover', (event, d) => {
+        // Bail if the tooltip markup isn't mounted (e.g. panel not rendered),
+        // so hovering a node can never throw on a null element.
+        if (!tooltip) return;
         tooltip.style.opacity = '1';
         ttTitle.innerText = d.title;
         ttDomain.innerText = d.domain;
@@ -221,10 +224,12 @@ export function createNodeLayer({ nodeWrapper, colorScale, linkRef, simRef, tool
           .style('stroke-width', (l) => (l.source.id === d.id || l.target.id === d.id ? 3 : 1));
       })
       .on('mousemove', (event) => {
+        if (!tooltip) return;
         tooltip.style.left = `${event.clientX}px`;
         tooltip.style.top = `${event.clientY - 15}px`;
       })
       .on('mouseout', () => {
+        if (!tooltip) return;
         tooltip.style.opacity = '0';
         if (!linkRef.current) return;
         linkRef.current

@@ -40,6 +40,30 @@ describe('zoom helpers', () => {
   });
 });
 
+describe('tooltip guard', () => {
+  it('hovering a node does not throw when tooltip markup is absent', () => {
+    // createCanvas() mounts #d3GraphCanvas but no #graphTooltip, so
+    // gatherTooltipRefs() returns all-null refs. Hovering must bail early
+    // instead of throwing on a null element.
+    const canvas = createCanvas();
+    setBookmarks([BM(1, 'alpha beta gamma'), BM(2, 'alpha beta gamma')]);
+    renderConceptLinkageGraph();
+
+    const circle = canvas.querySelector('circle');
+    expect(circle).not.toBeNull();
+    // d3 attaches the mouseover/mouseout listeners to the node <g> (the
+    // circle's parent), so dispatch there with bubbling enabled.
+    const group = circle.parentElement;
+    expect(group).not.toBeNull();
+    expect(() =>
+      group.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true })),
+    ).not.toThrow();
+    expect(() =>
+      group.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true })),
+    ).not.toThrow();
+  });
+});
+
 describe('resize', () => {
   it('re-measures the container and updates the SVG viewBox and state dimensions', () => {
     const canvas = createCanvas();
