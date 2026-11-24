@@ -26,6 +26,7 @@ import {
 } from './constants.js';
 import { partitionBookmarks, countActiveByFolder } from './service.js';
 import { getQueueLength } from '@/features/readingQueue';
+import { createIcons, Trash } from 'lucide';
 
 /**
  * Fallback policy: with an empty trash, the TRASH pseudo-row shows nothing, so
@@ -107,6 +108,8 @@ export function renderSidebarFolders() {
       btn.querySelector(`[${SIDEBAR_DATA_ATTRS.deleteFolder}]`).dataset.deleteFolder = file.id;
       folderList.appendChild(btn);
     });
+
+    createIcons({ icons: { Trash }, root: folderList });
   }
 }
 
