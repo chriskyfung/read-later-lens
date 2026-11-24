@@ -2,7 +2,13 @@
  * @fileoverview Tests for the sidebar folders rendering, including the
  * persist-error badge indicator.
  */
+vi.mock('lucide', () => ({
+  Trash: 'Trash',
+  createIcons: vi.fn(),
+}));
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createIcons } from 'lucide';
 import { renderSidebarFolders, updateQueueBadge } from './folders.js';
 import * as state from '@/core/state';
 import { SIDEBAR_IDS, FOLDER_ALL } from './constants.js';
@@ -95,6 +101,7 @@ afterEach(() => {
   state.setActiveTag(null);
   state.setPersistError(false);
   vi.unstubAllGlobals();
+  createIcons.mockClear();
 });
 
 describe('updateQueueBadge', () => {
@@ -142,5 +149,22 @@ describe('renderSidebarFolders persistError badge', () => {
     expect(els.queueCountBadge.classList.contains('text-red-200')).toBe(true);
     expect(els.queueCountBadge.classList.contains('bg-amber-900/50')).toBe(false);
     expect(els.queueCountBadge.classList.contains('text-amber-200')).toBe(false);
+  });
+});
+
+describe('renderSidebarFolders trash icon', () => {
+  it('renders the trash icon once with the folder list as root', () => {
+    renderSidebarFolders();
+    expect(createIcons).toHaveBeenCalledTimes(1);
+    expect(createIcons).toHaveBeenCalledWith({
+      icons: { Trash: 'Trash' },
+      root: els.folderList,
+    });
+  });
+
+  it('skips the trash icon render when the folder list is missing', () => {
+    delete els.folderList;
+    expect(() => renderSidebarFolders()).not.toThrow();
+    expect(createIcons).not.toHaveBeenCalled();
   });
 });
