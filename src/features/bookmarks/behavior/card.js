@@ -56,8 +56,9 @@ export function createBookmarkCard(bookmark) {
     .addEventListener('click', () => openSimilarityModal(bookmark.id));
   card
     .querySelector('.open-linkage-btn')
-    .addEventListener('click', () => openLinkageForBookmark(bookmark.id));
-  card.querySelector('[data-delete-bookmark]').dataset.deleteBookmark = bookmark.id;
+    ?.addEventListener('click', () => openLinkageForBookmark(bookmark.id));
+  const deleteBtn = card.querySelector('[data-delete-bookmark]');
+  if (deleteBtn) deleteBtn.dataset.deleteBookmark = bookmark.id;
 
   // Queue toggle button
   const queueBtn = card.querySelector('[data-add-queue]');
