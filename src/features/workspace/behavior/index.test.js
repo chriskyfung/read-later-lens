@@ -39,6 +39,7 @@ vi.mock('@/features/linkage', () => ({
   renderConceptLinkageGraph: vi.fn(),
   zoomGraphBy: vi.fn(),
   resetGraphZoom: vi.fn(),
+  linkageGraph: { dispose: vi.fn() },
 }));
 vi.mock('@/core/state', () => {
   const state = {
