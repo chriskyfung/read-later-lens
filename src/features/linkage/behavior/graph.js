@@ -384,6 +384,14 @@ export const linkageGraph = new LinkageGraph();
  */
 export function openLinkageForBookmark(id) {
   activateTab('linkage');
+  const container = document.getElementById('d3GraphCanvas');
+  // The linkage panel (and its canvas) is always mounted together with the
+  // other panels; if it is absent, the real problem is a missing panel, not a
+  // missing bookmark — say so instead of blaming the bookmark.
+  if (!container) {
+    showToast('關聯圖面板未載入，請先切換至關聯圖標籤頁');
+    return false;
+  }
   const focused = linkageGraph.render(id);
   if (!focused) {
     showToast('該書籤不在目前的關聯圖中（超出前 50 筆或已被篩除）');

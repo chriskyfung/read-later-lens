@@ -21,9 +21,16 @@ import {
   resetGraphZoom,
   focusLinkageNode,
   linkageGraph,
+  openLinkageForBookmark,
 } from '@/features/linkage';
 import { setBookmarks } from '@/core/state';
-import { BM, createCanvas, resetModuleState, nodesByLabel } from './helpers/linkage.js';
+import {
+  BM,
+  createCanvas,
+  createTabShell,
+  resetModuleState,
+  nodesByLabel,
+} from './helpers/linkage.js';
 
 afterEach(() => {
   resetModuleState();
@@ -61,6 +68,21 @@ describe('tooltip guard', () => {
     expect(() =>
       group.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true })),
     ).not.toThrow();
+  });
+});
+
+describe('openLinkageForBookmark toast', () => {
+  it('shows a panel-not-loaded toast when the canvas is not mounted', () => {
+    // createTabShell() mounts the tab bar, panels and toast, but NOT
+    // #d3GraphCanvas. openLinkageForBookmark must distinguish "no panel" from
+    // "bookmark not in graph".
+    createTabShell();
+    const ok = openLinkageForBookmark('1');
+
+    expect(ok).toBe(false);
+    const msg = document.getElementById('toastMsg').innerText;
+    expect(msg).toContain('關聯圖面板未載入');
+    expect(msg).not.toContain('不在目前的關聯圖中');
   });
 });
 
